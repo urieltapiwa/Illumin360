@@ -1,0 +1,104 @@
+MPX,Microsoft Project for Windows,4.0,ANSI
+10,$,1,2,",",.
+11,2,0,1,8.00,40.00,,,1,0
+12,1,0,480,/,:,am,pm,20,20
+30,Project1,Illumin Investments CC,Uriel Tapiwa Munjanga,,19/05/2026,,0,14/05/2026,"v3.7 spec §27 — 5 portals, 3 customer segments, Auto-Application, Founder Programme.",,,,,,,,,,,,,,,,,,Illumin360 v3.7 — 8-phase delivery plan + SDLC documentation,Uriel Tapiwa Munjanga
+40,Name,ID,Unique ID
+41,1,40,49
+50,Architect — Uriel Tapiwa Munjanga,1,1
+50,DevOps,2,2
+50,DBA,3,3
+50,QA Lead,4,4
+50,Legal — External Attorney,5,5
+50,Marketing,6,6
+50,Security — External,7,7
+50,Sponsor — CEO Illumin Investments CC,8,8
+60,Name,WBS,Outline Level,Duration,Predecessors,Fixed,Milestone,ID,Unique ID,Outline Number,Summary
+61,1,2,3,40,70,80,81,90,98,99,120
+70,0. Pre-build & Authorisation,1,1,0d,,No,Yes,1,1,1,Yes
+70,Kickoff — project authorised,1.1,2,0d,,No,Yes,2,2,1.1
+70,Merge v3.7 spec amendment + correct typos,1.2,2,3d,2,No,,3,3,1.2
+70,Attorney review — disclaimer pack D-01 to D-12,1.3,2,15d,3,No,,4,4,1.3
+70,"Provision Keycloak, RabbitMQ, PostgreSQL, MinIO, K8s",1.4,2,10d,3,No,,5,5,1.4
+70,Select + integrate payment gateway sandbox,1.5,2,5d,5,No,,6,6,1.5
+70,Build readiness milestone,1.6,2,0d,"4,5,6",No,Yes,7,7,1.6
+70,Phase 1 — Core Talent Pool + Auto-Application + Founder,2,1,0d,,No,Yes,8,8,2,Yes
+70,Apply DB migrations 001–015 + v3.7 additions,2.1,2,3d,7,No,,9,9,2.1
+70,Configure Keycloak realms (5 portals),2.2,2,5d,9,No,,10,10,2.2
+70,Registration flows — Professional / Student / Business,2.3,2,7d,10,No,,11,11,2.3
+70,Founder Programme quota + race-condition serialisation,2.4,2,5d,11,No,,12,12,2.4
+70,Profile management — Professional + Student,2.5,2,8d,11,No,,13,13,2.5
+70,Business profile + recruitment request creation,2.6,2,6d,13,No,,14,14,2.6
+70,Compliance D-03 declaration + D-04 sensitive-filter flow,2.7,2,4d,14,No,,15,15,2.7
+70,Matching engine v1 — two-pass; standard weights,2.8,2,10d,13,No,,16,16,2.8
+70,Auto-Application audit ledger + opt-outs,2.9,2,5d,16,No,,17,17,2.9
+70,Anonymous shortlist preview UI,2.10,2,4d,16,No,,18,18,2.10
+70,"Phase 1 test pack — quota race, perf, audit",2.11,2,7d,"12,17,18,15",No,,19,19,2.11
+70,Phase 1 sign-off milestone,2.12,2,0d,19,No,Yes,20,20,2.12
+70,"Phase 2 — Reporting, Payments, Notifications, Subscriptions",3,1,0d,,No,Yes,21,21,3,Yes
+70,Payment service — webhook + HMAC + PCI-DSS SAQ A,3.1,2,8d,20,No,,22,22,3.1
+70,Subscription tiers — Professional + Student + Business (4-tier),3.2,2,7d,22,No,,23,23,3.2
+70,Report generation — PDF + Word + methodology disclosure,3.3,2,8d,20,No,,24,24,3.3
+70,D-02 v3.7 wording in report footer (post-attorney),3.4,2,2d,"24,4",No,,25,25,3.4
+70,Notification service — email + in-product (52+ triggers),3.5,2,6d,22,No,,26,26,3.5
+70,Subscription reminder cron + deduplication,3.6,2,3d,23,No,,27,27,3.6
+70,Phase 2 test pack,3.7,2,5d,"25,26,27",No,,28,28,3.7
+70,Phase 2 sign-off milestone,3.8,2,0d,28,No,Yes,29,29,3.8
+70,"Phase 3 — Privacy, Compliance, Admin",4,1,0d,,No,Yes,30,30,4,Yes
+70,Candidate unlock flow + per-candidate billing,4.1,2,4d,29,No,,31,31,4.1
+70,Privacy controls — D-12 retention purge cron,4.2,2,4d,29,No,,32,32,4.2
+70,"Admin Portal — analytics, refund processing",4.3,2,8d,29,No,,33,33,4.3
+70,Audit trail finalisation + immutability tests,4.4,2,4d,33,No,,34,34,4.4
+70,Phase 3 test pack,4.5,2,5d,"31,32,34",No,,35,35,4.5
+70,Phase 3 sign-off milestone,4.6,2,0d,35,No,Yes,36,36,4.6
+70,Phase 4 — Internal Recruitment Link,5,1,0d,,No,Yes,37,37,5,Yes
+70,"Internal portal — branded URL, token-secured",5.1,2,5d,36,No,,38,38,5.1
+70,Auto-close cron + matching pipeline trigger,5.2,2,4d,38,No,,39,39,5.2
+70,"Consolidated invoice — portal + report (NAD 2,300)",5.3,2,3d,"39,22",No,,40,40,5.3
+70,Phase 4 test pack,5.4,2,3d,40,No,,41,41,5.4
+70,Phase 4 sign-off milestone,5.5,2,0d,41,No,Yes,42,42,5.5
+70,Phase 5 — Student CSR + Social + Support Portal,6,1,0d,,No,Yes,43,43,6,Yes
+70,Student verification (3 methods) + grace + graduate upgrade,6.1,2,6d,42,No,,44,44,6.1
+70,F1 Public profile card + OG + PNG,6.2,2,5d,44,No,,45,45,6.2
+70,F2 Demand feed (anonymised),6.3,2,3d,44,No,,46,46,6.3
+70,F3 Career Insights blog,6.4,2,4d,44,No,,47,47,6.4
+70,"F4 + §26 Badge framework (Verified Student, Compliant Recruiter, Founder)",6.5,2,5d,44,No,,48,48,6.5
+70,F5 Graduate Spotlight (consent-gated),6.6,2,3d,45,No,,49,49,6.6
+70,F7 Referral programme + reward application,6.7,2,4d,44,No,,50,50,6.7
+70,"Support Portal — tickets, KB, identity verification",6.8,2,7d,44,No,,51,51,6.8
+70,Phase 5 test pack,6.9,2,5d,"45,46,47,48,49,50,51",No,,52,52,6.9
+70,Phase 5 sign-off milestone,6.10,2,0d,52,No,Yes,53,53,6.10
+70,Phase 6 — AI Evolution + Assets + PWA + Assistant,7,1,0d,,No,Yes,54,54,7,Yes
+70,"Adaptive weighting (custom_weights, sum-to-100, locked)",7.1,2,5d,53,No,,55,55,7.1
+70,Gap Analysis — 70–85% band sub-blocks (no AI in headings),7.2,2,4d,55,No,,56,56,7.2
+70,RLHF data collection — match_feedback + day-14 prompt,7.3,2,5d,55,No,,57,57,7.3
+70,Asset management — logos + photo blind-screening,7.4,2,5d,53,No,,58,58,7.4
+70,"PWA — manifest, service worker, offline, install",7.5,2,4d,53,No,,59,59,7.5
+70,AI Platform Assistant — 5 instances + post-gen filter,7.6,2,8d,55,No,,60,60,7.6
+70,Workforce Benchmarking Report (Business),7.7,2,5d,55,No,,61,61,7.7
+70,"F6 Employer reviews (moderated, ?5 ratings)",7.8,2,4d,53,No,,62,62,7.8
+70,"Phase 6 test pack — assistant identity, blind-screen, adaptive bounds",7.9,2,6d,"56,57,58,59,60,61,62",No,,63,63,7.9
+70,Phase 6 sign-off milestone,7.10,2,0d,63,No,Yes,64,64,7.10
+70,Phase 7 — Video Integration (Premium),8,1,0d,,No,Yes,65,65,8,Yes
+70,"Video upload — 60s, 150 MB, virus scan",8.1,2,4d,64,No,,66,66,8.1
+70,Transcription provider integration,8.2,2,5d,66,No,,67,67,8.2
+70,Keyword extraction at 30% weight cap,8.3,2,3d,67,No,,68,68,8.3
+70,Content moderation queue,8.4,2,3d,66,No,,69,69,8.4
+70,Phase 7 test pack,8.5,2,3d,"68,69",No,,70,70,8.5
+70,Phase 7 sign-off milestone,8.6,2,0d,70,No,Yes,71,71,8.6
+70,Phase 8 — RLHF Refinement + Marketplace (Future),9,1,0d,,No,Yes,72,72,9,Yes
+70,Wait for 500 feedback records per scoring model,9.1,2,30d,71,No,,73,73,9.1
+70,Model weight refinement,9.2,2,15d,73,No,,74,74,9.2
+70,Marketplace expansion (scope TBD),9.3,2,30d,74,No,,75,75,9.3
+70,Phase 8 sign-off milestone,9.4,2,0d,75,No,Yes,76,76,9.4
+70,"SDLC Documentation (parallel, v2.0 population)",10,1,0d,,No,Yes,77,77,10,Yes
+70,Batches 1+2+3 populated — 53 docs,10.1,2,0d,2,No,Yes,78,78,10.1
+70,"Batch 4 — folders 04, 05, 06, 10",10.2,2,10d,20,No,,79,79,10.2
+70,"Batch 5 — folders 07, 08 test plans",10.3,2,10d,29,No,,80,80,10.3
+70,"Batch 6 — folders 11, 12 user manuals",10.4,2,8d,36,No,,81,81,10.4
+70,All 134 SDLC docs at v2.0 baseline,10.5,2,0d,"79,80,81",No,Yes,82,82,10.5
+70,Pre-launch and Go-Live,11,1,0d,,No,Yes,83,83,11,Yes
+70,External penetration test,11.1,2,10d,64,No,,84,84,11.1
+70,UAT — Founder cohort,11.2,2,10d,64,No,,85,85,11.2
+70,Final attorney sign-off on disclaimer pack,11.3,2,5d,"4,82",No,,86,86,11.3
+70,PRODUCTION GO-LIVE,11.4,2,0d,"84,85,86",No,Yes,87,87,11.4
