@@ -78,9 +78,20 @@ function demandOption(rows: { role: string; value: number }[]): echarts.EChartsO
 
 const trendColor: Record<string, string> = { hot: "text-gold", rising: "text-brand-bright", steady: "text-ink-mid" };
 
+interface OpenRole { id: string; title: string; city: string; positions: number; createdAt: string; }
+
 export default function Professional(_props: { session: Session }) {
   const [d, setD] = useState<Prof | null>(null);
   const [live, setLive] = useState(false);
+  const [openRoles, setOpenRoles] = useState<OpenRole[] | null>(null);
+  const [matchFilter, setMatchFilter] = useState<"all" | "saved" | "applied">("all");
+  // P2: live open roles from the Recruitment marketplace (real recruitment_requests).
+  useEffect(() => {
+    fetch("/api/recruitment/requests?status=open&pageSize=6")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((v) => { if (Array.isArray(v)) setOpenRoles(v); })
+      .catch(() => { /* marketplace unavailable — panel simply hidden */ });
+  }, []);
   // Live-first: read the professional's dashboard from the Professionals service (via the BFF/gateway);
   // fall back to the bundled snapshot if the API is unavailable. Mirrors the other portals' live-data pattern.
   useEffect(() => {
@@ -117,7 +128,8 @@ export default function Professional(_props: { session: Session }) {
     const r = await fetch(`/api/professionals/me/availability`, { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: JSON.stringify({ availability: next }) });
     if (r.ok) { const v = await r.json().catch(() => next); setD((prev) => (prev ? { ...prev, persona: { ...prev.persona, availability: typeof v === "string" ? v : next } } : prev)); }
   };
-  const navItems: [React.ReactNode, string, boolean][] = [[ICN.user, "pro.nav.profile", true], [ICN.spark2, "pro.nav.matches", false], [ICN.brief, "pro.nav.applications", false], [ICN.chart, "pro.nav.insights", false], [ICN.gear, "pro.nav.settings", false]];
+  const navItems: [React.ReactNode, string, string][] = [[ICN.user, "pro.nav.profile", "pro-top"], [ICN.spark2, "pro.nav.matches", "pro-matches"], [ICN.brief, "pro.nav.applications", "pro-applications"], [ICN.chart, "pro.nav.insights", "pro-insights"], [ICN.gear, "pro.nav.settings", "pro-top"]];
+  const goto = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
   const salaryPos = (v: number) => Math.max(2, Math.min(98, ((v - d.salary.p25) / (d.salary.p75 - d.salary.p25)) * 100));
   const initials = p.name.split(" ").map((x) => x[0]).slice(0, 2).join("");
 
@@ -127,11 +139,10 @@ export default function Professional(_props: { session: Session }) {
         <div className="px-1"><Logo /></div>
         <nav className="mt-9 flex flex-col gap-1">
           <div className="eyebrow px-3 mb-1">{t("pro.nav.eyebrow")}</div>
-          {navItems.map(([icon, label, active]) => (
-            <a key={label} href="#" className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition ${active ? "bg-brand/[0.12] text-ink-hi shadow-[inset_0_0_0_1px_rgba(47,211,154,0.25)]" : "text-ink-mid hover:bg-white/[0.03] hover:text-ink-hi"}`}>
-              <span className={active ? "text-brand-bright" : "text-ink-lo group-hover:text-ink-mid"}><Ic d={icon} /></span>{t(label)}
-              {active && <span className="ml-auto h-1.5 w-1.5 rounded-full bg-gold" />}
-            </a>
+          {navItems.map(([icon, label, target], idx) => (
+            <button key={label} onClick={() => goto(target)} className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-left transition ${idx === 0 ? "bg-brand/[0.12] text-ink-hi shadow-[inset_0_0_0_1px_rgba(47,211,154,0.25)]" : "text-ink-mid hover:bg-white/[0.03] hover:text-ink-hi"}`}>
+              <span className={idx === 0 ? "text-brand-bright" : "text-ink-lo group-hover:text-ink-mid"}><Ic d={icon} /></span>{t(label)}
+            </button>
           ))}
         </nav>
         <div className="mt-auto card p-3.5">
@@ -168,7 +179,7 @@ export default function Professional(_props: { session: Session }) {
 
         <motion.div initial="initial" animate="animate" transition={{ staggerChildren: 0.06 }} className="px-5 lg:px-7 py-6 space-y-5">
           {/* hero: profile strength + identity + KPIs */}
-          <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
+          <div id="pro-top" className="grid grid-cols-1 xl:grid-cols-3 gap-5 scroll-mt-24">
             <motion.section variants={fade} className="card p-5 flex items-center gap-4">
               <div className="w-[150px] shrink-0"><Chart option={gaugeOption(p.profileStrength)} height={150} /></div>
               <div>
@@ -198,14 +209,28 @@ export default function Professional(_props: { session: Session }) {
           </div>
 
           {/* matches + pipeline */}
-          <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
+          <div id="pro-matches" className="grid grid-cols-1 xl:grid-cols-3 gap-5 scroll-mt-24">
             <motion.section variants={fade} className="card p-5 xl:col-span-2">
               <div className="flex items-center justify-between mb-3">
                 <div><h3 className="font-display text-[15px] font-bold text-ink-hi">{t("pro.matches.title")}</h3><p className="text-[11px] text-ink-lo mt-0.5">{t("pro.matches.subtitle")}</p></div>
-                <span className="chip !text-[10px]">{t("pro.matches.new", { n: d.matches.length })}</span>
+                {live ? (
+                  <div className="flex items-center gap-0.5 rounded-lg bg-panel2/50 p-0.5">
+                    {(["all", "saved", "applied"] as const).map((f) => (
+                      <button key={f} onClick={() => setMatchFilter(f)} className={`rounded-md px-2.5 py-1 text-[11px] font-semibold capitalize transition ${matchFilter === f ? "bg-brand/20 text-brand-bright" : "text-ink-lo hover:text-ink-hi"}`}>{f}</button>
+                    ))}
+                  </div>
+                ) : (
+                  <span className="chip !text-[10px]">{t("pro.matches.new", { n: d.matches.length })}</span>
+                )}
               </div>
+              {(() => {
+                const visible = d.matches.filter((m) => m.status !== "dismissed").filter((m) => matchFilter === "all" || m.status === matchFilter);
+                if (visible.length === 0) {
+                  return <div className="py-8 text-center text-[12px] text-ink-lo">No {matchFilter === "all" ? "" : matchFilter + " "}matches right now.</div>;
+                }
+                return (
               <div className="grid sm:grid-cols-2 gap-3">
-                {d.matches.filter((m) => m.status !== "dismissed").map((m, i) => (
+                {visible.map((m, i) => (
                   <div key={m.id ?? i} className={`rounded-xl border p-3.5 transition group ${m.status === "applied" ? "border-brand/50 bg-brand/[0.06]" : m.status === "saved" ? "border-gold/40 bg-panel2/40" : "border-line/60 bg-panel2/40 hover:border-brand/40"}`}>
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
@@ -237,9 +262,11 @@ export default function Professional(_props: { session: Session }) {
                   </div>
                 ))}
               </div>
+                );
+              })()}
             </motion.section>
 
-            <motion.section variants={fade} className="card p-5">
+            <motion.section variants={fade} id="pro-applications" className="card p-5 scroll-mt-24">
               <h3 className="font-display text-[15px] font-bold text-ink-hi">{t("pro.pipeline.title")}</h3>
               <p className="text-[11px] text-ink-lo mt-0.5 mb-4">{t("pro.pipeline.subtitle")}</p>
               <div className="space-y-2.5">
@@ -260,8 +287,29 @@ export default function Professional(_props: { session: Session }) {
             </motion.section>
           </div>
 
+          {/* P2: live open roles from the Recruitment marketplace */}
+          {openRoles && openRoles.length > 0 && (
+            <div className="grid grid-cols-1 gap-5">
+              <motion.section variants={fade} className="card p-5">
+                <div className="flex items-center justify-between mb-3">
+                  <div><h3 className="font-display text-[15px] font-bold text-ink-hi">Open roles · marketplace</h3><p className="text-[11px] text-ink-lo mt-0.5">Live openings posted across Illumin360 right now.</p></div>
+                  <span className="chip !text-[10px] !text-brand-bright !border-brand/30"><span className="h-1.5 w-1.5 rounded-full bg-brand-bright animate-pulse" /> LIVE · {openRoles.length}</span>
+                </div>
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {openRoles.map((r) => (
+                    <div key={r.id} className="rounded-xl border border-line/60 bg-panel2/40 p-3.5 hover:border-brand/40 transition">
+                      <div className="text-sm font-semibold text-ink-hi truncate">{r.title}</div>
+                      <div className="text-[11px] text-ink-mid truncate">{r.city}</div>
+                      <div className="mt-2 flex items-center justify-between text-[10px] text-ink-lo"><span>{r.positions} position{r.positions === 1 ? "" : "s"}</span><span className="text-brand-bright">Open</span></div>
+                    </div>
+                  ))}
+                </div>
+              </motion.section>
+            </div>
+          )}
+
           {/* market insights: demand + skills + salary + activity */}
-          <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
+          <div id="pro-insights" className="grid grid-cols-1 xl:grid-cols-3 gap-5 scroll-mt-24">
             <motion.section variants={fade} className="card p-5">
               <h3 className="font-display text-[15px] font-bold text-ink-hi">{t("pro.demand.title")}</h3>
               <p className="text-[11px] text-ink-lo mt-0.5">{t("pro.demand.subtitle")}</p>
