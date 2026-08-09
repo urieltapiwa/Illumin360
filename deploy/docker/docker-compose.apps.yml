@@ -70,6 +70,27 @@ services:
     # the gateway's active health checks and Kubernetes probes.
     networks: [illumin360]
 
+  professionals-api:
+    build:
+      context: ../..
+      dockerfile: src/Services/Professionals/Illumin360.Professionals.Api/Dockerfile
+    container_name: illumin360-professionals-api
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__professionals: "Host=postgres;Port=5432;Database=illumin360_professionals;Username=${POSTGRES_USER:-illumin};Password=${POSTGRES_PASSWORD:-illumin_dev_pw}"
+      ConnectionStrings__rabbitmq: "amqp://${RABBITMQ_USER:-illumin}:${RABBITMQ_PASSWORD:-illumin}@rabbitmq:5672"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://alloy:4317"
+    expose: ["8080"]
+    ports: ["5204:8080"]
+    depends_on:
+      postgres: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+    # No container HEALTHCHECK: the chiseled runtime has no shell for a CMD-SHELL probe (it reported a false
+    # "unhealthy"). Liveness/readiness are exposed over HTTP at /health/live and /health/ready and consumed by
+    # the gateway's active health checks and Kubernetes probes.
+    networks: [illumin360]
+
   notifications-worker:
     build:
       context: ../..
@@ -99,7 +120,7 @@ services:
       ASPNETCORE_ENVIRONMENT: Production
       OTEL_EXPORTER_OTLP_ENDPOINT: "http://alloy:4317"
     ports: ["8088:8080"]
-    depends_on: [candidates-api, recruitment-api, students-api]
+    depends_on: [candidates-api, recruitment-api, students-api, professionals-api]
     networks: [illumin360]
 
   # Business portal SPA — static build served by nginx, fronted by the BFF (never exposed directly).

@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <RootNamespace>Illumin360.Professionals.Api</RootNamespace>
+    <UserSecretsId>illumin360-professionals</UserSecretsId>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <PackageReference Include="AspNetCore.HealthChecks.UI.Client" />
+    <ProjectReference Include="..\Illumin360.Professionals.Application\Illumin360.Professionals.Application.csproj" />
+    <ProjectReference Include="..\Illumin360.Professionals.Infrastructure\Illumin360.Professionals.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\..\BuildingBlocks\Observability\Illumin360.Observability.csproj" />
+    <ProjectReference Include="..\..\..\BuildingBlocks\Web\Illumin360.Web.csproj" />
+  </ItemGroup>
+</Project>

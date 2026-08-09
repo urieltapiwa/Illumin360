@@ -5,6 +5,16 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: [S
 
 ## [Unreleased]
 ### Added
+- **Professionals service (fourth vertical slice):** `Illumin360.Professionals.{Domain,Contracts,Application,Infrastructure,Api}`
+  exposing `GET /v1/professionals/me`, `GET /v1/professionals/{id}`, and `POST /v1/professionals`. Same
+  self-owned, migration-managed shape as Students (`professionals`, `professional_matches`,
+  `professional_pipeline`, `professional_skill_demand`, `professional_skills`, `professional_activity` +
+  outbox), with a startup seeder (Panduleni Amukwa demo persona) and `ProfessionalRegistered` outbox event.
+  Gateway route `/api/professionals/**`; `professionals-api` service (host port 5204) + DB-per-service entry.
+- **All four portals now live:** `Professional.tsx` reads `/api/professionals/me` (snapshot fallback + LIVE
+  chip). `Admin.tsx` overlays live platform signals from the Candidates service (talent count → totalUsers,
+  talent-by-city chart) with a LIVE chip; finance/ops tiles (MRR/ARR, subscriptions, tickets, verifications)
+  remain snapshot-driven pending billing/support/employers services with data.
 - **Students service (third vertical slice):** `Illumin360.Students.{Domain,Contracts,Application,Infrastructure,Api}`
   exposing `GET /v1/students/me`, `GET /v1/students/{id}`, and `POST /v1/students`. Unlike Candidates/Recruitment
   (which map onto externally-seeded tables), the Students context **owns and migration-manages** all of its tables

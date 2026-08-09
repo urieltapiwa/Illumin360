@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Illumin360.Professionals.Contracts</RootNamespace>
+  </PropertyGroup>
+  <!-- Cross-service integration-event contracts. Pure message records, no dependencies, so any
+       service (publisher or consumer) can reference them without taking on Professionals internals. -->
+</Project>

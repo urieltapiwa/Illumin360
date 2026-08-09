@@ -81,15 +81,31 @@ function mrrOption(m: AdminData["monthly"]): echarts.EChartsOption {
 export default function Admin({ session }: { session: Session }) {
   const { t } = useTranslation();
   const [d, setD] = useState<AdminData | null>(null);
+  const [talentTotal, setTalentTotal] = useState<number | null>(null);
+  const [liveByCity, setLiveByCity] = useState<{ city: string; value: number }[] | null>(null);
   useEffect(() => { fetch(import.meta.env.BASE_URL + "admin.json").then((r) => r.json()).then(setD); }, []);
+  // Live platform signals from the microservices (via BFF → gateway). Talent count and talent-by-city are
+  // real (Candidates service); finance/ops tiles (MRR, subscriptions, tickets, verifications) have no backing
+  // service yet, so they remain snapshot-driven. The LIVE chip reflects the live talent aggregate.
+  useEffect(() => {
+    fetch("/api/candidates/stats")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((s: { total?: number; byCity?: { label: string; count: number }[] } | null) => {
+        if (!s) return;
+        if (typeof s.total === "number") setTalentTotal(s.total);
+        if (Array.isArray(s.byCity)) setLiveByCity(s.byCity.map((x) => ({ city: x.label, value: x.count })));
+      })
+      .catch(() => { /* stack offline — keep snapshot */ });
+  }, []);
   if (!d) return <div className="grid place-items-center h-screen text-ink-mid font-mono text-sm animate-pulse">{t("admin.loading")}</div>;
 
   const k = d.kpis;
+  const live = talentTotal !== null;
   const degraded = d.services.filter((s) => s.status !== "operational").length;
   const nav: [React.ReactNode, string, boolean][] = [[ICN.grid, t("admin.nav.overview"), true], [ICN.users, t("admin.nav.users"), false], [ICN.cash, t("admin.nav.revenue"), false], [ICN.shield, t("admin.nav.moderation"), false], [ICN.server, t("admin.nav.system"), false], [ICN.gear, t("admin.nav.settings"), false]];
   const initials = (session.name || "Admin").split(" ").map((x) => x[0]).slice(0, 2).join("");
   const kpiCards = [
-    [t("admin.kpi.totalUsers"), nf(k.totalUsers), t("admin.kpi.dauDelta", { delta: k.dauDelta }), C.brand],
+    [t("admin.kpi.totalUsers"), nf(live ? talentTotal! + k.companies : k.totalUsers), t("admin.kpi.dauDelta", { delta: k.dauDelta }), C.brand],
     [t("admin.kpi.companies"), nf(k.companies), t("admin.kpi.companiesSub"), C.blue],
     [t("admin.kpi.mrr"), curC(k.mrr), t("admin.kpi.arrSub", { arr: curC(k.arr) }), C.gold],
     [t("admin.kpi.activeSubs"), nf(k.activeSubs), t("admin.kpi.activeSubsSub"), C.brandDeep],
@@ -121,7 +137,7 @@ export default function Admin({ session }: { session: Session }) {
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <h1 className="font-display text-xl font-extrabold text-ink-hi tracking-tight">{t("admin.topbar.title")}</h1>
-              <span className="chip !text-[10px] !text-gold !border-gold/30">{t("admin.topbar.demo")}</span>
+              {live ? <span className="chip !text-[10px] !text-brand-bright !border-brand/30"><span className="h-1.5 w-1.5 rounded-full bg-brand-bright animate-pulse" /> LIVE</span> : <span className="chip !text-[10px] !text-gold !border-gold/30">{t("admin.topbar.demo")}</span>}
             </div>
             <p className="text-[11px] text-ink-lo mt-0.5">{t("admin.topbar.subtitle")}</p>
           </div>
@@ -227,7 +243,7 @@ export default function Admin({ session }: { session: Session }) {
             <motion.section variants={fade} className="card p-5 xl:col-span-2">
               <h3 className="font-display text-[15px] font-bold text-ink-hi">{t("admin.panel.byRegion")}</h3>
               <p className="text-[11px] text-ink-lo mt-0.5">{t("admin.panel.byRegionSub")}</p>
-              <div className="mt-1"><Chart option={cityOption(d.byCity)} height={230} /></div>
+              <div className="mt-1"><Chart option={cityOption(liveByCity ?? d.byCity)} height={230} /></div>
             </motion.section>
             <motion.section variants={fade} className="card p-5">
               <h3 className="font-display text-[15px] font-bold text-ink-hi">{t("admin.panel.support")}</h3>

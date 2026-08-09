@@ -80,7 +80,25 @@ const trendColor: Record<string, string> = { hot: "text-gold", rising: "text-bra
 
 export default function Professional(_props: { session: Session }) {
   const [d, setD] = useState<Prof | null>(null);
-  useEffect(() => { fetch(import.meta.env.BASE_URL + "professional.json").then((r) => r.json()).then(setD); }, []);
+  const [live, setLive] = useState(false);
+  // Live-first: read the professional's dashboard from the Professionals service (via the BFF/gateway);
+  // fall back to the bundled snapshot if the API is unavailable. Mirrors the other portals' live-data pattern.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const r = await fetch("/api/professionals/me");
+        if (r.ok) {
+          const j = await r.json();
+          if (!cancelled) { setD(j); setLive(true); }
+          return;
+        }
+      } catch { /* fall through to the bundled snapshot */ }
+      const snap = await fetch(import.meta.env.BASE_URL + "professional.json").then((x) => x.json());
+      if (!cancelled) { setD(snap); setLive(false); }
+    })();
+    return () => { cancelled = true; };
+  }, []);
   const { t } = useTranslation();
   if (!d) return <div className="grid place-items-center h-screen text-ink-mid font-mono text-sm animate-pulse">{t("pro.loading")}</div>;
 
@@ -114,7 +132,7 @@ export default function Professional(_props: { session: Session }) {
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <h1 className="font-display text-xl font-extrabold text-ink-hi tracking-tight">{t("pro.header.title")}</h1>
-              <span className="chip !text-[10px] !text-gold !border-gold/30">{t("pro.header.demo")}</span>
+              {live ? <span className="chip !text-[10px] !text-brand-bright !border-brand/30"><span className="h-1.5 w-1.5 rounded-full bg-brand-bright animate-pulse" /> LIVE</span> : <span className="chip !text-[10px] !text-gold !border-gold/30">{t("pro.header.demo")}</span>}
             </div>
             <p className="text-[11px] text-ink-lo mt-0.5">{t("pro.header.subtitle")}</p>
           </div>
