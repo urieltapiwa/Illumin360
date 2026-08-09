@@ -13,7 +13,16 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: [S
   DB `illumin360_admin`. The Admin portal's verification panel now shows a LIVE chip and real Approve/Reject
   buttons wired to the API (rows clear on decision), with snapshot fallback for non-admins. Verified
   end-to-end via API (no-token 401 / non-admin 403 / admin 200 / re-decide 409; pending count persisted
-  6→5) both direct and through the gateway. Phases 2–3 (tickets, user management) to follow in this service.
+  6→5) both direct and through the gateway.
+- **Admin service phases 2 & 3 (support tickets + user management):** extends `Illumin360.Admin` with two
+  more RBAC-enforced, persisted, outbox-eventing capabilities. Tickets: `GET /v1/admin/tickets`
+  (`admin` role) and `POST .../{id}/assign|resolve` (`admin.write`), guarded (re-triage → 409),
+  `TicketTriaged` event. Accounts (user management): `GET /v1/admin/accounts` (`admin` role) and
+  `POST .../{id}/suspend|activate` (`admin.write`), guarded (no-op → 409), `AccountStatusChanged` event.
+  Second migration `AddTicketsAndAccounts`; seeder extended (idempotent per-collection) with demo
+  tickets + accounts. Verified via API (direct + gateway): 401/403/200 across both, real
+  resolve/suspend/activate with state persisted, and 409 conflict guards. The tickets/accounts Admin
+  portal panels are a follow-up (backend + RBAC are complete and verified).
 - **Service-layer RBAC (`Illumin360.Security` building block):** `AddIllumin360Auth` wires JWT bearer
   validation of Keycloak access tokens (relayed by the BFF) and registers `admin` / `admin.write`
   authorization policies. Handles the two Keycloak gotchas: accepts both the back-channel

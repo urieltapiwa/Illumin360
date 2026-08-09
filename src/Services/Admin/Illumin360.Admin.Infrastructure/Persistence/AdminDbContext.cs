@@ -15,6 +15,12 @@ public sealed class AdminDbContext(DbContextOptions<AdminDbContext> options) : D
     /// <summary>The verification-queue set.</summary>
     public DbSet<Verification> Verifications => Set<Verification>();
 
+    /// <summary>The support-ticket set.</summary>
+    public DbSet<Ticket> Tickets => Set<Ticket>();
+
+    /// <summary>The account-directory set.</summary>
+    public DbSet<AdminAccount> Accounts => Set<AdminAccount>();
+
     /// <inheritdoc />
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -47,6 +53,43 @@ public sealed class AdminDbContext(DbContextOptions<AdminDbContext> options) : D
             b.Property(v => v.CreatedAt).HasColumnName("created_at");
             b.HasIndex(v => v.Status);
             b.Ignore(v => v.DomainEvents);
+        });
+
+        var ticketStatusConverter = new ValueConverter<TicketStatus, string>(
+            v => v == TicketStatus.Assigned ? "assigned" : v == TicketStatus.Resolved ? "resolved" : "open",
+            v => v == "assigned" ? TicketStatus.Assigned : v == "resolved" ? TicketStatus.Resolved : TicketStatus.Open);
+
+        modelBuilder.Entity<Ticket>(b =>
+        {
+            b.ToTable("tickets");
+            b.HasKey(t => t.Id);
+            b.Property(t => t.Id).HasColumnName("id").HasConversion(id => id.Value, value => new TicketId(value));
+            b.Property(t => t.Subject).HasColumnName("subject").HasMaxLength(200);
+            b.Property(t => t.Priority).HasColumnName("priority").HasMaxLength(8);
+            b.Property(t => t.Requester).HasColumnName("requester").HasMaxLength(160);
+            b.Property(t => t.Status).HasColumnName("status").HasConversion(ticketStatusConverter).HasMaxLength(20);
+            b.Property(t => t.Assignee).HasColumnName("assignee").HasMaxLength(120);
+            b.Property(t => t.CreatedAt).HasColumnName("created_at");
+            b.HasIndex(t => t.Status);
+            b.Ignore(t => t.DomainEvents);
+        });
+
+        var accountStatusConverter = new ValueConverter<AccountStatus, string>(
+            v => v == AccountStatus.Suspended ? "suspended" : "active",
+            v => v == "suspended" ? AccountStatus.Suspended : AccountStatus.Active);
+
+        modelBuilder.Entity<AdminAccount>(b =>
+        {
+            b.ToTable("accounts");
+            b.HasKey(a => a.Id);
+            b.Property(a => a.Id).HasColumnName("id").HasConversion(id => id.Value, value => new AccountId(value));
+            b.Property(a => a.Name).HasColumnName("name").HasMaxLength(160);
+            b.Property(a => a.Kind).HasColumnName("kind").HasMaxLength(20);
+            b.Property(a => a.Email).HasColumnName("email").HasMaxLength(160);
+            b.Property(a => a.Status).HasColumnName("status").HasConversion(accountStatusConverter).HasMaxLength(20);
+            b.Property(a => a.CreatedAt).HasColumnName("created_at");
+            b.HasIndex(a => a.Status);
+            b.Ignore(a => a.DomainEvents);
         });
     }
 }

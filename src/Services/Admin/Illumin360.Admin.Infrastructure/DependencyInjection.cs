@@ -26,6 +26,8 @@ public static class DependencyInjection
 
         services.AddDbContext<AdminDbContext>(o => o.UseNpgsql(connectionString));
         services.AddScoped<IVerificationRepository, VerificationRepository>();
+        services.AddScoped<ITicketRepository, TicketRepository>();
+        services.AddScoped<IAccountRepository, AccountRepository>();
 
         var rabbitConnectionString = configuration.GetConnectionString("rabbitmq")
             ?? "amqp://illumin:illumin@localhost:5672";

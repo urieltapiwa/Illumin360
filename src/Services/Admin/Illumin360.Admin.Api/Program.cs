@@ -1,6 +1,8 @@
 using System.Security.Claims;
 using Illumin360.Admin.Application;
 using Illumin360.Admin.Application.Abstractions;
+using Illumin360.Admin.Application.Accounts;
+using Illumin360.Admin.Application.Tickets;
 using Illumin360.Admin.Application.Verifications;
 using Illumin360.Admin.Infrastructure;
 using Illumin360.Admin.Infrastructure.Persistence;
@@ -98,6 +100,114 @@ v1.MapPost("/verifications/{id:guid}/reject", async (
     .WithName("RejectVerification")
     .WithSummary("Reject a pending verification. Requires an admin (write) role.")
     .Produces<VerificationDto>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden)
+    .ProducesProblem(StatusCodes.Status404NotFound)
+    .ProducesProblem(StatusCodes.Status409Conflict);
+
+// --- Support tickets (Phase 2) ---
+v1.MapGet("/tickets", async (
+        string? status,
+        IQueryHandler<GetTicketsQuery, IReadOnlyList<TicketDto>> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new GetTicketsQuery(status ?? "open"), ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminPolicy)
+    .WithName("ListTickets")
+    .WithSummary("List support tickets (default: open). Requires an admin role.")
+    .Produces<IReadOnlyList<TicketDto>>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden);
+
+v1.MapPost("/tickets/{id:guid}/assign", async (
+        Guid id,
+        ClaimsPrincipal user,
+        ICommandHandler<TriageTicketCommand, TicketDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(
+            new TriageTicketCommand(id, TicketAction.Assign, user.Identity?.Name ?? "admin"), ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminWritePolicy)
+    .WithName("AssignTicket")
+    .WithSummary("Assign a ticket to the acting admin. Requires an admin (write) role.")
+    .Produces<TicketDto>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden)
+    .ProducesProblem(StatusCodes.Status404NotFound)
+    .ProducesProblem(StatusCodes.Status409Conflict);
+
+v1.MapPost("/tickets/{id:guid}/resolve", async (
+        Guid id,
+        ClaimsPrincipal user,
+        ICommandHandler<TriageTicketCommand, TicketDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(
+            new TriageTicketCommand(id, TicketAction.Resolve, user.Identity?.Name ?? "admin"), ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminWritePolicy)
+    .WithName("ResolveTicket")
+    .WithSummary("Resolve a ticket. Requires an admin (write) role.")
+    .Produces<TicketDto>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden)
+    .ProducesProblem(StatusCodes.Status404NotFound)
+    .ProducesProblem(StatusCodes.Status409Conflict);
+
+// --- User accounts (Phase 3) ---
+v1.MapGet("/accounts", async (
+        string? status,
+        IQueryHandler<GetAccountsQuery, IReadOnlyList<AccountDto>> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new GetAccountsQuery(status), ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminPolicy)
+    .WithName("ListAccounts")
+    .WithSummary("List platform accounts (optionally by status). Requires an admin role.")
+    .Produces<IReadOnlyList<AccountDto>>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden);
+
+v1.MapPost("/accounts/{id:guid}/suspend", async (
+        Guid id,
+        ClaimsPrincipal user,
+        ICommandHandler<SetAccountStatusCommand, AccountDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(
+            new SetAccountStatusCommand(id, AccountAction.Suspend, user.Identity?.Name ?? "admin"), ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminWritePolicy)
+    .WithName("SuspendAccount")
+    .WithSummary("Suspend a platform account. Requires an admin (write) role.")
+    .Produces<AccountDto>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden)
+    .ProducesProblem(StatusCodes.Status404NotFound)
+    .ProducesProblem(StatusCodes.Status409Conflict);
+
+v1.MapPost("/accounts/{id:guid}/activate", async (
+        Guid id,
+        ClaimsPrincipal user,
+        ICommandHandler<SetAccountStatusCommand, AccountDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(
+            new SetAccountStatusCommand(id, AccountAction.Activate, user.Identity?.Name ?? "admin"), ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminWritePolicy)
+    .WithName("ActivateAccount")
+    .WithSummary("Reactivate a suspended account. Requires an admin (write) role.")
+    .Produces<AccountDto>(StatusCodes.Status200OK)
     .ProducesProblem(StatusCodes.Status401Unauthorized)
     .ProducesProblem(StatusCodes.Status403Forbidden)
     .ProducesProblem(StatusCodes.Status404NotFound)
