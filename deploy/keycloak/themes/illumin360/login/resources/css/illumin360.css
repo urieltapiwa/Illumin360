@@ -1,0 +1,265 @@
+/* Illumin360 — branded dark login, matching the application portals.
+   Targets both the legacy Keycloak markup and PatternFly 5 (keycloak.v2). */
+
+:root {
+  --i-base: #07120e;
+  --i-panel: #0b1a14;
+  --i-panel2: #0f241b;
+  --i-line: #1c3a2e;
+  --i-brand: #1fb283;
+  --i-brand-bright: #2fd39a;
+  --i-gold: #e8b14c;
+  --i-ink-hi: #e8f2ec;
+  --i-ink-mid: #9dbbad;
+  --i-ink-lo: #65867a;
+}
+
+html,
+body,
+body.login-pf,
+.login-pf body,
+.pf-v5-c-background-image {
+  background: var(--i-base) !important;
+  background-image:
+    radial-gradient(900px 600px at 12% -8%, rgba(31, 178, 131, 0.18), transparent 60%),
+    radial-gradient(800px 520px at 100% 0%, rgba(232, 177, 76, 0.1), transparent 55%),
+    radial-gradient(760px 760px at 88% 112%, rgba(15, 110, 86, 0.22), transparent 60%) !important;
+  color: var(--i-ink-hi) !important;
+  font-family: "Hanken Grotesk", "Segoe UI", system-ui, sans-serif !important;
+}
+
+/* card container — both legacy and PF5 */
+.card-pf,
+#kc-content,
+.pf-v5-c-login__main,
+.pf-v5-c-card,
+.login-pf-page .card-pf {
+  background: rgba(11, 26, 20, 0.82) !important;
+  border: 1px solid var(--i-line) !important;
+  border-radius: 18px !important;
+  box-shadow: 0 30px 60px -30px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(47, 211, 154, 0.08) !important;
+  backdrop-filter: blur(8px);
+}
+
+.pf-v5-c-login,
+.login-pf-page {
+  background: transparent !important;
+}
+
+/* header / brand — the realm displayName ("Illumin360") styled as the wordmark */
+#kc-header,
+.pf-v5-c-login__header,
+.kc-logo-text,
+#kc-page-title {
+  color: var(--i-ink-hi) !important;
+  font-family: "Bricolage Grotesque", "Segoe UI", sans-serif !important;
+  font-weight: 800 !important;
+}
+#kc-header-wrapper {
+  color: var(--i-brand-bright) !important;
+  font-family: "Bricolage Grotesque", "Segoe UI", sans-serif !important;
+  font-weight: 800 !important;
+  font-size: 26px !important;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  background: none !important;
+  padding: 20px 0 10px !important;
+}
+
+/* labels & text */
+label,
+.pf-v5-c-form__label,
+.control-label,
+#kc-form-options,
+.pf-v5-c-login__main-footer-band,
+.instruction,
+p {
+  color: var(--i-ink-mid) !important;
+}
+
+/* inputs */
+input[type="text"],
+input[type="password"],
+input[type="email"],
+.pf-c-form-control,
+.pf-v5-c-form-control,
+.form-control {
+  background: var(--i-panel2) !important;
+  border: 1px solid var(--i-line) !important;
+  border-radius: 11px !important;
+  color: var(--i-ink-hi) !important;
+  padding: 11px 13px !important;
+  box-shadow: none !important;
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  background-clip: padding-box !important;
+}
+input:focus,
+.pf-v5-c-form-control:focus {
+  border-color: var(--i-brand) !important;
+  outline: none !important;
+  box-shadow: 0 0 0 3px rgba(31, 178, 131, 0.22) !important;
+}
+::placeholder {
+  color: var(--i-ink-lo) !important;
+}
+
+/* hide browser-native password reveal / autofill key icons (cosmetic artifacts) */
+input::-webkit-credentials-auto-fill-button,
+input::-webkit-strong-password-auto-fill-button,
+input::-webkit-contacts-auto-fill-button,
+input::-webkit-caps-lock-indicator {
+  visibility: hidden !important;
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  margin: 0 !important;
+  opacity: 0 !important;
+  pointer-events: none;
+}
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear {
+  display: none !important;
+}
+
+/* primary button */
+input[type="submit"],
+button[type="submit"],
+.btn-primary,
+#kc-login,
+.pf-v5-c-button.pf-m-primary {
+  background: var(--i-brand) !important;
+  border: none !important;
+  border-radius: 11px !important;
+  color: var(--i-base) !important;
+  font-weight: 700 !important;
+  padding: 11px 16px !important;
+  box-shadow: 0 0 0 1px rgba(47, 211, 154, 0.2), 0 0 30px -8px rgba(47, 211, 154, 0.5) !important;
+  transition: background 0.15s ease;
+}
+input[type="submit"]:hover,
+.btn-primary:hover,
+#kc-login:hover,
+.pf-v5-c-button.pf-m-primary:hover {
+  background: var(--i-brand-bright) !important;
+}
+
+/* links */
+a,
+.pf-v5-c-login__main-footer-links a,
+#kc-registration a,
+#kc-info a {
+  color: var(--i-brand-bright) !important;
+}
+a:hover {
+  color: var(--i-gold) !important;
+}
+
+/* alerts */
+.alert-error,
+.pf-v5-c-alert.pf-m-danger {
+  background: rgba(255, 126, 146, 0.12) !important;
+  border: 1px solid rgba(255, 126, 146, 0.4) !important;
+  color: #ff9fb0 !important;
+  border-radius: 11px !important;
+}
+.alert-success,
+.pf-v5-c-alert.pf-m-success {
+  background: rgba(31, 178, 131, 0.12) !important;
+  border: 1px solid rgba(31, 178, 131, 0.4) !important;
+  color: var(--i-brand-bright) !important;
+  border-radius: 11px !important;
+}
+
+/* checkbox accent */
+input[type="checkbox"] {
+  accent-color: var(--i-brand) !important;
+}
+
+/* ---- layout: a centered, branded card (self-sufficient, independent of base theme) ---- */
+.login-pf-page {
+  display: flex !important;
+  flex-direction: column;
+  align-items: center;
+  padding: 0 16px 48px !important;
+  width: auto !important;
+}
+#kc-header {
+  width: 100%;
+  max-width: 430px;
+  text-align: center;
+  margin: 54px auto 0 !important;
+  border: none !important;
+}
+.card-pf {
+  width: 100%;
+  max-width: 430px;
+  margin: 18px auto 0 !important;
+  padding: 34px 32px 30px !important;
+  float: none !important;
+}
+#kc-content,
+#kc-content-wrapper,
+#kc-form,
+#kc-form-wrapper {
+  width: 100% !important;
+}
+#kc-page-title {
+  text-align: center;
+  font-size: 21px !important;
+  font-weight: 800 !important;
+  margin: 0 0 20px !important;
+  color: var(--i-ink-hi) !important;
+}
+.form-group {
+  margin-bottom: 16px !important;
+}
+label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 12px !important;
+}
+#kc-form-buttons {
+  margin-top: 22px !important;
+}
+#kc-form-options {
+  margin-top: 4px;
+}
+
+/* password field: input + visibility toggle as one neat control */
+.pf-c-input-group,
+.kc-input-group {
+  display: flex !important;
+  width: 100%;
+}
+.pf-c-input-group > input,
+.pf-c-input-group .pf-c-form-control {
+  flex: 1 1 auto;
+  border-top-right-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
+  border-right: none !important;
+}
+.pf-c-input-group > button,
+.pf-c-input-group > .pf-c-button.pf-m-control {
+  flex: 0 0 auto;
+  background: var(--i-panel2) !important;
+  border: 1px solid var(--i-line) !important;
+  border-radius: 0 11px 11px 0 !important;
+  color: var(--i-ink-mid) !important;
+  padding: 0 13px !important;
+  box-shadow: none !important;
+}
+.pf-c-input-group > .pf-c-button.pf-m-control:hover {
+  color: var(--i-brand-bright) !important;
+  background: var(--i-panel2) !important;
+}
+
+/* spacing + footer text */
+#kc-info,
+#kc-info-wrapper,
+.login-pf-signup,
+#kc-registration {
+  margin-top: 14px;
+  text-align: center;
+  font-size: 12px;
+}

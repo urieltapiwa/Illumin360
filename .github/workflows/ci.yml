@@ -1,0 +1,124 @@
+# Illumin360 CI — charter Part 15 pipeline stages.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  security-events: write   # for CodeQL + Trivy SARIF upload
+
+env:
+  DOTNET_VERSION: '10.0.x'
+  DOTNET_NOLOGO: 'true'
+  CI: 'true'
+
+jobs:
+  build-test:
+    name: Build, test & coverage
+    runs-on: ubuntu-latest
+    services:
+      docker:
+        image: docker:dind   # Testcontainers needs a Docker daemon
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+      - name: Restore
+        run: dotnet restore src/Illumin360.sln
+      - name: Build (warnings as errors)
+        run: dotnet build src/Illumin360.sln -c Release --no-restore -warnaserror
+      - name: Format check
+        run: dotnet format src/Illumin360.sln --verify-no-changes --severity warn
+      - name: Test (+ coverage)
+        run: dotnet test src/Illumin360.sln -c Release --no-build --collect:"XPlat Code Coverage" --results-directory ./TestResults
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: ./TestResults
+
+  security:
+    name: Security scans
+    runs-on: ubuntu-latest
+    needs: build-test
+    steps:
+      - uses: actions/checkout@v4
+      - name: Secret scan (gitleaks)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: SCA + IaC scan (Trivy)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          severity: HIGH,CRITICAL
+          exit-code: '1'
+          format: sarif
+          output: trivy.sarif
+      - name: Upload Trivy SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy.sarif
+
+  codeql:
+    name: CodeQL (SAST)
+    runs-on: ubuntu-latest
+    needs: build-test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: csharp
+      - run: dotnet build src/Illumin360.sln -c Release
+      - uses: github/codeql-action/analyze@v3
+
+  sbom:
+    name: SBOM (CycloneDX)
+    runs-on: ubuntu-latest
+    needs: build-test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+      - name: Generate CycloneDX SBOM
+        run: |
+          dotnet tool install --global CycloneDX
+          dotnet restore src/Illumin360.sln
+          dotnet CycloneDX src/Illumin360.sln -o sbom
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: sbom
+
+  container:
+    name: Build & scan images
+    runs-on: ubuntu-latest
+    needs: [security, codeql]
+    strategy:
+      matrix:
+        include:
+          - image: candidates-api
+            dockerfile: src/Services/Candidates/Illumin360.Candidates.Api/Dockerfile
+          - image: gateway
+            dockerfile: src/Gateway/Dockerfile
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image
+        run: docker build -f ${{ matrix.dockerfile }} -t illumin360/${{ matrix.image }}:${{ github.sha }} .
+      - name: Scan image (Trivy)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: illumin360/${{ matrix.image }}:${{ github.sha }}
+          severity: HIGH,CRITICAL
+          exit-code: '1'

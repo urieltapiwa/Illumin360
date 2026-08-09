@@ -1,0 +1,163 @@
+{
+  "realm": "illumin360",
+  "enabled": true,
+  "displayName": "Illumin360",
+  "loginTheme": "illumin360",
+  "sslRequired": "external",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "accessTokenLifespan": 900,
+  "ssoSessionIdleTimeout": 1800,
+  "ssoSessionMaxLifespan": 2592000,
+  "bruteForceProtected": true,
+  "permanentLockout": false,
+  "failureFactor": 10,
+  "passwordPolicy": "length(12) and upperCase(1) and lowerCase(1) and digits(1) and notUsername()",
+  "roles": {
+    "realm": [
+      { "name": "client.user",       "description": "Professional (job_seeker) self-service" },
+      { "name": "client.student",    "description": "Student CSR profile" },
+      { "name": "client.employer",   "description": "Business / employer" },
+      { "name": "support.l1",        "description": "Support tier 1" },
+      { "name": "support.l2",        "description": "Support tier 2" },
+      { "name": "support.lead",      "description": "Support lead" },
+      { "name": "admin.read",        "description": "Admin read-only" },
+      { "name": "admin.write",       "description": "Admin read/write" },
+      { "name": "admin.superuser",   "description": "Full administrative authority" }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "gateway",
+      "name": "YARP Edge Gateway",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "secret": "CHANGE_ME_gateway_dev_secret",
+      "serviceAccountsEnabled": true,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false
+    },
+    {
+      "clientId": "professional-web",
+      "name": "Professional Portal BFF",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "secret": "CHANGE_ME_professional_dev_secret",
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "redirectUris": ["http://localhost:5101/*"],
+      "webOrigins": ["http://localhost:5101"]
+    },
+    {
+      "clientId": "student-web",
+      "name": "Student Portal BFF",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "secret": "CHANGE_ME_student_dev_secret",
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "redirectUris": ["http://localhost:5102/*"],
+      "webOrigins": ["http://localhost:5102"]
+    },
+    {
+      "clientId": "business-web",
+      "name": "Business Portal BFF",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "secret": "CHANGE_ME_business_dev_secret",
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "redirectUris": ["http://localhost:5103/*"],
+      "webOrigins": ["http://localhost:5103"]
+    },
+    {
+      "clientId": "support-web",
+      "name": "Support Portal BFF",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "secret": "CHANGE_ME_support_dev_secret",
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "redirectUris": ["http://localhost:5104/*"],
+      "webOrigins": ["http://localhost:5104"]
+    },
+    {
+      "clientId": "admin-web",
+      "name": "Admin Portal BFF",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "secret": "CHANGE_ME_admin_dev_secret",
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "redirectUris": ["http://localhost:5105/*"],
+      "webOrigins": ["http://localhost:5105"]
+    },
+    {
+      "clientId": "illumin360-business",
+      "name": "Business Portal SPA (Talent Insights)",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "rootUrl": "http://localhost:5173",
+      "redirectUris": ["http://localhost:5173/*"],
+      "webOrigins": ["+"],
+      "attributes": { "pkce.code.challenge.method": "S256" }
+    },
+    {
+      "clientId": "illumin360-business-bff",
+      "name": "Business Portal BFF (server-side OIDC + token relay)",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "secret": "bff-dev-secret-local-only",
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "rootUrl": "http://localhost:5180",
+      "redirectUris": ["http://localhost:5180/bff/signin-callback"],
+      "webOrigins": ["http://localhost:5180"],
+      "attributes": { "post.logout.redirect.uris": "http://localhost:5180/*" }
+    }
+  ],
+  "users": [
+    {
+      "username": "dev.professional",
+      "enabled": true,
+      "email": "professional@illumin360.local",
+      "emailVerified": true,
+      "firstName": "Dev",
+      "lastName": "Professional",
+      "credentials": [{ "type": "password", "value": "Password123!", "temporary": false }],
+      "realmRoles": ["client.user"]
+    },
+    {
+      "username": "dev.admin",
+      "enabled": true,
+      "email": "admin@illumin360.local",
+      "emailVerified": true,
+      "firstName": "Dev",
+      "lastName": "Admin",
+      "credentials": [{ "type": "password", "value": "Password123!", "temporary": false }],
+      "realmRoles": ["admin.superuser"]
+    },
+    {
+      "username": "demo",
+      "enabled": true,
+      "email": "demo@etosha.na",
+      "emailVerified": true,
+      "firstName": "Tjaronda",
+      "lastName": "Hoebes",
+      "credentials": [{ "type": "password", "value": "Illumin360Demo!", "temporary": false }]
+    }
+  ]
+}

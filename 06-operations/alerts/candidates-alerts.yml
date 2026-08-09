@@ -1,0 +1,21 @@
+# Illumin360 — Candidates alert rules (charter Part 10.5). Symptom + multi-burn-rate.
+groups:
+  - name: candidates-slo
+    rules:
+      - alert: CandidatesHighErrorRateFast
+        expr: |
+          (sum(rate(http_server_request_duration_seconds_count{service_name="candidates",http_response_status_code=~"5.."}[5m]))
+           / sum(rate(http_server_request_duration_seconds_count{service_name="candidates"}[5m]))) > 0.02
+        for: 5m
+        labels: { severity: page, service: candidates }
+        annotations:
+          summary: "Candidates 5xx error budget burning fast"
+          runbook: "06-operations/runbooks/candidates.md"
+      - alert: CandidatesLatencyP95High
+        expr: |
+          histogram_quantile(0.95, sum(rate(http_server_request_duration_seconds_bucket{service_name="candidates"}[5m])) by (le)) > 0.3
+        for: 10m
+        labels: { severity: ticket, service: candidates }
+        annotations:
+          summary: "Candidates p95 latency above 300ms SLO"
+          runbook: "06-operations/runbooks/candidates.md"

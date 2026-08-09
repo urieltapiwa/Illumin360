@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Illumin360.SharedKernel</RootNamespace>
+  </PropertyGroup>
+</Project>

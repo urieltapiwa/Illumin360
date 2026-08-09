@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <RootNamespace>Illumin360.Notifications.Worker</RootNamespace>
+    <UserSecretsId>illumin360-notifications</UserSecretsId>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="MassTransit" />
+    <PackageReference Include="MassTransit.RabbitMQ" />
+    <ProjectReference Include="..\..\Candidates\Illumin360.Candidates.Contracts\Illumin360.Candidates.Contracts.csproj" />
+    <ProjectReference Include="..\..\..\BuildingBlocks\Observability\Illumin360.Observability.csproj" />
+  </ItemGroup>
+</Project>

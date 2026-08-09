@@ -1,0 +1,32 @@
+# Illumin360 Prometheus — scrape short-term metrics; remote-write long-term to Mimir.
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: illumin360-local
+    namespace: illumin360
+
+remote_write:
+  - url: http://mimir:9009/api/v1/push
+
+scrape_configs:
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  - job_name: alloy
+    static_configs:
+      - targets: ["alloy:12345"]
+
+  - job_name: keycloak
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["keycloak:9000"]
+
+  # .NET services expose /metrics; add targets as services come online.
+  - job_name: illumin360-services
+    metrics_path: /metrics
+    static_configs:
+      - targets: []
+        labels:
+          tier: backend

@@ -1,0 +1,119 @@
+# Illumin360 — application services overlay (build + run the .NET apps in the local environment).
+# Run the full topology:
+#   docker compose -f deploy/docker/docker-compose.yml \
+#                  -f deploy/observability/docker-compose.observability.yml \
+#                  -f deploy/docker/docker-compose.apps.yml up -d --build
+# Build context is the repo root so Dockerfiles can copy Directory.*.props + src/.
+name: illumin360
+
+services:
+  candidates-api:
+    build:
+      context: ../..
+      dockerfile: src/Services/Candidates/Illumin360.Candidates.Api/Dockerfile
+    container_name: illumin360-candidates-api
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__candidates: "Host=postgres;Port=5432;Database=illumin360_candidates;Username=${POSTGRES_USER:-illumin};Password=${POSTGRES_PASSWORD:-illumin_dev_pw}"
+      ConnectionStrings__rabbitmq: "amqp://${RABBITMQ_USER:-illumin}:${RABBITMQ_PASSWORD:-illumin}@rabbitmq:5672"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://alloy:4317"
+    expose: ["8080"]
+    ports: ["5201:8080"]
+    depends_on:
+      postgres: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+    # No container HEALTHCHECK: the chiseled runtime has no shell for a CMD-SHELL probe (it reported a false
+    # "unhealthy"). Liveness/readiness are exposed over HTTP at /health/live and /health/ready and consumed by
+    # the gateway's active health checks and Kubernetes probes.
+    networks: [illumin360]
+
+  recruitment-api:
+    build:
+      context: ../..
+      dockerfile: src/Services/Recruitment/Illumin360.Recruitment.Api/Dockerfile
+    container_name: illumin360-recruitment-api
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__recruitment: "Host=postgres;Port=5432;Database=illumin360_recruitment;Username=${POSTGRES_USER:-illumin};Password=${POSTGRES_PASSWORD:-illumin_dev_pw}"
+      ConnectionStrings__rabbitmq: "amqp://${RABBITMQ_USER:-illumin}:${RABBITMQ_PASSWORD:-illumin}@rabbitmq:5672"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://alloy:4317"
+    expose: ["8080"]
+    ports: ["5202:8080"]
+    depends_on:
+      postgres: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+    # No container HEALTHCHECK: the chiseled runtime has no shell for a CMD-SHELL probe (it reported a false
+    # "unhealthy"). Liveness/readiness are exposed over HTTP at /health/live and /health/ready and consumed by
+    # the gateway's active health checks and Kubernetes probes.
+    networks: [illumin360]
+
+  notifications-worker:
+    build:
+      context: ../..
+      dockerfile: src/Services/Notifications/Illumin360.Notifications.Worker/Dockerfile
+    container_name: illumin360-notifications-worker
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__rabbitmq: "amqp://${RABBITMQ_USER:-illumin}:${RABBITMQ_PASSWORD:-illumin}@rabbitmq:5672"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://alloy:4317"
+    expose: ["8080"]
+    ports: ["5301:8080"]
+    depends_on:
+      rabbitmq: { condition: service_healthy }
+    # No container HEALTHCHECK: the chiseled runtime has no shell for a CMD-SHELL probe (it reported a false
+    # "unhealthy"). Liveness/readiness are exposed over HTTP at /health/live and /health/ready and consumed by
+    # the gateway's active health checks and Kubernetes probes.
+    networks: [illumin360]
+
+  gateway:
+    build:
+      context: ../..
+      dockerfile: src/Gateway/Dockerfile
+    container_name: illumin360-gateway
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://alloy:4317"
+    ports: ["8088:8080"]
+    depends_on: [candidates-api, recruitment-api]
+    networks: [illumin360]
+
+  # Business portal SPA — static build served by nginx, fronted by the BFF (never exposed directly).
+  web:
+    build:
+      context: ../../web/business-portal
+      dockerfile: Dockerfile
+      args:
+        VITE_USE_BFF: "1"
+    container_name: illumin360-business-web
+    restart: unless-stopped
+    expose: ["80"]
+    networks: [illumin360]
+
+  # Business BFF — server-side OIDC + cookie session + token relay; serves the SPA same-origin.
+  # OIDC runs against the shared dev Keycloak on the host: host.docker.internal lets the BFF reach it, and on
+  # Docker Desktop the host browser resolves the same name, keeping issuer/redirect consistent. Full Docker OIDC
+  # also needs the KC client's redirect URIs to include this BFF's external URL (http://localhost:5180/...).
+  bff-business:
+    build:
+      context: ../..
+      dockerfile: src/Bff/Illumin360.Bff.Business/Dockerfile
+    container_name: illumin360-bff-business
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      Oidc__Authority: "http://host.docker.internal:8080/realms/illumin360"
+      Oidc__ClientId: "illumin360-business-bff"
+      Oidc__ClientSecret: "${BFF_CLIENT_SECRET:-bff-dev-secret-local-only}"
+      Oidc__RequireHttps: "false"
+      ReverseProxy__Clusters__gateway__Destinations__d1__Address: "http://gateway:8080/"
+      ReverseProxy__Clusters__spa__Destinations__d1__Address: "http://web:80/"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://alloy:4317"
+    ports: ["5180:8080"]
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on: [web, gateway]
+    networks: [illumin360]

@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Illumin360.Candidates.Application</RootNamespace>
+  </PropertyGroup>
+  <!-- Application depends ONLY on Domain (charter Part 5). -->
+  <ItemGroup>
+    <PackageReference Include="FluentValidation.AspNetCore" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <ProjectReference Include="..\Illumin360.Candidates.Contracts\Illumin360.Candidates.Contracts.csproj" />
+    <ProjectReference Include="..\Illumin360.Candidates.Domain\Illumin360.Candidates.Domain.csproj" />
+  </ItemGroup>
+</Project>

@@ -246,4 +246,36 @@ def populate(template_path: Path, content: dict, output_path: Path):
         populated_count += 1
     
     doc.save(str(output_path))
+
+    # 5. Restore any _rels parts that python-docx silently dropped
+    # (header/footer/footnotes/comments/fontTable .rels — Word rejects the file otherwise)
+    _restore_missing_rels(template_path, output_path)
+
     return {"populated": populated_count, "missing": missing}
+
+
+def _restore_missing_rels(template_path: Path, output_path: Path):
+    """Copy any zip parts that exist in the template but were dropped on save.
+
+    python-docx strips relationship files for parts it doesn't recognize
+    (header1.xml.rels, footer1.xml.rels, comments.xml.rels, etc.). Word
+    considers the resulting file corrupt and refuses to open it. This restores
+    those parts from the template.
+    """
+    import zipfile, os
+    with zipfile.ZipFile(template_path) as zt:
+        tem_parts = set(zt.namelist())
+    with zipfile.ZipFile(output_path) as zp:
+        pop_parts = set(zp.namelist())
+    missing = [p for p in tem_parts if p not in pop_parts]
+    if not missing:
+        return
+    tmp_path = str(output_path) + ".tmp"
+    with zipfile.ZipFile(template_path) as zt, \
+         zipfile.ZipFile(output_path) as zp, \
+         zipfile.ZipFile(tmp_path, "w", zipfile.ZIP_DEFLATED) as zo:
+        for name in zp.namelist():
+            zo.writestr(name, zp.read(name))
+        for name in missing:
+            zo.writestr(name, zt.read(name))
+    os.replace(tmp_path, str(output_path))

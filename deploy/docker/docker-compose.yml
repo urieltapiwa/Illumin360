@@ -1,0 +1,121 @@
+# Illumin360 — local infrastructure (charter Parts 2, 8, 13).
+# Bring up:   docker compose -f deploy/docker/docker-compose.yml up -d
+# Add obs:    docker compose -f deploy/docker/docker-compose.yml -f deploy/observability/docker-compose.observability.yml up -d
+name: illumin360
+
+networks:
+  illumin360:
+    name: illumin360
+    # Created out-of-band by ../../../dev-platform/setup.ps1 so the shared
+    # Keycloak/Grafana stack can attach to it regardless of start order.
+    external: true
+
+volumes:
+  postgres-data:
+  redis-data:
+  rabbitmq-data:
+  minio-data:
+  clamav-data:
+
+services:
+  # ---------------------------------------------------------------- PostgreSQL 17
+  postgres:
+    image: postgres:17-alpine
+    container_name: illumin360-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-illumin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-illumin_dev_pw}
+      POSTGRES_DB: ${POSTGRES_DB:-illumin360}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-illumin} -d ${POSTGRES_DB:-illumin360}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks: [illumin360]
+
+  # ---------------------------------------------------------------- Redis
+  redis:
+    image: redis:7-alpine
+    container_name: illumin360-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks: [illumin360]
+
+  # ---------------------------------------------------------------- Keycloak (IAM)
+  # MOVED to the shared dev platform: ../../../dev-platform/docker-compose.platform.yml
+  # It joins this 'illumin360' network and is reachable here as the same
+  # hostname "keycloak:8080" (realm: illumin360). No app config changed.
+
+  # ---------------------------------------------------------------- RabbitMQ
+  rabbitmq:
+    image: rabbitmq:4-management-alpine
+    container_name: illumin360-rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-illumin}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-illumin}
+    ports:
+      - "${RABBITMQ_PORT:-5672}:5672"
+      - "${RABBITMQ_MGMT_PORT:-15672}:15672"
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+    networks: [illumin360]
+
+  # ---------------------------------------------------------------- MinIO (S3-compatible object storage)
+  minio:
+    image: minio/minio:latest
+    container_name: illumin360-minio
+    restart: unless-stopped
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-illumin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-illumin12345}
+    ports:
+      - "${MINIO_API_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    networks: [illumin360]
+
+  # ---------------------------------------------------------------- ClamAV (upload scanning) — optional
+  clamav:
+    image: clamav/clamav:latest
+    container_name: illumin360-clamav
+    restart: unless-stopped
+    profiles: ["security"]   # start with: docker compose --profile security up -d
+    ports:
+      - "3310:3310"
+    volumes:
+      - clamav-data:/var/lib/clamav
+    healthcheck:
+      test: ["CMD-SHELL", "echo PING | nc -w 5 localhost 3310 | grep -q PONG"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+    networks: [illumin360]

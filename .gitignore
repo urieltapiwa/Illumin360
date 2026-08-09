@@ -1,0 +1,45 @@
+## .NET
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+*.user
+*.suo
+.vs/
+artifacts/
+TestResults/
+coverage*.xml
+*.trx
+
+## Rider / VS Code
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+## Env & secrets (NEVER commit real secrets)
+.env
+*.local.env
+deploy/docker/.env
+!deploy/docker/.env.example
+secrets/
+*.pfx
+*.key
+
+## Docker / data volumes
+deploy/**/data/
+**/.docker-data/
+
+## OS
+.DS_Store
+Thumbs.db
+
+## Node (token pipeline for design system, if used)
+node_modules/
+
+# marketing deck build artifacts (pptxgenjs)
+_deck/
+_docx_work/
+_seed/
+
+# React proof-slice app (node_modules)
+web/

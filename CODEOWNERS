@@ -1,0 +1,25 @@
+# Illumin360 code ownership — required reviewers per area.
+# Replace @illumin/* placeholders with real GitHub teams/usernames.
+
+# Default owner for everything in the repo
+*                               @illumin/platform-leads
+
+# Engineering charter & governance
+/CHARTER.md                     @illumin/architecture
+/00-governance/                 @illumin/architecture
+/03-architecture/               @illumin/architecture
+
+# Source code areas
+/src/BuildingBlocks/            @illumin/platform-leads
+/src/Gateway/                   @illumin/platform-leads
+/src/Services/Identity/         @illumin/security
+/src/Services/Billing/          @illumin/payments @illumin/security
+/src/Services/Recruitment/      @illumin/ai-matching
+/src/Services/AiAssistant/      @illumin/ai-matching
+
+# Deploy & observability
+/deploy/                        @illumin/platform-ops
+/06-operations/                 @illumin/platform-ops
+
+# Compliance-sensitive areas
+/09_Compliance_Legal/           @illumin/compliance

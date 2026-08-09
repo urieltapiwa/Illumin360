@@ -1,0 +1,29 @@
+{
+  "uid": "illumin360-candidates",
+  "title": "Illumin360 — Candidates (RED)",
+  "tags": ["illumin360", "candidates", "RED"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "panels": [
+    {
+      "type": "timeseries", "title": "Request rate (req/s)", "id": 1,
+      "gridPos": {"h": 8, "w": 8, "x": 0, "y": 0},
+      "datasource": {"type": "prometheus", "uid": "Mimir"},
+      "targets": [{"expr": "sum(rate(http_server_request_duration_seconds_count{service_name=\"candidates\"}[1m]))", "legendFormat": "rate"}]
+    },
+    {
+      "type": "timeseries", "title": "Error rate (5xx %)", "id": 2,
+      "gridPos": {"h": 8, "w": 8, "x": 8, "y": 0},
+      "datasource": {"type": "prometheus", "uid": "Mimir"},
+      "targets": [{"expr": "sum(rate(http_server_request_duration_seconds_count{service_name=\"candidates\",http_response_status_code=~\"5..\"}[1m])) / sum(rate(http_server_request_duration_seconds_count{service_name=\"candidates\"}[1m]))", "legendFormat": "5xx ratio"}]
+    },
+    {
+      "type": "timeseries", "title": "Duration p95 (s)", "id": 3,
+      "gridPos": {"h": 8, "w": 8, "x": 16, "y": 0},
+      "datasource": {"type": "prometheus", "uid": "Mimir"},
+      "targets": [{"expr": "histogram_quantile(0.95, sum(rate(http_server_request_duration_seconds_bucket{service_name=\"candidates\"}[5m])) by (le))", "legendFormat": "p95"}]
+    }
+  ]
+}

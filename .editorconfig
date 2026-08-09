@@ -1,0 +1,94 @@
+# Illumin360 — formatting + analyzer rules. See CHARTER.md Part 18.
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+
+[*.{json,yml,yaml,csproj,props,targets,xml}]
+indent_size = 2
+
+[*.md]
+trim_trailing_whitespace = false
+
+# EF Core-generated migrations: treat as generated so the strict analyzers/StyleCop skip them.
+[**/Migrations/*.cs]
+generated_code = true
+
+[*.cs]
+# Language conventions
+csharp_style_namespace_declarations = file_scoped:error
+dotnet_style_require_accessibility_modifiers = for_non_interface_members:warning
+csharp_prefer_braces = true:warning
+dotnet_style_qualification_for_field = false:suggestion
+dotnet_sort_system_directives_first = true
+csharp_using_directive_placement = outside_namespace:warning
+
+# Naming: async methods end with Async
+dotnet_naming_rule.async_methods_end_with_async.severity = warning
+dotnet_naming_rule.async_methods_end_with_async.symbols = async_methods
+dotnet_naming_rule.async_methods_end_with_async.style = end_with_async
+dotnet_naming_symbols.async_methods.applicable_kinds = method
+dotnet_naming_symbols.async_methods.required_modifiers = async
+dotnet_naming_style.end_with_async.required_suffix = Async
+dotnet_naming_style.end_with_async.capitalization = pascal_case
+
+# Treat key analyzer findings as errors (security/quality)
+dotnet_diagnostic.CA2007.severity = none      # ConfigureAwait not required in ASP.NET Core
+dotnet_diagnostic.CA1062.severity = warning    # Validate public args
+dotnet_diagnostic.CA2100.severity = error      # SQL injection
+dotnet_diagnostic.CA5350.severity = error      # Weak crypto
+dotnet_diagnostic.CA5351.severity = error      # Broken crypto
+
+# --- StyleCop: reconcile with the documented house style (CHARTER Part 18). ---
+# StyleCop's SAxxxx analyzers are independent of the dotnet_style_* / IDE settings above, so the
+# house conventions must be restated here or StyleCop's legacy defaults fail the strict build.
+# These four DIRECTLY contradict documented conventions and are disabled:
+dotnet_diagnostic.SA1200.severity = none   # usings live OUTSIDE the (file-scoped) namespace
+dotnet_diagnostic.SA1101.severity = none   # no 'this.' prefix — we use _underscore fields
+dotnet_diagnostic.SA1309.severity = none   # _underscore-prefixed private fields are the convention
+dotnet_diagnostic.SA1633.severity = none   # no file-header banner convention
+
+# Concise XML-doc house style: a <summary> on every public member is still enforced by the compiler
+# (CS1591 / GenerateDocumentationFile). StyleCop's per-parameter / returns / phrasing pedantry is
+# downgraded to suggestion so it guides without breaking the warnings-as-errors build.
+dotnet_diagnostic.SA1611.severity = suggestion   # <param> docs
+dotnet_diagnostic.SA1612.severity = suggestion   # <param> order/name match
+dotnet_diagnostic.SA1615.severity = suggestion   # <returns> docs
+dotnet_diagnostic.SA1618.severity = suggestion   # <typeparam> docs
+dotnet_diagnostic.SA1623.severity = suggestion   # property summary must start with "Gets"/"Gets or sets"
+dotnet_diagnostic.SA1642.severity = suggestion   # constructor summary standard text
+
+# Member-ordering / layout: relaxed to suggestion (the codebase groups members by intent, not by
+# StyleCop's strict static/instance + access ordering).
+dotnet_diagnostic.SA1201.severity = suggestion   # element ordering
+dotnet_diagnostic.SA1202.severity = suggestion   # access-level ordering
+dotnet_diagnostic.SA1204.severity = suggestion   # static before instance
+dotnet_diagnostic.SA1210.severity = suggestion   # using ordering (system-first handled above)
+dotnet_diagnostic.SA1514.severity = suggestion   # blank line before documentation header
+
+# Concise layout conventions used throughout the codebase:
+dotnet_diagnostic.SA1402.severity = none         # co-locate small related types (e.g. aggregate + its domain event)
+dotnet_diagnostic.SA1502.severity = suggestion   # allow single-line members (e.g. `: base(id) { }` EF ctor)
+dotnet_diagnostic.SA1128.severity = suggestion   # allow constructor initializer on the declaration line
+dotnet_diagnostic.SA1649.severity = none         # vertical-slice files are feature-named (command/query + handler together), not first-type-named
+
+# CA rules that are idiomatic-exception / cross-language and not relevant here:
+dotnet_diagnostic.CA1000.severity = none         # static factory methods on Result<T> are idiomatic
+dotnet_diagnostic.CA1716.severity = none         # 'Error' clashes with a VB keyword; we are C#-only
+dotnet_diagnostic.CA1305.severity = suggestion   # no globalization-sensitive formatting in this codebase yet
+
+# ---- Test projects: relax rules that conflict with standard xUnit test conventions ----
+[**/tests/**/*.cs]
+dotnet_diagnostic.CA1707.severity = none         # Method_Scenario_Expectation test naming uses underscores
+dotnet_diagnostic.SA0001.severity = none         # XML doc analysis off (tests have no GenerateDocumentationFile)
+dotnet_diagnostic.SA1122.severity = none         # "" literals are fine in test arrange data
+dotnet_diagnostic.SA1515.severity = none         # arrange/act/assert comments
+dotnet_diagnostic.SA1600.severity = none         # tests need no XML docs
+dotnet_diagnostic.SA1633.severity = none         # no file headers
+dotnet_diagnostic.CA1861.severity = none         # inline constant arrays in [InlineData]/[MemberData]
+dotnet_diagnostic.CA2007.severity = none         # ConfigureAwait not needed in tests

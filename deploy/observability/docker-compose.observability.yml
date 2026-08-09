@@ -1,0 +1,108 @@
+# Illumin360 — Grafana LGTM observability stack (charter Part 10).
+# Flow:  .NET services / Keycloak --OTLP--> Alloy --> Prometheus->Mimir (metrics), Loki (logs), Tempo (traces) --> Grafana
+# Run alongside infra:
+#   docker compose -f deploy/docker/docker-compose.yml -f deploy/observability/docker-compose.observability.yml up -d
+name: illumin360
+
+networks:
+  illumin360:
+    name: illumin360
+    external: true
+  # Shared platform network — the shared Grafana reaches this stack's backends
+  # over it via the per-app aliases below.
+  dev-platform:
+    external: true
+
+volumes:
+  prometheus-data:
+  loki-data:
+  tempo-data:
+  mimir-data:
+
+services:
+  # ---------------------------------------------------------------- Grafana Alloy (OTel collector)
+  alloy:
+    image: grafana/alloy:latest
+    container_name: illumin360-alloy
+    restart: unless-stopped
+    command:
+      - run
+      - --server.http.listen-addr=0.0.0.0:12345
+      - --storage.path=/var/lib/alloy/data
+      - /etc/alloy/config.alloy
+    ports:
+      - "${OTLP_GRPC_PORT:-4317}:4317"   # OTLP gRPC
+      - "${OTLP_HTTP_PORT:-4318}:4318"   # OTLP HTTP
+      - "12345:12345"                    # Alloy UI
+    volumes:
+      - ./alloy/config.alloy:/etc/alloy/config.alloy:ro
+    networks: [illumin360]
+
+  # ---------------------------------------------------------------- Prometheus (scrape + short-term)
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: illumin360-prometheus
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --web.enable-remote-write-receiver
+      - --enable-feature=exemplar-storage
+    # No host port: the shared Grafana queries it in-network as illumin360-prometheus.
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    networks:
+      illumin360:
+      dev-platform:
+        aliases: [illumin360-prometheus]
+
+  # ---------------------------------------------------------------- Mimir (long-term metrics)
+  mimir:
+    image: grafana/mimir:latest
+    container_name: illumin360-mimir
+    restart: unless-stopped
+    command: ["-config.file=/etc/mimir/mimir.yaml"]
+    # No host port: reached in-network as illumin360-mimir.
+    volumes:
+      - ./mimir/mimir.yaml:/etc/mimir/mimir.yaml:ro
+      - mimir-data:/data
+    networks:
+      illumin360:
+      dev-platform:
+        aliases: [illumin360-mimir]
+
+  # ---------------------------------------------------------------- Loki (logs)
+  loki:
+    image: grafana/loki:latest
+    container_name: illumin360-loki
+    restart: unless-stopped
+    command: ["-config.file=/etc/loki/loki.yaml"]
+    # No host port: reached in-network as illumin360-loki.
+    volumes:
+      - ./loki/loki.yaml:/etc/loki/loki.yaml:ro
+      - loki-data:/loki
+    networks:
+      illumin360:
+      dev-platform:
+        aliases: [illumin360-loki]
+
+  # ---------------------------------------------------------------- Tempo (traces)
+  tempo:
+    image: grafana/tempo:latest
+    container_name: illumin360-tempo
+    restart: unless-stopped
+    command: ["-config.file=/etc/tempo/tempo.yaml"]
+    # No host port: reached in-network as illumin360-tempo.
+    volumes:
+      - ./tempo/tempo.yaml:/etc/tempo/tempo.yaml:ro
+      - tempo-data:/var/tempo
+    networks:
+      illumin360:
+      dev-platform:
+        aliases: [illumin360-tempo]
+
+  # ---------------------------------------------------------------- Grafana
+  # MOVED to the shared dev platform: ../../../dev-platform/docker-compose.platform.yml
+  # The shared Grafana exposes an "Illumin360" org whose datasources point at the
+  # backends above (illumin360-mimir / -prometheus / -loki / -tempo). The
+  # Illumin360 dashboards in 06-operations/dashboards are mounted there.
