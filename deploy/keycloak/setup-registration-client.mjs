@@ -7,6 +7,11 @@
 // Non-destructive: only adds this one client + its service-account role mappings; touches nothing else in
 // the shared realm. Safe to re-run. Requires Node 18+ (global fetch).
 //
+// NOTE: for browser-openable verification/reset email links, the shared dev Keycloak must run with
+//   KC_HOSTNAME=http://localhost:8080  and  KC_HOSTNAME_BACKCHANNEL_DYNAMIC=true
+// (set in dev-platform/docker-compose.platform.yml). That makes front-channel URLs (issuer + email
+// links) use localhost:8080 while back-channel calls (token/JWKS) stay dynamic on keycloak:8080.
+//
 // Usage (Keycloak reachable at KC, master admin creds):
 //   KC=http://localhost:8080 KC_ADMIN=admin KC_ADMIN_PW=admin \
 //   REG_SECRET=registration-dev-secret-local-only \

@@ -13,8 +13,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: [S
   the domain profile call fails, the just-created Keycloak identity is deleted, so registration is
   all-or-nothing (no orphaned identity). Verified: register → unverified + gated + real "Verify email"
   caught by Mailpit with a valid link; and with the domain service down, register → 502 with the Keycloak
-  identity rolled back (0 orphans). Known dev caveat: the emailed link uses the back-channel host
-  (`keycloak:8080`); real browsers need the realm `frontendUrl`/`KC_HOSTNAME` set to the front-channel host.
+  identity rolled back (0 orphans). Emailed verification links are browser-openable: the shared dev
+  Keycloak now runs with `KC_HOSTNAME=http://localhost:8080` + `KC_HOSTNAME_BACKCHANNEL_DYNAMIC=true`
+  (in `dev-platform/docker-compose.platform.yml`), so front-channel URLs (issuer + email links) use
+  `localhost:8080` while in-cluster back-channel calls (token/JWKS) stay on `keycloak:8080`. Login stays
+  gated until the user clicks the emailed verify link (Keycloak's confirmation page).
 - **Self-registration for all three user types (student, professional, employer):** a public, rate-limited
   sign-up flow. The Business BFF hosts anonymous `POST /register/{student|professional|employer}` endpoints
   (`KeycloakRegistrar`) that provision the Keycloak identity via the Admin API using a confidential
