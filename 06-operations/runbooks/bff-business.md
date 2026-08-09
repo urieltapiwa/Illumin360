@@ -28,12 +28,23 @@ The browser never sees a token (charter Part 2/7). **Port:** 8080 (container) / 
 ### Keycloak hostname alignment (Docker)
 In Docker the BFF resolves Keycloak by its in-network name (`keycloak:8080`) while the user's browser can only
 reach the published port (`localhost:8080`). `Oidc:Authority` stays on the **back-channel** host so discovery,
-token exchange, user-info and issuer validation are internal — the token `iss` matches `Authority`, no mismatch.
-`Oidc:FrontChannelAuthority` rewrites **only the authorize + end-session redirects** (the URLs the browser
-follows) to the browser-reachable host, in `OnRedirectToIdentityProvider` / `…ForSignOut`. This deliberately
-leaves the **shared** dev Keycloak on per-request issuer derivation (no fixed `KC_HOSTNAME`); pinning one would
-rewrite the issuer for the sibling apps (SalesApp / StoreCatalogue) and break their back-channel validation.
-Local dev leaves `FrontChannelAuthority` unset (both channels are already `localhost`) → no rewrite.
+the code→token exchange and JWKS retrieval are internal; `Oidc:FrontChannelAuthority` rewrites **only the
+authorize + end-session redirects** (the URLs the browser follows) to the browser-reachable host, in
+`OnRedirectToIdentityProvider` / `…ForSignOut`. Two consequences of the split, both handled in `Program.cs`:
+
+- **Token issuer.** Keycloak (per-request issuer derivation) stamps the token `iss` with the host the user
+  *authenticated* against — the **front-channel** host — not the back-channel discovery host. So both are added
+  to `TokenValidationParameters.ValidIssuers`; the signing keys still come from the back-channel JWKS.
+- **Claims source.** `GetClaimsFromUserInfoEndpoint = false` — the back-channel user-info endpoint rejects a
+  token minted for the front-channel host, so identity claims are read from the (already-validated) id_token.
+
+This deliberately leaves the **shared** dev Keycloak on per-request issuer derivation (no fixed `KC_HOSTNAME`);
+pinning one would rewrite the issuer for the sibling apps (SalesApp / StoreCatalogue) and break their
+back-channel validation. Local dev leaves `FrontChannelAuthority` unset (both channels are already `localhost`)
+→ no rewrite. Verified end-to-end: demo user → KC login at `localhost:8080` → callback → cookie session →
+token-relayed `/api` returning live data. (The gateway and resource APIs do not themselves validate the bearer
+token today, so the relayed token's `iss` does not affect `/api`; the BFF's `authenticated` route policy is
+what gates it.)
 
 PAR (Pushed Authorization Requests) is currently `Disable`d (code+PKCE is the baseline). Re-enable
 `PushedAuthorizationBehavior = UseIfAvailable` once the confidential client + KC PAR are confirmed.
