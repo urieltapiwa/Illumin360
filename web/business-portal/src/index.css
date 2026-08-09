@@ -69,6 +69,39 @@
   --c-ink-lo: 150 124 100;
 }
 
+/* ---- Light mode ----
+   Overrides the neutral surfaces + ink only; brand accents come from the active preset above.
+   data-mode="light" forces it; data-mode="system" follows the OS via the media query below.
+   Specificity of :root[data-mode="…"] (0,2,0) beats the accent-preset [data-theme] rules (0,1,0),
+   so light neutrals win regardless of the chosen accent. */
+:root[data-mode="light"] {
+  color-scheme: light;
+  --c-base: 246 249 247;
+  --c-panel: 255 255 255;
+  --c-panel2: 240 245 242;
+  --c-elevate: 231 239 234;
+  --c-line: 214 226 220;
+  --c-grid: 224 234 229;
+  --c-ink-hi: 12 30 23;
+  --c-ink-mid: 74 99 88;
+  --c-ink-lo: 120 143 133;
+}
+
+@media (prefers-color-scheme: light) {
+  :root[data-mode="system"] {
+    color-scheme: light;
+    --c-base: 246 249 247;
+    --c-panel: 255 255 255;
+    --c-panel2: 240 245 242;
+    --c-elevate: 231 239 234;
+    --c-line: 214 226 220;
+    --c-grid: 224 234 229;
+    --c-ink-hi: 12 30 23;
+    --c-ink-mid: 74 99 88;
+    --c-ink-lo: 120 143 133;
+  }
+}
+
 html,
 body,
 #root {

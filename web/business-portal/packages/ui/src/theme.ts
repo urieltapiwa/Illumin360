@@ -29,3 +29,28 @@ export function useTheme() {
   const set = (id: string) => { applyTheme(id); setTheme(id); };
   return [theme, set] as const;
 }
+
+/* ---- Light/dark mode (separate from the accent preset) ----
+   "system" follows the OS via CSS prefers-color-scheme; "light"/"dark" force it. */
+export type Mode = "system" | "light" | "dark";
+const MODE_KEY = "illumin-mode";
+
+export function applyMode(mode: Mode) {
+  document.documentElement.dataset.mode = mode;
+  try { localStorage.setItem(MODE_KEY, mode); } catch { /* ignore */ }
+}
+
+export function initMode(): Mode {
+  let saved: Mode = "system";
+  try { saved = (localStorage.getItem(MODE_KEY) as Mode) || "system"; } catch { /* ignore */ }
+  applyMode(saved);
+  return saved;
+}
+
+export function useMode() {
+  const [mode, setMode] = useState<Mode>(() => {
+    try { return (localStorage.getItem(MODE_KEY) as Mode) || "system"; } catch { return "system"; }
+  });
+  const set = (m: Mode) => { applyMode(m); setMode(m); };
+  return [mode, set] as const;
+}
