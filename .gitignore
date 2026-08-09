@@ -41,5 +41,6 @@ _deck/
 _docx_work/
 _seed/
 
-# React proof-slice app (node_modules)
-web/
+# React frontend build output (source under web/ IS tracked; node_modules is ignored above)
+web/**/dist/
+web/**/.vite/

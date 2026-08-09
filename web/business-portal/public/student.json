@@ -1,0 +1,188 @@
+{
+ "persona": {
+  "name": "Selma Nghidinwa",
+  "field": "Computer Science",
+  "school": "Namibia Univ. of Science & Technology",
+  "year": "Final year",
+  "graduating": "2026",
+  "readiness": 78,
+  "program": "Illumin Futures (CSR)",
+  "city": "Windhoek"
+ },
+ "kpis": {
+  "profileViews": 76,
+  "viewsDelta": 31,
+  "internshipMatches": 9,
+  "applications": 4,
+  "skillsDone": 7,
+  "mentorSessions": 3,
+  "readiness": 78
+ },
+ "viewsTrend": [
+  4,
+  6,
+  5,
+  8,
+  11,
+  14,
+  12,
+  18,
+  22,
+  27,
+  33,
+  41,
+  58,
+  76
+ ],
+ "matches": [
+  {
+   "role": "IT Intern",
+   "company": "Unity Group",
+   "city": "Walvis Bay",
+   "match": 95,
+   "stipendLo": 9000,
+   "stipendHi": 16000,
+   "type": "Internship",
+   "posted": "1d"
+  },
+  {
+   "role": "Graduate Software Developer",
+   "company": "Baobab (Pty) Ltd",
+   "city": "Rundu",
+   "match": 94,
+   "stipendLo": 9000,
+   "stipendHi": 16000,
+   "type": "Internship",
+   "posted": "3d"
+  },
+  {
+   "role": "Junior Data Analyst",
+   "company": "Kalahari CC",
+   "city": "Windhoek",
+   "match": 94,
+   "stipendLo": 8000,
+   "stipendHi": 12000,
+   "type": "Internship",
+   "posted": "1d"
+  },
+  {
+   "role": "Trainee Network Engineer",
+   "company": "Atlantic Trading",
+   "city": "Windhoek",
+   "match": 92,
+   "stipendLo": 8000,
+   "stipendHi": 16000,
+   "type": "Internship",
+   "posted": "3d"
+  },
+  {
+   "role": "Software Developer Intern",
+   "company": "Zambezi Consulting",
+   "city": "Windhoek",
+   "match": 86,
+   "stipendLo": 6000,
+   "stipendHi": 16000,
+   "type": "Internship",
+   "posted": "1w"
+  },
+  {
+   "role": "Graduate Accountant",
+   "company": "Cornerstone Trading",
+   "city": "Windhoek",
+   "match": 80,
+   "stipendLo": 9000,
+   "stipendHi": 12000,
+   "type": "Internship",
+   "posted": "1d"
+  }
+ ],
+ "learning": [
+  {
+   "name": "CV optimisation",
+   "progress": 100,
+   "tag": "done"
+  },
+  {
+   "name": "Interview readiness",
+   "progress": 80,
+   "tag": "in progress"
+  },
+  {
+   "name": "SQL fundamentals",
+   "progress": 60,
+   "tag": "in progress"
+  },
+  {
+   "name": "Git & collaboration",
+   "progress": 40,
+   "tag": "in progress"
+  },
+  {
+   "name": "Professional communication",
+   "progress": 100,
+   "tag": "done"
+  }
+ ],
+ "pipeline": [
+  {
+   "stage": "Applied",
+   "value": 9
+  },
+  {
+   "stage": "Reviewed",
+   "value": 6
+  },
+  {
+   "stage": "Interview",
+   "value": 2
+  },
+  {
+   "stage": "Offer",
+   "value": 1
+  }
+ ],
+ "skills": [
+  {
+   "name": "Python",
+   "level": 80
+  },
+  {
+   "name": "Java",
+   "level": 72
+  },
+  {
+   "name": "Web (HTML/CSS/JS)",
+   "level": 68
+  },
+  {
+   "name": "Databases",
+   "level": 60
+  },
+  {
+   "name": "Problem solving",
+   "level": 85
+  }
+ ],
+ "activity": [
+  {
+   "text": "Mentor session booked with a Senior Engineer",
+   "when": "1h ago"
+  },
+  {
+   "text": "New internship match \u00b7 IT Intern at Erongo Tech (92%)",
+   "when": "4h ago"
+  },
+  {
+   "text": "You completed 'CV optimisation' module",
+   "when": "1d ago"
+  },
+  {
+   "text": "Namib Mills viewed your student profile",
+   "when": "2d ago"
+  },
+  {
+   "text": "Readiness score increased to 78%",
+   "when": "3d ago"
+  }
+ ]
+}

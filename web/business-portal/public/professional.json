@@ -1,0 +1,216 @@
+{
+ "persona": {
+  "name": "Panduleni Amukwa",
+  "role": "Software Developer",
+  "city": "Windhoek",
+  "nationality": "Namibian",
+  "availability": "Open to opportunities",
+  "headline": "Full-stack developer \u00b7 6 yrs \u00b7 .NET / React / cloud",
+  "profileStrength": 86,
+  "percentile": 12,
+  "memberSince": "2019"
+ },
+ "kpis": {
+  "profileViews": 164,
+  "viewsDelta": 24,
+  "matchOpportunities": 18,
+  "matchDelta": 12,
+  "activeApplications": 5,
+  "responseRate": 64,
+  "avgMatch": 91,
+  "interviews": 3
+ },
+ "viewsTrend": [
+  20,
+  23,
+  24,
+  27,
+  29,
+  30,
+  34,
+  38,
+  43,
+  48,
+  54,
+  62,
+  69,
+  82
+ ],
+ "matches": [
+  {
+   "role": "Senior Software Developer",
+   "company": "Cornerstone Consulting",
+   "city": "Windhoek",
+   "industry": "Telecommunications",
+   "match": 95,
+   "salaryLo": 28000,
+   "salaryHi": 42000,
+   "posted": "1w",
+   "type": "Full-time"
+  },
+  {
+   "role": "Data Engineer",
+   "company": "Kunene Consulting",
+   "city": "Walvis Bay",
+   "industry": "NGO & Development",
+   "match": 94,
+   "salaryLo": 52000,
+   "salaryHi": 80000,
+   "posted": "2d",
+   "type": "Full-time"
+  },
+  {
+   "role": "DevOps Engineer",
+   "company": "Meridian (Pty) Ltd",
+   "city": "Oshakati",
+   "industry": "Mining",
+   "match": 86,
+   "salaryLo": 28000,
+   "salaryHi": 42000,
+   "posted": "1w",
+   "type": "Contract"
+  },
+  {
+   "role": "Full-Stack Developer",
+   "company": "Fish River CC",
+   "city": "Oshakati",
+   "industry": "Agriculture",
+   "match": 85,
+   "salaryLo": 28000,
+   "salaryHi": 42000,
+   "posted": "4d",
+   "type": "Full-time"
+  },
+  {
+   "role": "Solutions Architect",
+   "company": "Kalahari Namibia",
+   "city": "Oshakati",
+   "industry": "Healthcare",
+   "match": 85,
+   "salaryLo": 32000,
+   "salaryHi": 48000,
+   "posted": "2w",
+   "type": "Full-time"
+  },
+  {
+   "role": "Backend Engineer",
+   "company": "Kunene Group",
+   "city": "Okahandja",
+   "industry": "Agriculture",
+   "match": 84,
+   "salaryLo": 32000,
+   "salaryHi": 48000,
+   "posted": "2w",
+   "type": "Contract"
+  }
+ ],
+ "pipeline": [
+  {
+   "stage": "Applied",
+   "value": 12
+  },
+  {
+   "stage": "Reviewed",
+   "value": 9
+  },
+  {
+   "stage": "Shortlisted",
+   "value": 5
+  },
+  {
+   "stage": "Interview",
+   "value": 3
+  },
+  {
+   "stage": "Offer",
+   "value": 1
+  }
+ ],
+ "skillDemand": [
+  {
+   "role": "Software Developer",
+   "value": 813
+  },
+  {
+   "role": "Data Analyst",
+   "value": 738
+  },
+  {
+   "role": "Project Manager",
+   "value": 773
+  },
+  {
+   "role": "Network Engineer",
+   "value": 789
+  },
+  {
+   "role": "Accountant",
+   "value": 810
+  },
+  {
+   "role": "Civil Engineer",
+   "value": 738
+  }
+ ],
+ "skills": [
+  {
+   "name": "C# / .NET",
+   "level": 92,
+   "trend": "hot"
+  },
+  {
+   "name": "React / TypeScript",
+   "level": 88,
+   "trend": "hot"
+  },
+  {
+   "name": "Azure / Cloud",
+   "level": 78,
+   "trend": "rising"
+  },
+  {
+   "name": "SQL / Postgres",
+   "level": 84,
+   "trend": "steady"
+  },
+  {
+   "name": "Docker / K8s",
+   "level": 71,
+   "trend": "rising"
+  }
+ ],
+ "salary": {
+  "role": "Software Developer",
+  "p25": 32000,
+  "median": 46000,
+  "p75": 64000,
+  "you": 52000
+ },
+ "activity": [
+  {
+   "icon": "view",
+   "text": "Standard Bank Namibia viewed your profile",
+   "when": "2h ago"
+  },
+  {
+   "icon": "match",
+   "text": "New 94% match \u00b7 Backend Engineer at Erongo Tech",
+   "when": "5h ago"
+  },
+  {
+   "icon": "shortlist",
+   "text": "You were shortlisted by Namib Mills",
+   "when": "1d ago"
+  },
+  {
+   "icon": "interview",
+   "text": "Interview scheduled \u00b7 Solutions Architect",
+   "when": "2d ago"
+  },
+  {
+   "icon": "view",
+   "text": "12 recruiters viewed your profile this week",
+   "when": "3d ago"
+  }
+ ]
+}
