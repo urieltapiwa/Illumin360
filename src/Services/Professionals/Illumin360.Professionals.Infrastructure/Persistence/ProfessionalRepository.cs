@@ -33,6 +33,22 @@ public sealed class ProfessionalRepository(ProfessionalsDbContext db) : IProfess
     public void Add(Professional professional) => _db.Professionals.Add(professional);
 
     /// <inheritdoc />
+    public async Task<ProfessionalId?> GetDefaultProfessionalIdAsync(CancellationToken cancellationToken)
+    {
+        var p = await _db.Professionals.AsNoTracking().OrderBy(x => x.CreatedAt)
+            .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+        return p?.Id;
+    }
+
+    /// <inheritdoc />
+    public Task<Professional?> GetTrackedAsync(ProfessionalId id, CancellationToken cancellationToken) =>
+        _db.Professionals.FirstOrDefaultAsync(p => p.Id == id, cancellationToken);
+
+    /// <inheritdoc />
+    public Task<ProfessionalMatch?> GetMatchAsync(ProfessionalId professionalId, Guid matchId, CancellationToken cancellationToken) =>
+        _db.Matches.FirstOrDefaultAsync(m => m.Id == matchId && m.ProfessionalId == professionalId, cancellationToken);
+
+    /// <inheritdoc />
     public Task<int> SaveChangesAsync(CancellationToken cancellationToken) =>
         _db.SaveChangesAsync(cancellationToken);
 

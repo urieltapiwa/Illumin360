@@ -2,6 +2,22 @@ using Illumin360.SharedKernel;
 
 namespace Illumin360.Professionals.Domain;
 
+/// <summary>The professional's disposition toward a surfaced match.</summary>
+public enum MatchStatus
+{
+    /// <summary>Newly surfaced, no action taken.</summary>
+    New,
+
+    /// <summary>Saved for later.</summary>
+    Saved,
+
+    /// <summary>Dismissed / not interested.</summary>
+    Dismissed,
+
+    /// <summary>Applied to.</summary>
+    Applied,
+}
+
 /// <summary>A job match surfaced to the professional.</summary>
 public sealed class ProfessionalMatch : Entity<Guid>
 {
@@ -83,6 +99,28 @@ public sealed class ProfessionalMatch : Entity<Guid>
 
     /// <summary>Display order.</summary>
     public int Sort { get; private set; }
+
+    /// <summary>The professional's disposition toward this match.</summary>
+    public MatchStatus Status { get; private set; }
+
+    /// <summary>Marks the match as saved.</summary>
+    public void Save() => Status = MatchStatus.Saved;
+
+    /// <summary>Marks the match as dismissed.</summary>
+    public void Dismiss() => Status = MatchStatus.Dismissed;
+
+    /// <summary>Marks the match as applied to.</summary>
+    /// <returns>Success, or a conflict if it was already applied.</returns>
+    public Result<ProfessionalMatch> Apply()
+    {
+        if (Status == MatchStatus.Applied)
+        {
+            return Error.Conflict("match.already_applied", "You have already applied to this match.");
+        }
+
+        Status = MatchStatus.Applied;
+        return this;
+    }
 }
 
 /// <summary>A stage in the professional's application pipeline with the count at that stage.</summary>

@@ -35,6 +35,24 @@ public interface IProfessionalRepository
     /// <param name="professional">The professional to add.</param>
     void Add(Professional professional);
 
+    /// <summary>The default ("me") professional's id (most recently created), or null if none exist.</summary>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The default professional id, or null.</returns>
+    Task<ProfessionalId?> GetDefaultProfessionalIdAsync(CancellationToken cancellationToken);
+
+    /// <summary>Loads a professional for update (change-tracked).</summary>
+    /// <param name="id">The professional id.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The tracked professional, or null.</returns>
+    Task<Professional?> GetTrackedAsync(ProfessionalId id, CancellationToken cancellationToken);
+
+    /// <summary>Loads a match belonging to a professional for update (change-tracked).</summary>
+    /// <param name="professionalId">Owning professional.</param>
+    /// <param name="matchId">Match id.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The tracked match, or null.</returns>
+    Task<ProfessionalMatch?> GetMatchAsync(ProfessionalId professionalId, Guid matchId, CancellationToken cancellationToken);
+
     /// <summary>Commits pending changes (and flushes the outbox in the same transaction).</summary>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The number of state entries written.</returns>

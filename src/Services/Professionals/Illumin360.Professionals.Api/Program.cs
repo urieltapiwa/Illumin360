@@ -91,6 +91,53 @@ v1.MapPost("/", async (
     .ProducesProblem(StatusCodes.Status401Unauthorized)
     .ProducesProblem(StatusCodes.Status403Forbidden);
 
+// --- Professional self-service actions on the current ("me") profile (role: professional) ---
+static MatchAction? ParseMatchAction(string a) => a switch
+{
+    "save" => MatchAction.Save,
+    "dismiss" => MatchAction.Dismiss,
+    "apply" => MatchAction.Apply,
+    _ => null,
+};
+
+v1.MapPost("/me/matches/{id:guid}/{action}", async (
+        Guid id,
+        string action,
+        ICommandHandler<UpdateMatchStatusCommand, MatchDto> handler,
+        CancellationToken ct) =>
+    {
+        if (ParseMatchAction(action) is not { } parsed)
+        {
+            return Results.NotFound();
+        }
+
+        var result = await handler.HandleAsync(new UpdateMatchStatusCommand(id, parsed), ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.ProfessionalPolicy)
+    .WithName("UpdateMatchStatus")
+    .WithSummary("Save / dismiss / apply to a match on the current profile. Requires a professional role.")
+    .Produces<MatchDto>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden)
+    .ProducesProblem(StatusCodes.Status404NotFound)
+    .ProducesProblem(StatusCodes.Status409Conflict);
+
+v1.MapPost("/me/availability", async (
+        SetAvailabilityCommand command,
+        ICommandHandler<SetAvailabilityCommand, string> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(command, ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.ProfessionalPolicy)
+    .WithName("SetAvailability")
+    .WithSummary("Update the current profile's availability. Requires a professional role.")
+    .Produces<string>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden);
+
 app.Run();
 
 /// <summary>Exposed so integration tests can use <c>WebApplicationFactory</c> (charter Part 14).</summary>

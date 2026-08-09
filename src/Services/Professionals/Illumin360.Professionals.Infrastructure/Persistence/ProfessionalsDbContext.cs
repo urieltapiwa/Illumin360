@@ -2,6 +2,7 @@ using Illumin360.Professionals.Domain;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace Illumin360.Professionals.Infrastructure.Persistence;
 
@@ -103,6 +104,13 @@ public sealed class ProfessionalsDbContext(DbContextOptions<ProfessionalsDbConte
             b.Property(x => x.Type).HasColumnName("type").HasMaxLength(40);
             b.Property(x => x.PostedLabel).HasColumnName("posted_label").HasMaxLength(20);
             b.Property(x => x.Sort).HasColumnName("sort");
+            b.Property(x => x.Status)
+                .HasColumnName("status")
+                .HasMaxLength(20)
+                .HasDefaultValue(MatchStatus.New)
+                .HasConversion(new ValueConverter<MatchStatus, string>(
+                    v => v == MatchStatus.Saved ? "saved" : v == MatchStatus.Dismissed ? "dismissed" : v == MatchStatus.Applied ? "applied" : "new",
+                    v => v == "saved" ? MatchStatus.Saved : v == "dismissed" ? MatchStatus.Dismissed : v == "applied" ? MatchStatus.Applied : MatchStatus.New));
             b.HasIndex(x => x.ProfessionalId);
             b.Ignore(x => x.DomainEvents);
         });

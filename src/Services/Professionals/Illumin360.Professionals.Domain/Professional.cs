@@ -115,6 +115,19 @@ public sealed class Professional : Entity<ProfessionalId>
     /// <summary>The professional's full display name.</summary>
     public string FullName => $"{FirstName} {LastName}".Trim();
 
+    /// <summary>Updates the availability label (ignored if blank).</summary>
+    /// <param name="availability">New availability label.</param>
+    public void SetAvailability(string availability)
+    {
+        if (!string.IsNullOrWhiteSpace(availability))
+        {
+            Availability = availability.Trim();
+        }
+    }
+
+    /// <summary>Records that the professional submitted an application (bumps the active count).</summary>
+    public void RecordApplication() => ActiveApplications += 1;
+
     /// <summary>Registers a new professional. Metrics start at zero and accrue with platform use.</summary>
     /// <param name="firstName">Given name.</param>
     /// <param name="lastName">Family name.</param>

@@ -6,7 +6,7 @@ import { logout, type Session } from "./auth";
 import { useTranslation } from "react-i18next";
 import { LanguageSwitcher, ThemeSwitcher } from "@illumin360/ui";
 
-interface Match { role: string; company: string; city: string; industry: string; match: number; salaryLo: number; salaryHi: number; posted: string; type: string; }
+interface Match { role: string; company: string; city: string; industry: string; match: number; salaryLo: number; salaryHi: number; posted: string; type: string; id?: string; status?: string; }
 interface Prof {
   persona: { name: string; role: string; city: string; nationality: string; availability: string; headline: string; profileStrength: number; percentile: number; memberSince: string };
   kpis: { profileViews: number; viewsDelta: number; matchOpportunities: number; matchDelta: number; activeApplications: number; responseRate: number; avgMatch: number; interviews: number };
@@ -103,6 +103,20 @@ export default function Professional(_props: { session: Session }) {
   if (!d) return <div className="grid place-items-center h-screen text-ink-mid font-mono text-sm animate-pulse">{t("pro.loading")}</div>;
 
   const p = d.persona; const k = d.kpis;
+  // Self-service actions (only meaningful when logged in / live; snapshot matches have no id).
+  const act = async (matchId: string | undefined, action: "save" | "dismiss" | "apply") => {
+    if (!matchId) return;
+    const r = await fetch(`/api/professionals/me/matches/${matchId}/${action}`, { method: "POST", credentials: "same-origin" });
+    if (r.ok) {
+      const updated = await r.json().catch(() => null);
+      setD((prev) => (prev ? { ...prev, matches: prev.matches.map((m) => (m.id === matchId ? { ...m, status: updated?.status ?? action + "d" } : m)) } : prev));
+    }
+  };
+  const toggleAvailability = async () => {
+    const next = /open/i.test(p.availability) ? "Not looking" : "Open to opportunities";
+    const r = await fetch(`/api/professionals/me/availability`, { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: JSON.stringify({ availability: next }) });
+    if (r.ok) { const v = await r.json().catch(() => next); setD((prev) => (prev ? { ...prev, persona: { ...prev.persona, availability: typeof v === "string" ? v : next } } : prev)); }
+  };
   const navItems: [React.ReactNode, string, boolean][] = [[ICN.user, "pro.nav.profile", true], [ICN.spark2, "pro.nav.matches", false], [ICN.brief, "pro.nav.applications", false], [ICN.chart, "pro.nav.insights", false], [ICN.gear, "pro.nav.settings", false]];
   const salaryPos = (v: number) => Math.max(2, Math.min(98, ((v - d.salary.p25) / (d.salary.p75 - d.salary.p25)) * 100));
   const initials = p.name.split(" ").map((x) => x[0]).slice(0, 2).join("");
@@ -139,7 +153,11 @@ export default function Professional(_props: { session: Session }) {
           <div className="ml-auto flex items-center gap-3">
             <LanguageSwitcher />
             <ThemeSwitcher />
-            <span className="chip !text-[11px] !text-brand-bright !border-brand/30 hidden md:inline-flex"><span className="h-1.5 w-1.5 rounded-full bg-brand-bright" />{p.availability}</span>
+            {live ? (
+              <button onClick={toggleAvailability} title="Toggle availability" className={`chip !text-[11px] hidden md:inline-flex transition ${/open/i.test(p.availability) ? "!text-brand-bright !border-brand/30" : "!text-ink-mid !border-line/70"}`}><span className={`h-1.5 w-1.5 rounded-full ${/open/i.test(p.availability) ? "bg-brand-bright" : "bg-ink-lo"}`} />{p.availability}</button>
+            ) : (
+              <span className="chip !text-[11px] !text-brand-bright !border-brand/30 hidden md:inline-flex"><span className="h-1.5 w-1.5 rounded-full bg-brand-bright" />{p.availability}</span>
+            )}
             <div className="hidden md:flex items-center gap-2.5 rounded-xl border border-line/70 bg-panel2/50 pl-2.5 pr-2 py-1.5">
               <div className="grid h-7 w-7 place-items-center rounded-lg bg-brand/20 text-[11px] font-bold text-brand-bright">{initials}</div>
               <div className="leading-tight"><div className="text-xs font-semibold text-ink-hi">{p.name}</div><div className="text-[10px] text-ink-lo">{p.role}</div></div>
@@ -187,8 +205,8 @@ export default function Professional(_props: { session: Session }) {
                 <span className="chip !text-[10px]">{t("pro.matches.new", { n: d.matches.length })}</span>
               </div>
               <div className="grid sm:grid-cols-2 gap-3">
-                {d.matches.map((m, i) => (
-                  <div key={i} className="rounded-xl border border-line/60 bg-panel2/40 p-3.5 hover:border-brand/40 transition group">
+                {d.matches.filter((m) => m.status !== "dismissed").map((m, i) => (
+                  <div key={m.id ?? i} className={`rounded-xl border p-3.5 transition group ${m.status === "applied" ? "border-brand/50 bg-brand/[0.06]" : m.status === "saved" ? "border-gold/40 bg-panel2/40" : "border-line/60 bg-panel2/40 hover:border-brand/40"}`}>
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
                         <div className="text-sm font-semibold text-ink-hi truncate">{m.role}</div>
@@ -203,6 +221,19 @@ export default function Professional(_props: { session: Session }) {
                       <span className="text-[11px] text-gold num">{kK(m.salaryLo)}–{kK(m.salaryHi)}</span>
                       <span className="text-[10px] text-ink-lo">{m.type} · {m.posted}</span>
                     </div>
+                    {live && m.id && (
+                      <div className="mt-2.5 flex items-center gap-1.5 border-t border-line/40 pt-2.5">
+                        {m.status === "applied" ? (
+                          <span className="chip !text-[10px] !text-brand-bright !border-brand/30">✓ Applied</span>
+                        ) : (
+                          <>
+                            <button onClick={() => act(m.id, "apply")} className="rounded-lg bg-brand/15 px-2.5 py-1 text-[11px] font-semibold text-brand-bright hover:bg-brand/25 transition">Apply</button>
+                            <button onClick={() => act(m.id, "save")} className={`rounded-lg px-2.5 py-1 text-[11px] font-semibold transition ${m.status === "saved" ? "bg-gold/20 text-gold" : "bg-panel2/70 text-ink-mid hover:text-ink-hi"}`}>{m.status === "saved" ? "Saved" : "Save"}</button>
+                            <button onClick={() => act(m.id, "dismiss")} className="ml-auto rounded-lg px-2.5 py-1 text-[11px] font-semibold text-ink-lo hover:text-pink transition">Dismiss</button>
+                          </>
+                        )}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

@@ -1,4 +1,5 @@
 using Illumin360.Professionals.Application.Abstractions;
+using Illumin360.Professionals.Domain;
 
 namespace Illumin360.Professionals.Application.Professionals;
 
@@ -52,6 +53,8 @@ public sealed record KpisDto(
 /// <param name="SalaryHi">Upper salary bound (NAD).</param>
 /// <param name="Type">Engagement type.</param>
 /// <param name="Posted">Relative posted-time label.</param>
+/// <param name="Id">Match id (for actions).</param>
+/// <param name="Status">Disposition: new/saved/dismissed/applied.</param>
 public sealed record MatchDto(
     string Role,
     string Company,
@@ -61,7 +64,9 @@ public sealed record MatchDto(
     int SalaryLo,
     int SalaryHi,
     string Type,
-    string Posted);
+    string Posted,
+    Guid Id,
+    string Status);
 
 /// <summary>A pipeline stage and its count.</summary>
 /// <param name="Stage">Stage name.</param>
@@ -146,8 +151,7 @@ public sealed record ProfessionalDashboardDto(
                 p.AvgMatch,
                 p.Interviews),
             p.ViewsTrend,
-            [.. d.Matches.Select(m => new MatchDto(
-                m.Role, m.Company, m.City, m.Industry, m.MatchScore, m.SalaryLo, m.SalaryHi, m.Type, m.PostedLabel))],
+            [.. d.Matches.Select(m => new MatchDto(m.Role, m.Company, m.City, m.Industry, m.MatchScore, m.SalaryLo, m.SalaryHi, m.Type, m.PostedLabel, m.Id, m.Status switch { MatchStatus.Saved => "saved", MatchStatus.Dismissed => "dismissed", MatchStatus.Applied => "applied", _ => "new" }))],
             [.. d.Pipeline.Select(s => new PipelineDto(s.Stage, s.Value))],
             [.. d.SkillDemand.Select(s => new SkillDemandDto(s.Role, s.Value))],
             [.. d.Skills.Select(s => new SkillDto(s.Name, s.Level, s.Trend))],
