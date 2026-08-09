@@ -84,6 +84,8 @@ export default function Admin({ session }: { session: Session }) {
   const [talentTotal, setTalentTotal] = useState<number | null>(null);
   const [liveByCity, setLiveByCity] = useState<{ city: string; value: number }[] | null>(null);
   const [liveVers, setLiveVers] = useState<{ id: string; entity: string; kind: string; risk: string; submitted: string; status: string }[] | null>(null);
+  const [liveTickets, setLiveTickets] = useState<{ id: string; subject: string; priority: string; requester: string; status: string; assignee: string | null }[] | null>(null);
+  const [liveAccounts, setLiveAccounts] = useState<{ id: string; name: string; kind: string; email: string; status: string }[] | null>(null);
   useEffect(() => { fetch(import.meta.env.BASE_URL + "admin.json").then((r) => r.json()).then(setD); }, []);
   // Live platform signals from the microservices (via BFF → gateway). Talent count and talent-by-city are
   // real (Candidates service); finance/ops tiles (MRR, subscriptions, tickets, verifications) have no backing
@@ -104,6 +106,14 @@ export default function Admin({ session }: { session: Session }) {
       .then((r) => (r.ok ? r.json() : null))
       .then((v) => { if (Array.isArray(v)) setLiveVers(v); })
       .catch(() => { /* not authorized / offline — keep snapshot */ });
+    fetch("/api/admin/tickets", { credentials: "same-origin" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((v) => { if (Array.isArray(v)) setLiveTickets(v); })
+      .catch(() => { /* keep snapshot */ });
+    fetch("/api/admin/accounts", { credentials: "same-origin" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((v) => { if (Array.isArray(v)) setLiveAccounts(v); })
+      .catch(() => { /* keep snapshot */ });
   }, []);
   if (!d) return <div className="grid place-items-center h-screen text-ink-mid font-mono text-sm animate-pulse">{t("admin.loading")}</div>;
 
@@ -115,6 +125,17 @@ export default function Admin({ session }: { session: Session }) {
   const decide = async (id: string, action: "approve" | "reject") => {
     const r = await fetch(`/api/admin/verifications/${id}/${action}`, { method: "POST", credentials: "same-origin" });
     if (r.ok) setLiveVers((prev) => (prev ? prev.filter((v) => v.id !== id) : prev));
+  };
+  const resolveTicket = async (id: string) => {
+    const r = await fetch(`/api/admin/tickets/${id}/resolve`, { method: "POST", credentials: "same-origin" });
+    if (r.ok) setLiveTickets((prev) => (prev ? prev.filter((tk) => tk.id !== id) : prev));
+  };
+  const setAccount = async (id: string, action: "suspend" | "activate") => {
+    const r = await fetch(`/api/admin/accounts/${id}/${action}`, { method: "POST", credentials: "same-origin" });
+    if (r.ok) {
+      const updated = await r.json().catch(() => null);
+      setLiveAccounts((prev) => (prev ? prev.map((a) => (a.id === id ? { ...a, status: updated?.status ?? (action === "suspend" ? "suspended" : "active") } : a)) : prev));
+    }
   };
   const degraded = d.services.filter((s) => s.status !== "operational").length;
   const nav: [React.ReactNode, string, boolean][] = [[ICN.grid, t("admin.nav.overview"), true], [ICN.users, t("admin.nav.users"), false], [ICN.cash, t("admin.nav.revenue"), false], [ICN.shield, t("admin.nav.moderation"), false], [ICN.server, t("admin.nav.system"), false], [ICN.gear, t("admin.nav.settings"), false]];
@@ -273,17 +294,61 @@ export default function Admin({ session }: { session: Session }) {
               <div className="mt-1"><Chart option={cityOption(liveByCity ?? d.byCity)} height={230} /></div>
             </motion.section>
             <motion.section variants={fade} className="card p-5">
-              <h3 className="font-display text-[15px] font-bold text-ink-hi">{t("admin.panel.support")}</h3>
+              <div className="flex items-center justify-between mb-1"><h3 className="font-display text-[15px] font-bold text-ink-hi">{t("admin.panel.support")}</h3>{liveTickets !== null && <span className="chip !text-[10px] !text-brand-bright !border-brand/30"><span className="h-1.5 w-1.5 rounded-full bg-brand-bright animate-pulse" /> LIVE · {liveTickets.length}</span>}</div>
               <p className="text-[11px] text-ink-lo mt-0.5 mb-3">{t("admin.panel.supportSub")}</p>
-              {[[t("admin.tickets.p1"), d.tickets.p1, "#FF7E92"], [t("admin.tickets.p2"), d.tickets.p2, "#E8B14C"], [t("admin.tickets.p3"), d.tickets.p3, "#2FD39A"]].map(([l, v, c], i) => (
-                <div key={i} className="mb-2.5">
-                  <div className="flex justify-between text-xs mb-1"><span className="text-ink-mid">{l as string}</span><span className="num text-ink-hi">{v as number}</span></div>
-                  <div className="h-2 rounded-full bg-panel2/70 overflow-hidden"><div className="h-full rounded-full" style={{ width: ((v as number) / d.tickets.open) * 100 + "%", background: c as string }} /></div>
+              {liveTickets !== null ? (
+                <div className="space-y-2">
+                  {liveTickets.length === 0 && <div className="py-4 text-center text-ink-lo text-[12px]">{t("admin.tickets.queueClear", "No open tickets.")}</div>}
+                  {liveTickets.map((tk) => (
+                    <div key={tk.id} className="flex items-center gap-2 rounded-xl border border-line/60 bg-panel2/40 px-3 py-2">
+                      <span className={`chip !text-[9px] ${tk.priority === "P1" ? "!text-pink !border-pink/30" : tk.priority === "P2" ? "!text-gold !border-gold/30" : "!text-brand-bright !border-brand/30"}`}>{tk.priority}</span>
+                      <div className="min-w-0 flex-1"><div className="text-[12px] text-ink-hi truncate">{tk.subject}</div><div className="text-[10px] text-ink-lo truncate">{tk.requester}</div></div>
+                      <button onClick={() => resolveTicket(tk.id)} className="shrink-0 rounded-lg bg-brand/15 px-2.5 py-1 text-[11px] font-semibold text-brand-bright hover:bg-brand/25 transition">{t("admin.tickets.resolve", "Resolve")}</button>
+                    </div>
+                  ))}
                 </div>
-              ))}
-              <div className="mt-3 rounded-xl bg-brand/[0.08] border border-brand/20 p-3 text-[11px] text-ink-mid"><span className="text-brand-bright font-semibold">{t("admin.tickets.slaHighlight", { pct: d.tickets.slaOk })}</span> {t("admin.tickets.slaMet")}</div>
+              ) : (
+                <>
+                  {[[t("admin.tickets.p1"), d.tickets.p1, "#FF7E92"], [t("admin.tickets.p2"), d.tickets.p2, "#E8B14C"], [t("admin.tickets.p3"), d.tickets.p3, "#2FD39A"]].map(([l, v, c], i) => (
+                    <div key={i} className="mb-2.5">
+                      <div className="flex justify-between text-xs mb-1"><span className="text-ink-mid">{l as string}</span><span className="num text-ink-hi">{v as number}</span></div>
+                      <div className="h-2 rounded-full bg-panel2/70 overflow-hidden"><div className="h-full rounded-full" style={{ width: ((v as number) / d.tickets.open) * 100 + "%", background: c as string }} /></div>
+                    </div>
+                  ))}
+                  <div className="mt-3 rounded-xl bg-brand/[0.08] border border-brand/20 p-3 text-[11px] text-ink-mid"><span className="text-brand-bright font-semibold">{t("admin.tickets.slaHighlight", { pct: d.tickets.slaOk })}</span> {t("admin.tickets.slaMet")}</div>
+                </>
+              )}
             </motion.section>
           </div>
+
+          {liveAccounts !== null && (
+            <div className="grid grid-cols-1 gap-5">
+              <motion.section variants={fade} className="card p-5">
+                <div className="flex items-center justify-between mb-3">
+                  <div><h3 className="font-display text-[15px] font-bold text-ink-hi">{t("admin.panel.users", "User management")}</h3><p className="text-[11px] text-ink-lo mt-0.5">{t("admin.panel.usersSub", "Suspend or reactivate platform accounts.")}</p></div>
+                  <span className="chip !text-[10px] !text-brand-bright !border-brand/30"><span className="h-1.5 w-1.5 rounded-full bg-brand-bright animate-pulse" /> LIVE · {liveAccounts.length}</span>
+                </div>
+                <table className="w-full text-sm">
+                  <thead><tr className="text-left eyebrow border-b border-line/60"><th className="py-2 pl-1 font-semibold">{t("admin.users.name", "Account")}</th><th className="font-semibold">{t("admin.users.kind", "Type")}</th><th className="font-semibold">{t("admin.users.email", "Email")}</th><th className="font-semibold">{t("admin.users.status", "Status")}</th><th className="font-semibold text-right pr-1">{t("admin.table.action")}</th></tr></thead>
+                  <tbody>
+                    {liveAccounts.map((a) => (
+                      <tr key={a.id} className="border-b border-line/30">
+                        <td className="py-2.5 pl-1 text-ink-hi font-medium">{a.name}</td>
+                        <td className="text-ink-mid">{a.kind}</td>
+                        <td className="text-ink-lo text-[12px]">{a.email}</td>
+                        <td><span className={`chip !text-[10px] ${a.status === "suspended" ? "!text-pink !border-pink/30" : "!text-brand-bright !border-brand/30"}`}>{a.status}</span></td>
+                        <td className="text-right pr-1">
+                          {a.status === "suspended"
+                            ? <button onClick={() => setAccount(a.id, "activate")} className="rounded-lg bg-brand/15 px-2.5 py-1 text-[11px] font-semibold text-brand-bright hover:bg-brand/25 transition">{t("admin.users.activate", "Activate")}</button>
+                            : <button onClick={() => setAccount(a.id, "suspend")} className="rounded-lg bg-pink/15 px-2.5 py-1 text-[11px] font-semibold text-pink hover:bg-pink/25 transition">{t("admin.users.suspend", "Suspend")}</button>}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </motion.section>
+            </div>
+          )}
 
           <footer className="flex flex-wrap items-center justify-between gap-2 pt-1 pb-4 text-[11px] text-ink-lo">
             <span>{t("admin.footer.console")}</span><span>{t("admin.footer.synthetic")}</span>
