@@ -4,6 +4,7 @@ using Illumin360.Recruitment.Application.Abstractions;
 using Illumin360.Recruitment.Application.Recruitment;
 using Illumin360.Recruitment.Infrastructure;
 using Illumin360.Recruitment.Infrastructure.Persistence;
+using Illumin360.Security;
 using Illumin360.Web;
 using Microsoft.EntityFrameworkCore;
 
@@ -19,6 +20,9 @@ builder.Services.AddHealthChecks()
 // --- Clean Architecture layers ---
 builder.Services.AddRecruitmentApplication();
 builder.Services.AddRecruitmentInfrastructure(builder.Configuration);
+
+// --- AuthN/AuthZ: validate Keycloak JWTs relayed by the BFF; expose admin role policies (charter Part 7) ---
+builder.Services.AddIllumin360Auth(builder.Configuration);
 
 // --- OpenAPI 3.1 (charter Part 7) ---
 builder.Services.AddOpenApi();
@@ -36,6 +40,8 @@ await using (var scope = app.Services.CreateAsyncScope())
 }
 
 app.UseExceptionHandler();
+app.UseAuthentication();
+app.UseAuthorization();
 app.MapOpenApi(); // /openapi/v1.json
 
 // --- Health probes: /health/live, /health/ready, /health/startup (charter Part 11) ---
@@ -106,10 +112,13 @@ v1.MapPost("/requests", async (
         var result = await handler.HandleAsync(command, ct);
         return result.ToCreatedResult(dto => $"/v1/recruitment/requests/{dto.Id}");
     })
+    .RequireAuthorization(AuthenticationExtensions.AdminWritePolicy)
     .WithName("PostRecruitmentRequest")
-    .WithSummary("Post a new recruitment request.")
+    .WithSummary("Post a new recruitment request. Requires an admin (write) role.")
     .Produces<RecruitmentRequestDto>(StatusCodes.Status201Created)
-    .ProducesProblem(StatusCodes.Status400BadRequest);
+    .ProducesProblem(StatusCodes.Status400BadRequest)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden);
 
 app.Run();
 

@@ -10,5 +10,6 @@
     <ProjectReference Include="..\Illumin360.Professionals.Infrastructure\Illumin360.Professionals.Infrastructure.csproj" />
     <ProjectReference Include="..\..\..\BuildingBlocks\Observability\Illumin360.Observability.csproj" />
     <ProjectReference Include="..\..\..\BuildingBlocks\Web\Illumin360.Web.csproj" />
+    <ProjectReference Include="..\..\..\BuildingBlocks\Security\Illumin360.Security.csproj" />
   </ItemGroup>
 </Project>

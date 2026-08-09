@@ -1,4 +1,5 @@
 using Illumin360.Observability;
+using Illumin360.Security;
 using Illumin360.Professionals.Application;
 using Illumin360.Professionals.Application.Abstractions;
 using Illumin360.Professionals.Application.Professionals;
@@ -20,6 +21,9 @@ builder.Services.AddHealthChecks()
 builder.Services.AddProfessionalsApplication();
 builder.Services.AddProfessionalsInfrastructure(builder.Configuration);
 
+// --- AuthN/AuthZ: validate Keycloak JWTs relayed by the BFF; expose admin role policies (charter Part 7) ---
+builder.Services.AddIllumin360Auth(builder.Configuration);
+
 // --- OpenAPI 3.1 (charter Part 7) ---
 builder.Services.AddOpenApi();
 builder.Services.AddProblemDetails();
@@ -36,6 +40,8 @@ await using (var scope = app.Services.CreateAsyncScope())
 }
 
 app.UseExceptionHandler();
+app.UseAuthentication();
+app.UseAuthorization();
 app.MapOpenApi(); // /openapi/v1.json
 
 // --- Health probes: /health/live, /health/ready, /health/startup (charter Part 11) ---
@@ -77,10 +83,13 @@ v1.MapPost("/", async (
         var result = await handler.HandleAsync(command, ct);
         return result.ToCreatedResult(dto => $"/v1/professionals/{dto.Id}");
     })
+    .RequireAuthorization(AuthenticationExtensions.AdminWritePolicy)
     .WithName("RegisterProfessional")
-    .WithSummary("Register a new professional on the programme.")
+    .WithSummary("Register a new professional on the marketplace. Requires an admin (write) role.")
     .Produces<ProfessionalSummaryDto>(StatusCodes.Status201Created)
-    .ProducesProblem(StatusCodes.Status400BadRequest);
+    .ProducesProblem(StatusCodes.Status400BadRequest)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden);
 
 app.Run();
 

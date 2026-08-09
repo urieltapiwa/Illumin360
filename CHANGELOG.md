@@ -5,6 +5,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: [S
 
 ## [Unreleased]
 ### Added
+- **Service-layer RBAC (`Illumin360.Security` building block):** `AddIllumin360Auth` wires JWT bearer
+  validation of Keycloak access tokens (relayed by the BFF) and registers `admin` / `admin.write`
+  authorization policies. Handles the two Keycloak gotchas: accepts both the back-channel
+  (`keycloak:8080`) and front-channel (`localhost:8080`) issuers, and projects realm roles from the
+  `realm_access.roles` claim into ASP.NET role claims (audience validation off until a realm audience
+  mapper exists). Wired into all four service APIs (Candidates, Recruitment, Students, Professionals);
+  each write endpoint (`POST`) now requires the `admin.write` policy (`admin.write`/`admin.superuser`
+  roles). Read endpoints stay anonymous so the portals keep working. Compiles clean; runtime
+  401/403/200 verification pending image rebuild.
 - **Professionals service (fourth vertical slice):** `Illumin360.Professionals.{Domain,Contracts,Application,Infrastructure,Api}`
   exposing `GET /v1/professionals/me`, `GET /v1/professionals/{id}`, and `POST /v1/professionals`. Same
   self-owned, migration-managed shape as Students (`professionals`, `professional_matches`,

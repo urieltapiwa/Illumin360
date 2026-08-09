@@ -1,4 +1,5 @@
 using Illumin360.Observability;
+using Illumin360.Security;
 using Illumin360.Students.Application;
 using Illumin360.Students.Application.Abstractions;
 using Illumin360.Students.Application.Students;
@@ -20,6 +21,9 @@ builder.Services.AddHealthChecks()
 builder.Services.AddStudentsApplication();
 builder.Services.AddStudentsInfrastructure(builder.Configuration);
 
+// --- AuthN/AuthZ: validate Keycloak JWTs relayed by the BFF; expose admin role policies (charter Part 7) ---
+builder.Services.AddIllumin360Auth(builder.Configuration);
+
 // --- OpenAPI 3.1 (charter Part 7) ---
 builder.Services.AddOpenApi();
 builder.Services.AddProblemDetails();
@@ -36,6 +40,8 @@ await using (var scope = app.Services.CreateAsyncScope())
 }
 
 app.UseExceptionHandler();
+app.UseAuthentication();
+app.UseAuthorization();
 app.MapOpenApi(); // /openapi/v1.json
 
 // --- Health probes: /health/live, /health/ready, /health/startup (charter Part 11) ---
@@ -77,10 +83,13 @@ v1.MapPost("/", async (
         var result = await handler.HandleAsync(command, ct);
         return result.ToCreatedResult(dto => $"/v1/students/{dto.Id}");
     })
+    .RequireAuthorization(AuthenticationExtensions.AdminWritePolicy)
     .WithName("RegisterStudent")
-    .WithSummary("Register a new student on the programme.")
+    .WithSummary("Register a new student on the programme. Requires an admin (write) role.")
     .Produces<StudentSummaryDto>(StatusCodes.Status201Created)
-    .ProducesProblem(StatusCodes.Status400BadRequest);
+    .ProducesProblem(StatusCodes.Status400BadRequest)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden);
 
 app.Run();
 

@@ -4,6 +4,7 @@ using Illumin360.Candidates.Application.Candidates;
 using Illumin360.Candidates.Infrastructure;
 using Illumin360.Candidates.Infrastructure.Persistence;
 using Illumin360.Observability;
+using Illumin360.Security;
 using Illumin360.Web;
 using Microsoft.EntityFrameworkCore;
 
@@ -20,6 +21,9 @@ builder.Services.AddHealthChecks()
 builder.Services.AddCandidatesApplication();
 builder.Services.AddCandidatesInfrastructure(builder.Configuration);
 
+// --- AuthN/AuthZ: validate Keycloak JWTs relayed by the BFF; expose admin role policies (charter Part 7) ---
+builder.Services.AddIllumin360Auth(builder.Configuration);
+
 // --- OpenAPI 3.1 (charter Part 7) ---
 builder.Services.AddOpenApi();
 builder.Services.AddProblemDetails();
@@ -35,6 +39,8 @@ await using (var scope = app.Services.CreateAsyncScope())
 }
 
 app.UseExceptionHandler();
+app.UseAuthentication();
+app.UseAuthorization();
 app.MapOpenApi(); // /openapi/v1.json
 
 // --- Health probes: /health/live, /health/ready, /health/startup (charter Part 11) ---
@@ -89,10 +95,13 @@ v1.MapPost("/", async (
         var result = await handler.HandleAsync(command, ct);
         return result.ToCreatedResult(dto => $"/v1/candidates/{dto.Id}");
     })
+    .RequireAuthorization(AuthenticationExtensions.AdminWritePolicy)
     .WithName("RegisterCandidate")
-    .WithSummary("Register a new candidate into the talent pool.")
+    .WithSummary("Register a new candidate into the talent pool. Requires an admin (write) role.")
     .Produces<CandidateDto>(StatusCodes.Status201Created)
-    .ProducesProblem(StatusCodes.Status400BadRequest);
+    .ProducesProblem(StatusCodes.Status400BadRequest)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden);
 
 app.Run();
 
