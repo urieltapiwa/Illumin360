@@ -5,6 +5,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: [S
 
 ## [Unreleased]
 ### Added
+- **Admin service (`Illumin360.Admin`) — first production-ready admin action (verifications):** a real
+  vertical slice for the admin verification queue. `GET /v1/admin/verifications` (requires an admin role)
+  and `POST /v1/admin/verifications/{id}/approve|reject` (requires `admin.write`), each persisted, guarded
+  (re-deciding a decided item → 409), and emitting a `VerificationDecided` outbox event. Own `admin` schema
+  + migration + seeded demo queue; gateway route `/api/admin/**`; `admin-api` compose service (port 5205);
+  DB `illumin360_admin`. The Admin portal's verification panel now shows a LIVE chip and real Approve/Reject
+  buttons wired to the API (rows clear on decision), with snapshot fallback for non-admins. Verified
+  end-to-end via API (no-token 401 / non-admin 403 / admin 200 / re-decide 409; pending count persisted
+  6→5) both direct and through the gateway. Phases 2–3 (tickets, user management) to follow in this service.
 - **Service-layer RBAC (`Illumin360.Security` building block):** `AddIllumin360Auth` wires JWT bearer
   validation of Keycloak access tokens (relayed by the BFF) and registers `admin` / `admin.write`
   authorization policies. Handles the two Keycloak gotchas: accepts both the back-channel

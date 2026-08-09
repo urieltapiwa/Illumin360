@@ -91,6 +91,24 @@ services:
     # the gateway's active health checks and Kubernetes probes.
     networks: [illumin360]
 
+  admin-api:
+    build:
+      context: ../..
+      dockerfile: src/Services/Admin/Illumin360.Admin.Api/Dockerfile
+    container_name: illumin360-admin-api
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__admin: "Host=postgres;Port=5432;Database=illumin360_admin;Username=${POSTGRES_USER:-illumin};Password=${POSTGRES_PASSWORD:-illumin_dev_pw}"
+      ConnectionStrings__rabbitmq: "amqp://${RABBITMQ_USER:-illumin}:${RABBITMQ_PASSWORD:-illumin}@rabbitmq:5672"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://alloy:4317"
+    expose: ["8080"]
+    ports: ["5205:8080"]
+    depends_on:
+      postgres: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+    networks: [illumin360]
+
   notifications-worker:
     build:
       context: ../..
@@ -120,7 +138,7 @@ services:
       ASPNETCORE_ENVIRONMENT: Production
       OTEL_EXPORTER_OTLP_ENDPOINT: "http://alloy:4317"
     ports: ["8088:8080"]
-    depends_on: [candidates-api, recruitment-api, students-api, professionals-api]
+    depends_on: [candidates-api, recruitment-api, students-api, professionals-api, admin-api]
     networks: [illumin360]
 
   # Business portal SPA — static build served by nginx, fronted by the BFF (never exposed directly).

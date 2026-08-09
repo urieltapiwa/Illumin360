@@ -8,7 +8,7 @@ create_db() {
     WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = '$1')\gexec
 SQL
 }
-for svc in keycloak identity candidates employers recruitment students professionals billing notifications support engagement aiassistant; do
+for svc in keycloak identity candidates employers recruitment students professionals admin billing notifications support engagement aiassistant; do
   create_db "illumin360_${svc}"
 done
 # Keycloak expects its own db name from KC_DB_NAME (default illumin360_keycloak)

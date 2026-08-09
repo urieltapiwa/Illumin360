@@ -83,6 +83,7 @@ export default function Admin({ session }: { session: Session }) {
   const [d, setD] = useState<AdminData | null>(null);
   const [talentTotal, setTalentTotal] = useState<number | null>(null);
   const [liveByCity, setLiveByCity] = useState<{ city: string; value: number }[] | null>(null);
+  const [liveVers, setLiveVers] = useState<{ id: string; entity: string; kind: string; risk: string; submitted: string; status: string }[] | null>(null);
   useEffect(() => { fetch(import.meta.env.BASE_URL + "admin.json").then((r) => r.json()).then(setD); }, []);
   // Live platform signals from the microservices (via BFF → gateway). Talent count and talent-by-city are
   // real (Candidates service); finance/ops tiles (MRR, subscriptions, tickets, verifications) have no backing
@@ -97,10 +98,24 @@ export default function Admin({ session }: { session: Session }) {
       })
       .catch(() => { /* stack offline — keep snapshot */ });
   }, []);
+  // Live verification queue from the Admin service (admin-role gated). Non-admins get 403 → snapshot.
+  useEffect(() => {
+    fetch("/api/admin/verifications", { credentials: "same-origin" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((v) => { if (Array.isArray(v)) setLiveVers(v); })
+      .catch(() => { /* not authorized / offline — keep snapshot */ });
+  }, []);
   if (!d) return <div className="grid place-items-center h-screen text-ink-mid font-mono text-sm animate-pulse">{t("admin.loading")}</div>;
 
   const k = d.kpis;
   const live = talentTotal !== null;
+  // Verification queue: live (from the Admin service) when authorized, else the bundled snapshot.
+  const vers: { id?: string; entity: string; kind: string; risk: string; submitted: string }[] = liveVers ?? d.verifications;
+  const versLive = liveVers !== null;
+  const decide = async (id: string, action: "approve" | "reject") => {
+    const r = await fetch(`/api/admin/verifications/${id}/${action}`, { method: "POST", credentials: "same-origin" });
+    if (r.ok) setLiveVers((prev) => (prev ? prev.filter((v) => v.id !== id) : prev));
+  };
   const degraded = d.services.filter((s) => s.status !== "operational").length;
   const nav: [React.ReactNode, string, boolean][] = [[ICN.grid, t("admin.nav.overview"), true], [ICN.users, t("admin.nav.users"), false], [ICN.cash, t("admin.nav.revenue"), false], [ICN.shield, t("admin.nav.moderation"), false], [ICN.server, t("admin.nav.system"), false], [ICN.gear, t("admin.nav.settings"), false]];
   const initials = (session.name || "Admin").split(" ").map((x) => x[0]).slice(0, 2).join("");
@@ -206,17 +221,29 @@ export default function Admin({ session }: { session: Session }) {
 
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
             <motion.section variants={fade} className="card p-5 xl:col-span-2">
-              <div className="flex items-center justify-between mb-3"><div><h3 className="font-display text-[15px] font-bold text-ink-hi">{t("admin.panel.verifications")}</h3><p className="text-[11px] text-ink-lo mt-0.5">{t("admin.panel.verificationsSub", { n: k.pendingVerifications })}</p></div><span className="chip !text-[10px] !text-gold !border-gold/30">{t("admin.panel.verificationsChip", { n: k.pendingVerifications })}</span></div>
+              <div className="flex items-center justify-between mb-3"><div><h3 className="font-display text-[15px] font-bold text-ink-hi">{t("admin.panel.verifications")}</h3><p className="text-[11px] text-ink-lo mt-0.5">{t("admin.panel.verificationsSub", { n: vers.length })}</p></div>{versLive ? <span className="chip !text-[10px] !text-brand-bright !border-brand/30"><span className="h-1.5 w-1.5 rounded-full bg-brand-bright animate-pulse" /> LIVE · {vers.length}</span> : <span className="chip !text-[10px] !text-gold !border-gold/30">{t("admin.panel.verificationsChip", { n: k.pendingVerifications })}</span>}</div>
               <table className="w-full text-sm">
                 <thead><tr className="text-left eyebrow border-b border-line/60"><th className="py-2 pl-1 font-semibold">{t("admin.table.entity")}</th><th className="font-semibold">{t("admin.table.type")}</th><th className="font-semibold">{t("admin.table.submitted")}</th><th className="font-semibold">{t("admin.table.risk")}</th><th className="font-semibold text-right pr-1">{t("admin.table.action")}</th></tr></thead>
                 <tbody>
-                  {d.verifications.map((v, i) => (
-                    <tr key={i} className="border-b border-line/30">
+                  {vers.length === 0 && (
+                    <tr><td colSpan={5} className="py-6 text-center text-ink-lo text-[12px]">{t("admin.table.queueClear", "Queue clear — no pending verifications.")}</td></tr>
+                  )}
+                  {vers.map((v, i) => (
+                    <tr key={v.id ?? i} className="border-b border-line/30">
                       <td className="py-2.5 pl-1 text-ink-hi font-medium">{v.entity}</td>
                       <td className="text-ink-mid">{v.kind}</td>
                       <td className="text-ink-lo num text-[12px]">{v.submitted}</td>
                       <td><span className={`chip !text-[10px] ${v.risk === "Medium" ? "!text-gold !border-gold/30" : "!text-brand-bright !border-brand/30"}`}>{v.risk}</span></td>
-                      <td className="text-right pr-1"><button className="rounded-lg bg-brand/15 px-2.5 py-1 text-[11px] font-semibold text-brand-bright hover:bg-brand/25 transition">{t("admin.table.review")}</button></td>
+                      <td className="text-right pr-1">
+                        {versLive ? (
+                          <div className="inline-flex gap-1.5">
+                            <button onClick={() => decide(v.id!, "approve")} className="rounded-lg bg-brand/15 px-2.5 py-1 text-[11px] font-semibold text-brand-bright hover:bg-brand/25 transition">{t("admin.table.approve", "Approve")}</button>
+                            <button onClick={() => decide(v.id!, "reject")} className="rounded-lg bg-pink/15 px-2.5 py-1 text-[11px] font-semibold text-pink hover:bg-pink/25 transition">{t("admin.table.reject", "Reject")}</button>
+                          </div>
+                        ) : (
+                          <button className="rounded-lg bg-brand/15 px-2.5 py-1 text-[11px] font-semibold text-brand-bright hover:bg-brand/25 transition">{t("admin.table.review")}</button>
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>

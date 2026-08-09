@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Illumin360.Admin.Application</RootNamespace>
+  </PropertyGroup>
+  <!-- Application depends ONLY on Domain + Contracts (charter Part 5). -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <ProjectReference Include="..\Illumin360.Admin.Contracts\Illumin360.Admin.Contracts.csproj" />
+    <ProjectReference Include="..\Illumin360.Admin.Domain\Illumin360.Admin.Domain.csproj" />
+  </ItemGroup>
+</Project>
