@@ -126,7 +126,8 @@ public sealed class KeycloakRegistrar(IHttpClientFactory httpFactory, IConfigura
             firstName = req.FirstName!.Trim(),
             lastName = req.LastName!.Trim(),
             enabled = true,
-            emailVerified = true, // dev: skip the email-verification round-trip
+            emailVerified = false, // must verify via email before the browser login flow completes
+            requiredActions = new[] { "VERIFY_EMAIL" },
             credentials = new[] { new { type = "password", value = req.Password, temporary = false } },
         };
         using (var create = await http.PostAsJsonAsync($"{kcBase}/admin/realms/{realm}/users", createBody, ct).ConfigureAwait(false))
@@ -161,10 +162,18 @@ public sealed class KeycloakRegistrar(IHttpClientFactory httpFactory, IConfigura
             }
         }
 
-        // --- 5. create the domain profile (student/professional) via the gateway using the service token ---
-        await CreateDomainProfileAsync(http, token, type, req, ct).ConfigureAwait(false);
+        // --- 5. create the domain profile; compensate (delete the identity) if it fails → atomic outcome ---
+        var profileOk = await CreateDomainProfileAsync(http, token, type, req, ct).ConfigureAwait(false);
+        if (!profileOk)
+        {
+            (await http.DeleteAsync($"{kcBase}/admin/realms/{realm}/users/{userId}", ct).ConfigureAwait(false)).Dispose();
+            return new RegistrationResult(StatusCodes.Status502BadGateway, "profile_failed", "Could not create your profile — please try again.");
+        }
 
-        return new RegistrationResult(StatusCodes.Status201Created, "registered", "Account created. You can now sign in.");
+        // --- 6. send the verification email (Keycloak → SMTP) ---
+        (await http.PutAsync($"{kcBase}/admin/realms/{realm}/users/{userId}/send-verify-email", content: null, ct).ConfigureAwait(false)).Dispose();
+
+        return new RegistrationResult(StatusCodes.Status201Created, "registered", "Account created. Check your email to verify your address, then sign in.");
     }
 
     private static async Task<string?> GetServiceTokenAsync(HttpClient http, string kcBase, string realm, string clientId, string clientSecret, CancellationToken ct)
@@ -188,16 +197,21 @@ public sealed class KeycloakRegistrar(IHttpClientFactory httpFactory, IConfigura
         return payload.TryGetProperty("access_token", out var t) ? t.GetString() : null;
     }
 
-    private async Task CreateDomainProfileAsync(HttpClient http, string token, string type, RegisterRequest req, CancellationToken ct)
+    private async Task<bool> CreateDomainProfileAsync(HttpClient http, string token, string type, RegisterRequest req, CancellationToken ct)
     {
+        // Employer: identity + client.employer role only — no employers service to profile into yet.
+        if (type == "employer")
+        {
+            return true;
+        }
+
         var gateway = _config["Registration:GatewayBaseUrl"] ?? "http://gateway:8080";
         http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
         try
         {
-            if (type == "student")
-            {
-                var body = new
+            var (path, body) = type == "student"
+                ? ($"{gateway}/api/students", (object)new
                 {
                     firstName = req.FirstName!.Trim(),
                     lastName = req.LastName!.Trim(),
@@ -207,12 +221,8 @@ public sealed class KeycloakRegistrar(IHttpClientFactory httpFactory, IConfigura
                     graduating = string.Empty,
                     program = "Self-registered",
                     city = req.City!.Trim(),
-                };
-                (await http.PostAsJsonAsync($"{gateway}/api/students", body, ct).ConfigureAwait(false)).Dispose();
-            }
-            else if (type == "professional")
-            {
-                var body = new
+                })
+                : ($"{gateway}/api/professionals", new
                 {
                     firstName = req.FirstName!.Trim(),
                     lastName = req.LastName!.Trim(),
@@ -221,16 +231,14 @@ public sealed class KeycloakRegistrar(IHttpClientFactory httpFactory, IConfigura
                     nationality = string.Empty,
                     availability = "Open to opportunities",
                     headline = string.Empty,
-                };
-                (await http.PostAsJsonAsync($"{gateway}/api/professionals", body, ct).ConfigureAwait(false)).Dispose();
-            }
+                });
 
-            // employer: identity + client.employer role only — no employers service to profile into yet.
+            using var resp = await http.PostAsJsonAsync(path, body, ct).ConfigureAwait(false);
+            return resp.IsSuccessStatusCode;
         }
         catch (HttpRequestException)
         {
-            // Profile creation is best-effort in this MVP: the identity + role are the gate to logging in.
-            // A production build would make this transactional / retried via the outbox.
+            return false;
         }
     }
 }

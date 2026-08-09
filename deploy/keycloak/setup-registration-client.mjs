@@ -58,3 +58,12 @@ for (const name of ["manage-users", "view-realm"]) {
 await fetch(`${KC}/admin/realms/${REALM}/users/${sa.id}/role-mappings/clients/${rm.id}`, { method: "POST", headers: H(at), body: JSON.stringify(rmRoles) });
 
 console.log("registration client configured (service account roles: manage-users + view-realm + admin.write + client.*)");
+
+// 4. realm SMTP → dev mail catcher (Mailpit) so email-verification messages are sent + caught.
+const realm = await fetch(`${KC}/admin/realms/${REALM}`, { headers: H(at) }).then(j);
+realm.smtpServer = {
+  host: process.env.SMTP_HOST || "mailpit", port: process.env.SMTP_PORT || "1025",
+  from: "no-reply@illumin360.local", fromDisplayName: "Illumin360", ssl: "false", starttls: "false", auth: "false",
+};
+await fetch(`${KC}/admin/realms/${REALM}`, { method: "PUT", headers: H(at), body: JSON.stringify(realm) });
+console.log("realm SMTP configured -> Mailpit");

@@ -109,6 +109,18 @@ services:
       rabbitmq: { condition: service_healthy }
     networks: [illumin360]
 
+  # Dev mail catcher for the self-registration email-verification flow (SMTP in, web UI + API on 8025).
+  # The illumin360 realm's SMTP is pointed here; verification emails are caught, not delivered externally.
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: illumin360-mailpit
+    restart: unless-stopped
+    ports: ["8025:8025", "1025:1025"]
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY: "true"
+      MP_SMTP_AUTH_ALLOW_INSECURE: "true"
+    networks: [illumin360]
+
   notifications-worker:
     build:
       context: ../..

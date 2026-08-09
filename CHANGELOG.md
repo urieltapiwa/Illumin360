@@ -5,6 +5,16 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: [S
 
 ## [Unreleased]
 ### Added
+- **Self-registration hardening — email verification + transactional (compensating) profile creation:**
+  new users are now created **unverified** (`emailVerified=false` + a `VERIFY_EMAIL` required action that
+  gates the browser login), and Keycloak sends a real verification email via SMTP. A **Mailpit** dev
+  mail-catcher (`illumin360-mailpit`, ports 8025/1025) is added and the `illumin360` realm's SMTP points at
+  it (isolated — separate realm from SalesApp/StoreCatalogue). Profile creation is now **compensating**: if
+  the domain profile call fails, the just-created Keycloak identity is deleted, so registration is
+  all-or-nothing (no orphaned identity). Verified: register → unverified + gated + real "Verify email"
+  caught by Mailpit with a valid link; and with the domain service down, register → 502 with the Keycloak
+  identity rolled back (0 orphans). Known dev caveat: the emailed link uses the back-channel host
+  (`keycloak:8080`); real browsers need the realm `frontendUrl`/`KC_HOSTNAME` set to the front-channel host.
 - **Self-registration for all three user types (student, professional, employer):** a public, rate-limited
   sign-up flow. The Business BFF hosts anonymous `POST /register/{student|professional|employer}` endpoints
   (`KeycloakRegistrar`) that provision the Keycloak identity via the Admin API using a confidential
