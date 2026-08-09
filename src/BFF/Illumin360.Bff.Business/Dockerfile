@@ -8,8 +8,8 @@ WORKDIR /src
 # .editorconfig MUST be copied or StyleCop/analyzers run with defaults and fail the strict build.
 COPY Directory.Build.props Directory.Packages.props global.json .editorconfig ./
 COPY src/ ./src/
-RUN dotnet restore "src/Bff/Illumin360.Bff.Business/Illumin360.Bff.Business.csproj"
-RUN dotnet publish "src/Bff/Illumin360.Bff.Business/Illumin360.Bff.Business.csproj" \
+RUN dotnet restore "src/BFF/Illumin360.Bff.Business/Illumin360.Bff.Business.csproj"
+RUN dotnet publish "src/BFF/Illumin360.Bff.Business/Illumin360.Bff.Business.csproj" \
     -c Release -o /app/publish /p:UseAppHost=false
 
 # Chiseled, non-root runtime

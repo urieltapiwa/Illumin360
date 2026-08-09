@@ -103,7 +103,7 @@ services:
   bff-business:
     build:
       context: ../..
-      dockerfile: src/Bff/Illumin360.Bff.Business/Dockerfile
+      dockerfile: src/BFF/Illumin360.Bff.Business/Dockerfile
     container_name: illumin360-bff-business
     restart: unless-stopped
     environment:
