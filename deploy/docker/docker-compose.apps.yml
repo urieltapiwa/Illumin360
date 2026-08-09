@@ -94,9 +94,12 @@ services:
     networks: [illumin360]
 
   # Business BFF — server-side OIDC + cookie session + token relay; serves the SPA same-origin.
-  # OIDC runs against the shared dev Keycloak on the host: host.docker.internal lets the BFF reach it, and on
-  # Docker Desktop the host browser resolves the same name, keeping issuer/redirect consistent. Full Docker OIDC
-  # also needs the KC client's redirect URIs to include this BFF's external URL (http://localhost:5180/...).
+  # Keycloak hostname alignment: the BFF reaches the shared dev Keycloak by its in-network name
+  # (Oidc__Authority = keycloak:8080) for discovery, token exchange, user-info and issuer validation, so the
+  # token `iss` matches Authority. The browser can't resolve `keycloak`, so the authorize/end-session redirects
+  # are rewritten to Oidc__FrontChannelAuthority (localhost:8080, the published KC port) in-app. This keeps the
+  # shared Keycloak on per-request issuer derivation (no fixed KC_HOSTNAME) so the sibling apps still validate.
+  # The realm client's redirect URIs must include this BFF's external URL (http://localhost:5180/bff/...).
   bff-business:
     build:
       context: ../..
@@ -105,7 +108,8 @@ services:
     restart: unless-stopped
     environment:
       ASPNETCORE_ENVIRONMENT: Production
-      Oidc__Authority: "http://host.docker.internal:8080/realms/illumin360"
+      Oidc__Authority: "http://keycloak:8080/realms/illumin360"
+      Oidc__FrontChannelAuthority: "http://localhost:8080/realms/illumin360"
       Oidc__ClientId: "illumin360-business-bff"
       Oidc__ClientSecret: "${BFF_CLIENT_SECRET:-bff-dev-secret-local-only}"
       Oidc__RequireHttps: "false"
@@ -113,7 +117,5 @@ services:
       ReverseProxy__Clusters__spa__Destinations__d1__Address: "http://web:80/"
       OTEL_EXPORTER_OTLP_ENDPOINT: "http://alloy:4317"
     ports: ["5180:8080"]
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     depends_on: [web, gateway]
     networks: [illumin360]

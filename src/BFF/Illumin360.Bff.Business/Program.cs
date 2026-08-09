@@ -69,6 +69,37 @@ builder.Services.AddAuthentication(options =>
     options.Scope.Add("email");
     options.TokenValidationParameters.NameClaimType = "name";
     options.TokenValidationParameters.RoleClaimType = "roles";
+
+    // --- Keycloak hostname alignment (charter Part 2/7) ---
+    // In Docker the BFF reaches Keycloak by its in-network name (`keycloak:8080`), but the user's browser
+    // must be sent to a host it can actually resolve (`localhost:8080`). We keep `Authority` on the
+    // back-channel host so discovery, token exchange, user-info and issuer validation all stay internal
+    // (the token `iss` therefore matches `Authority` — no mismatch), and rewrite ONLY the redirects the
+    // browser follows — authorization + end-session — to the front-channel host. This avoids pinning a
+    // fixed `KC_HOSTNAME` on the *shared* dev Keycloak, which would rewrite the issuer for the sibling
+    // apps (SalesApp / StoreCatalogue) and break their back-channel token validation.
+    // Unset (local dev, where both channels are already localhost) → no rewrite, behaviour unchanged.
+    var frontChannel = oidc["FrontChannelAuthority"];
+    if (!string.IsNullOrWhiteSpace(frontChannel))
+    {
+        var front = new Uri(frontChannel);
+        static string ToFrontChannel(string? url, Uri front) =>
+            string.IsNullOrEmpty(url)
+                ? url ?? string.Empty
+                : new UriBuilder(url) { Scheme = front.Scheme, Host = front.Host, Port = front.Port }.Uri.AbsoluteUri;
+
+        options.Events ??= new OpenIdConnectEvents();
+        options.Events.OnRedirectToIdentityProvider = ctx =>
+        {
+            ctx.ProtocolMessage.IssuerAddress = ToFrontChannel(ctx.ProtocolMessage.IssuerAddress, front);
+            return Task.CompletedTask;
+        };
+        options.Events.OnRedirectToIdentityProviderForSignOut = ctx =>
+        {
+            ctx.ProtocolMessage.IssuerAddress = ToFrontChannel(ctx.ProtocolMessage.IssuerAddress, front);
+            return Task.CompletedTask;
+        };
+    }
 });
 
 builder.Services.AddAuthorization(options =>

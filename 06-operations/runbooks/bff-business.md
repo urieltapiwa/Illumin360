@@ -18,11 +18,22 @@ The browser never sees a token (charter Part 2/7). **Port:** 8080 (container) / 
 ## Configuration (`Oidc` section + env)
 | Key | Local dev | Docker |
 | --- | --- | --- |
-| `Oidc:Authority` | `http://localhost:8080/realms/illumin360` | Keycloak issuer URL reachable by the BFF |
+| `Oidc:Authority` | `http://localhost:8080/realms/illumin360` | **back-channel** issuer URL the BFF resolves internally (`http://keycloak:8080/realms/illumin360`) |
+| `Oidc:FrontChannelAuthority` | _(unset — both channels are localhost)_ | **front-channel** URL the browser must reach (`http://localhost:8080/realms/illumin360`) |
 | `Oidc:ClientId` | `illumin360-business-bff` | same |
 | `Oidc:ClientSecret` | via env `Oidc__ClientSecret` (never commit; prod → Vault) | Vault |
 | `ReverseProxy:Clusters:gateway` | `http://localhost:8088/` | `http://gateway:8080/` |
 | `ReverseProxy:Clusters:spa` | `http://localhost:5173/` (vite) | the SPA container |
+
+### Keycloak hostname alignment (Docker)
+In Docker the BFF resolves Keycloak by its in-network name (`keycloak:8080`) while the user's browser can only
+reach the published port (`localhost:8080`). `Oidc:Authority` stays on the **back-channel** host so discovery,
+token exchange, user-info and issuer validation are internal — the token `iss` matches `Authority`, no mismatch.
+`Oidc:FrontChannelAuthority` rewrites **only the authorize + end-session redirects** (the URLs the browser
+follows) to the browser-reachable host, in `OnRedirectToIdentityProvider` / `…ForSignOut`. This deliberately
+leaves the **shared** dev Keycloak on per-request issuer derivation (no fixed `KC_HOSTNAME`); pinning one would
+rewrite the issuer for the sibling apps (SalesApp / StoreCatalogue) and break their back-channel validation.
+Local dev leaves `FrontChannelAuthority` unset (both channels are already `localhost`) → no rewrite.
 
 PAR (Pushed Authorization Requests) is currently `Disable`d (code+PKCE is the baseline). Re-enable
 `PushedAuthorizationBehavior = UseIfAvailable` once the confidential client + KC PAR are confirmed.
@@ -32,6 +43,7 @@ The confidential client `illumin360-business-bff` is declared in `deploy/keycloa
 (secret `bff-dev-secret-local-only`, redirect `http://localhost:5180/bff/signin-callback`). The **shared** dev
 Keycloak must have this client for the full flow to work — create it from the realm file, the admin console,
 or the admin REST API. Until then `/bff/login` builds the correct redirect but Keycloak rejects the unknown client.
+The client's redirect URIs must include the BFF's external URL (`http://localhost:5180/bff/signin-callback`).
 
 ## Run locally
 `Oidc__ClientSecret=bff-dev-secret-local-only ASPNETCORE_ENVIRONMENT=Development dotnet run` (listens on 5180).
