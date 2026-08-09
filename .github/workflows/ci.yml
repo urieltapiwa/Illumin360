@@ -25,7 +25,7 @@ jobs:
         image: docker:dind   # Testcontainers needs a Docker daemon
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
       - name: Restore
@@ -73,7 +73,7 @@ jobs:
     needs: build-test
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
       - uses: github/codeql-action/init@v3
@@ -88,7 +88,7 @@ jobs:
     needs: build-test
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
       - name: Generate CycloneDX SBOM
