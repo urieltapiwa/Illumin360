@@ -31,9 +31,9 @@
   </ItemGroup>
 
   <ItemGroup Label="Messaging / Workflow">
-    <PackageVersion Include="MassTransit" Version="8.3.0" />
+    <PackageVersion Include="MassTransit" Version="9.2.0" />
     <PackageVersion Include="MassTransit.RabbitMQ" Version="8.3.0" />
-    <PackageVersion Include="MassTransit.EntityFrameworkCore" Version="8.3.0" />
+    <PackageVersion Include="MassTransit.EntityFrameworkCore" Version="9.2.0" />
     <PackageVersion Include="Temporalio" Version="1.4.0" />
   </ItemGroup>
 
