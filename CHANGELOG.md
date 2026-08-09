@@ -5,6 +5,18 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: [S
 
 ## [Unreleased]
 ### Added
+- **Self-registration for all three user types (student, professional, employer):** a public, rate-limited
+  sign-up flow. The Business BFF hosts anonymous `POST /register/{student|professional|employer}` endpoints
+  (`KeycloakRegistrar`) that provision the Keycloak identity via the Admin API using a confidential
+  service-account client (`illumin360-registration`), assign the type role
+  (`client.student`/`client.user`/`client.employer`), and create the domain profile (student/professional)
+  through the gateway with the service token; employers get an identity + role (no employers service yet).
+  Fixed-window rate limiting (5/min per IP), 12-char password policy enforced, duplicate-email → 409.
+  Sign-up screen added to the portal (`App.tsx` `Register`) with a type selector + "Create account" link
+  on the login screen. Keycloak client + service-account roles (manage-users, view-realm, admin.write,
+  client.*) are reproduced by `deploy/keycloak/setup-registration-client.mjs` (idempotent, non-destructive
+  to the shared realm). Verified end-to-end stranger→logged-in: all three register (201) and then log in
+  with the correct role; duplicate → 409; weak password → 400; student/professional profiles created.
 - **Admin service (`Illumin360.Admin`) — first production-ready admin action (verifications):** a real
   vertical slice for the admin verification queue. `GET /v1/admin/verifications` (requires an admin role)
   and `POST /v1/admin/verifications/{id}/approve|reject` (requires `admin.write`), each persisted, guarded

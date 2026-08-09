@@ -1,4 +1,6 @@
 using System.Security.Claims;
+using System.Threading.RateLimiting;
+using Illumin360.Bff.Business;
 using Illumin360.Observability;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -136,6 +138,17 @@ builder.Services.AddReverseProxy()
         }
     });
 
+// Self-registration: Keycloak user provisioning + rate limiting (abuse control on a public endpoint).
+builder.Services.AddHttpClient();
+builder.Services.AddScoped<KeycloakRegistrar>();
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy("register", httpContext => RateLimitPartition.GetFixedWindowLimiter(
+        httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = 5, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
+});
+
 builder.Services.AddHealthChecks()
     .AddCheck("self", () => Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Healthy(), tags: ["live", "ready"]);
 
@@ -143,9 +156,19 @@ var app = builder.Build();
 
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseRateLimiter();
 
 // --- Health probes (charter Part 11) ---
 app.MapProjectHealthChecks();
+
+// --- Self-registration (anonymous, rate-limited): provisions Keycloak identity + role + domain profile ---
+app.MapPost("/register/{type}", async (string type, RegisterRequest req, KeycloakRegistrar registrar, CancellationToken ct) =>
+    {
+        var result = await registrar.RegisterAsync(type, req, ct);
+        return Results.Json(new { code = result.Code, message = result.Message }, statusCode: result.StatusCode);
+    })
+    .RequireRateLimiting("register")
+    .WithName("Register");
 
 // --- BFF session endpoints ---
 var bff = app.MapGroup("/bff");

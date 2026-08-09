@@ -406,8 +406,68 @@ function Login() {
           </button>
           <div className="my-5 flex items-center gap-3 text-[11px] text-ink-lo"><span className="h-px flex-1 bg-line/60" />{t("login.secured")}<span className="h-px flex-1 bg-line/60" /></div>
           <a href="?demo=1" className="block w-full rounded-xl border border-line/70 bg-panel2/40 py-3 text-center font-semibold text-ink-mid hover:text-ink-hi hover:border-brand/40 transition">{t("login.demo")}</a>
+          <a href="?screen=register" className="mt-3 block text-center text-[12px] text-ink-mid hover:text-brand-bright transition">New to Illumin360? <span className="font-semibold text-brand-bright">Create an account</span></a>
           <p className="mt-6 text-center text-[11px] text-ink-lo">{t("login.oauth")}</p>
         </div>
+      </div>
+    </div>
+  );
+}
+
+const REG_TYPES: [string, string][] = [["student", "Student"], ["professional", "Professional"], ["employer", "Employer"]];
+
+function Register() {
+  const [type, setType] = useState("student");
+  const [form, setForm] = useState({ firstName: "", lastName: "", email: "", password: "", city: "", field: "", school: "", role: "", company: "" });
+  const [status, setStatus] = useState<{ state: "idle" | "submitting" | "ok" | "error"; msg?: string }>({ state: "idle" });
+  const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement>) => setForm((f) => ({ ...f, [k]: e.target.value }));
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (form.password.length < 12) { setStatus({ state: "error", msg: "Password must be at least 12 characters." }); return; }
+    setStatus({ state: "submitting" });
+    try {
+      const r = await fetch(`/register/${type}`, { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: JSON.stringify(form) });
+      const body = await r.json().catch(() => ({}));
+      setStatus(r.ok ? { state: "ok", msg: body.message || "Account created." } : { state: "error", msg: body.message || "Registration failed." });
+    } catch { setStatus({ state: "error", msg: "Network error — please try again." }); }
+  };
+  const inputCls = "w-full rounded-xl border border-line/70 bg-panel2/40 px-3 py-2.5 text-sm text-ink-hi placeholder:text-ink-lo focus:border-brand/50 focus:outline-none";
+  return (
+    <div className="min-h-screen grid place-items-center px-5 py-12 relative">
+      <div className="absolute top-4 right-4 z-30 flex items-center gap-2"><LanguageSwitcher /><ThemeSwitcher /></div>
+      <div className="w-full max-w-md">
+        <Logo />
+        <h1 className="font-display text-3xl font-extrabold text-ink-hi mt-6">Create your account</h1>
+        <p className="text-ink-mid mt-2 text-sm">Join Illumin360 as a student, professional, or employer.</p>
+        {status.state === "ok" ? (
+          <div className="mt-6 rounded-xl border border-brand/30 bg-brand/[0.08] p-5">
+            <div className="text-brand-bright font-semibold">Account created ✓</div>
+            <p className="text-[13px] text-ink-mid mt-1">{status.msg}</p>
+            <button onClick={login} className="mt-4 w-full rounded-xl bg-brand py-2.5 font-semibold text-sm hover:bg-brand-bright transition">Sign in</button>
+          </div>
+        ) : (
+          <form onSubmit={submit} className="mt-6 space-y-3">
+            <div className="grid grid-cols-3 gap-1.5 rounded-xl bg-panel2/50 p-1">
+              {REG_TYPES.map(([v, l]) => (
+                <button type="button" key={v} onClick={() => setType(v)} className={`rounded-lg py-1.5 text-[12px] font-semibold transition ${type === v ? "bg-brand/20 text-brand-bright" : "text-ink-mid hover:text-ink-hi"}`}>{l}</button>
+              ))}
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <input className={inputCls} placeholder="First name" value={form.firstName} onChange={set("firstName")} required />
+              <input className={inputCls} placeholder="Last name" value={form.lastName} onChange={set("lastName")} required />
+            </div>
+            <input className={inputCls} type="email" placeholder="Email" value={form.email} onChange={set("email")} required />
+            <input className={inputCls} type="password" placeholder="Password" value={form.password} onChange={set("password")} required />
+            <input className={inputCls} placeholder="City" value={form.city} onChange={set("city")} required />
+            {type === "student" && (<div className="grid grid-cols-2 gap-3"><input className={inputCls} placeholder="Field of study" value={form.field} onChange={set("field")} /><input className={inputCls} placeholder="School" value={form.school} onChange={set("school")} /></div>)}
+            {type === "professional" && (<input className={inputCls} placeholder="Role (e.g. Software Developer)" value={form.role} onChange={set("role")} />)}
+            {type === "employer" && (<input className={inputCls} placeholder="Company name" value={form.company} onChange={set("company")} />)}
+            <p className="text-[11px] text-ink-lo">Password must be at least 12 characters.</p>
+            {status.state === "error" && <div className="rounded-lg border border-pink/30 bg-pink/[0.08] px-3 py-2 text-[12px] text-pink">{status.msg}</div>}
+            <button type="submit" disabled={status.state === "submitting"} className="w-full rounded-xl bg-brand py-3 font-semibold hover:bg-brand-bright transition disabled:opacity-60">{status.state === "submitting" ? "Creating account…" : "Create account"}</button>
+          </form>
+        )}
+        <a href="?screen=login" className="mt-5 block text-center text-[12px] text-ink-lo hover:text-ink-hi">Already have an account? Sign in</a>
       </div>
     </div>
   );
@@ -416,6 +476,7 @@ function Login() {
 export default function App() {
   const [session, setSession] = useState<Session | null>(null);
   useEffect(() => { initAuth().then(setSession); }, []);
+  if (new URLSearchParams(location.search).get("screen") === "register") return <Register />;
   if (new URLSearchParams(location.search).get("screen") === "login") return <Login />;
   if (!session) return <div className="grid place-items-center h-screen text-ink-mid font-mono text-sm animate-pulse">Connecting…</div>;
   if (!session.authenticated) return <Login />;
