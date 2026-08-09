@@ -102,6 +102,24 @@
   }
 }
 
+/* Light mode: the body glow gradients are tuned for a dark canvas — dial them right down
+   so light mode reads clean instead of washed/muddy. */
+:root[data-mode="light"] body {
+  background-image:
+    radial-gradient(900px 600px at 12% -8%, rgb(var(--c-brand) / 0.06), transparent 60%),
+    radial-gradient(800px 520px at 100% 0%, rgb(var(--c-gold) / 0.05), transparent 55%),
+    radial-gradient(700px 700px at 85% 110%, rgb(var(--c-brand-deep) / 0.05), transparent 60%);
+}
+
+@media (prefers-color-scheme: light) {
+  :root[data-mode="system"] body {
+    background-image:
+      radial-gradient(900px 600px at 12% -8%, rgb(var(--c-brand) / 0.06), transparent 60%),
+      radial-gradient(800px 520px at 100% 0%, rgb(var(--c-gold) / 0.05), transparent 55%),
+      radial-gradient(700px 700px at 85% 110%, rgb(var(--c-brand-deep) / 0.05), transparent 60%);
+  }
+}
+
 html,
 body,
 #root {
