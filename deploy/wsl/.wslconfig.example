@@ -1,0 +1,28 @@
+# Recommended WSL2 tuning for running the Illumin360 stack + building the .NET
+# service images with Docker Desktop on a memory-constrained machine (e.g. 8 GB).
+#
+# WHY: Docker Desktop's Linux engine runs in a WSL2 VM. On the default memory
+# ceiling (~50% of RAM), building several chiseled .NET images in parallel
+# exhausts the VM and OOM-crashes the engine. Raising the ceiling and — crucially
+# — adding swap lets memory spikes spill to disk instead of killing the engine.
+#
+# This is a MACHINE-LEVEL file, not loaded by the app. Copy it to your Windows
+# user profile and restart WSL:
+#
+#   copy deploy\wsl\.wslconfig.example %USERPROFILE%\.wslconfig
+#   wsl --shutdown
+#   # then relaunch Docker Desktop
+#
+# Tune `memory`/`processors` to your host (values below suit an 8 GB / 8-core box).
+# Also recommended: build the service images ONE AT A TIME rather than in parallel.
+
+[wsl2]
+# Memory ceiling for the VM (a cap, not a reservation). Leaves headroom for Windows.
+memory=5GB
+# Swap gives builds headroom so memory spikes spill to disk instead of OOM-killing
+# the engine — this is what stops the crashes.
+swap=4GB
+# Leave a couple of cores for Windows/host.
+processors=6
+# Return idle VM memory to Windows over time instead of holding the ceiling.
+autoMemoryReclaim=gradual
