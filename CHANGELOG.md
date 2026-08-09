@@ -5,6 +5,21 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: [S
 
 ## [Unreleased]
 ### Added
+- **Students service (third vertical slice):** `Illumin360.Students.{Domain,Contracts,Application,Infrastructure,Api}`
+  exposing `GET /v1/students/me`, `GET /v1/students/{id}`, and `POST /v1/students`. Unlike Candidates/Recruitment
+  (which map onto externally-seeded tables), the Students context **owns and migration-manages** all of its tables
+  (`students`, `student_skills`, `student_learning`, `student_matches`, `student_pipeline`, `student_activity`) plus
+  the MassTransit outbox — `InitialCreate` migration + `IDesignTimeDbContextFactory`, and a startup seeder that loads
+  a demo cohort so the portal has live data out of the box. Publishes `StudentRegistered` via the transactional
+  outbox (ADR-0007); `Illumin360.Students.Contracts` is the dependency-free event library (ADR-0008).
+- **Gateway route** `/api/students/**` → rewritten to `/v1/students/**` with an active `/health/ready` check;
+  `students-api` service (host port 5203) wired into `docker-compose.apps.yml` and the DB-per-service init list.
+- **Student portal — live data:** `web/business-portal/src/Student.tsx` now reads `/api/students/me` via the BFF
+  (snapshot fallback + LIVE chip), mirroring the Business dashboard's live-data pattern. KPIs (internship matches,
+  modules done) derive from the real rows.
+- **Dependency security bumps (repo-wide):** `System.Security.Cryptography.Xml` 10.0.6 → 10.0.10 and a pin of
+  `Microsoft.OpenApi` to patched 2.11.0 (via `Microsoft.AspNetCore.OpenApi` 10.0.10) to clear newly-surfaced
+  high-severity NuGet audit advisories that were breaking every service's clean build.
 - **Business BFF (`Illumin360.Bff.Business`) — real server-side token handling:** an ASP.NET Core Backend-For-Frontend
   that runs the OIDC authorization-code + PKCE flow against Keycloak server-side, holds tokens in an encrypted
   HttpOnly cookie session, and YARP-reverse-proxies `/api/**` to the gateway with the user's access token attached

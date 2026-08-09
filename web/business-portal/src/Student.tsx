@@ -42,8 +42,26 @@ const tagColor: Record<string, string> = { done: "text-brand-bright", "in progre
 
 export default function Student(_props: { session: Session }) {
   const [d, setD] = useState<StudentData | null>(null);
+  const [live, setLive] = useState(false);
   const { t } = useTranslation();
-  useEffect(() => { fetch(import.meta.env.BASE_URL + "student.json").then((r) => r.json()).then(setD); }, []);
+  // Live-first: read the student's dashboard from the Students service (via the BFF/gateway); fall back to
+  // the bundled snapshot if the API is unavailable. Mirrors the Business dashboard's live-data pattern.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const r = await fetch("/api/students/me");
+        if (r.ok) {
+          const j = await r.json();
+          if (!cancelled) { setD(j); setLive(true); }
+          return;
+        }
+      } catch { /* fall through to the bundled snapshot */ }
+      const snap = await fetch(import.meta.env.BASE_URL + "student.json").then((x) => x.json());
+      if (!cancelled) { setD(snap); setLive(false); }
+    })();
+    return () => { cancelled = true; };
+  }, []);
   if (!d) return <div className="grid place-items-center h-screen text-ink-mid font-mono text-sm animate-pulse">{t("student.loading")}</div>;
   const p = d.persona, k = d.kpis;
   const nav: [React.ReactNode, string, boolean][] = [[N.path, "student.nav.path", true], [N.cap, "student.nav.internships", false], [N.book, "student.nav.learning", false], [N.chat, "student.nav.mentors", false], [N.gear, "student.nav.settings", false]];
@@ -62,7 +80,7 @@ export default function Student(_props: { session: Session }) {
       </aside>
       <main className="flex-1 min-w-0 relative z-10">
         <header className="sticky top-0 z-20 flex items-center gap-4 border-b border-line/60 bg-base/70 backdrop-blur-xl px-5 lg:px-7 py-4">
-          <div className="min-w-0"><div className="flex items-center gap-2"><h1 className="font-display text-xl font-extrabold text-ink-hi tracking-tight">{t("student.topbar.title")}</h1><span className="chip !text-[10px] !text-gold !border-gold/30">{t("student.topbar.demo")}</span></div><p className="text-[11px] text-ink-lo mt-0.5">{t("student.topbar.subtitle")}</p></div>
+          <div className="min-w-0"><div className="flex items-center gap-2"><h1 className="font-display text-xl font-extrabold text-ink-hi tracking-tight">{t("student.topbar.title")}</h1>{live ? <span className="chip !text-[10px] !text-brand-bright !border-brand/30"><span className="h-1.5 w-1.5 rounded-full bg-brand-bright animate-pulse" /> LIVE</span> : <span className="chip !text-[10px] !text-gold !border-gold/30">{t("student.topbar.demo")}</span>}</div><p className="text-[11px] text-ink-lo mt-0.5">{t("student.topbar.subtitle")}</p></div>
           <div className="ml-auto flex items-center gap-3">
             <LanguageSwitcher />
             <ThemeSwitcher />
