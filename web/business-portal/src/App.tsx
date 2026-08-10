@@ -5,6 +5,7 @@ import { initAuth, login, logout, type Session } from "./auth";
 import Professional from "./Professional";
 import Admin from "./Admin";
 import Student from "./Student";
+import Employer from "./Employer";
 import Support from "./Support";
 import { useTranslation } from "react-i18next";
 import { LanguageSwitcher, ThemeSwitcher } from "@illumin360/ui";
@@ -484,6 +485,7 @@ export default function App() {
   if (portal === "professional") return <Professional session={session} />;
   if (portal === "admin") return <Admin session={session} />;
   if (portal === "student") return <Student session={session} />;
+  if (portal === "employer") return <Employer session={session} />;
   if (portal === "support") return <Support session={session} />;
   return <DashboardView session={session} />;
 }
