@@ -97,6 +97,21 @@ public static class DependencyInjection
         services.AddScoped<
             IQueryHandler<GetOffersQuery, IReadOnlyList<OfferDto>>,
             GetOffersQueryHandler>();
+        services.AddScoped<
+            ICommandHandler<StartOnboardingCommand, OnboardingChecklistDto>,
+            StartOnboardingCommandHandler>();
+        services.AddScoped<
+            IQueryHandler<GetOnboardingQuery, OnboardingChecklistDto>,
+            GetOnboardingQueryHandler>();
+        services.AddScoped<
+            ICommandHandler<ToggleOnboardingTaskCommand, OnboardingTaskDto>,
+            ToggleOnboardingTaskCommandHandler>();
+        services.AddScoped<
+            ICommandHandler<AddOnboardingTaskCommand, OnboardingTaskDto>,
+            AddOnboardingTaskCommandHandler>();
+        services.AddScoped<
+            ICommandHandler<RemoveOnboardingTaskCommand, bool>,
+            RemoveOnboardingTaskCommandHandler>();
         return services;
     }
 }

@@ -148,6 +148,38 @@ public interface IRecruitmentRepository
     /// <param name="cancellationToken">Cancellation token.</param>
     Task<IReadOnlyList<Offer>> ListOffersForApplicationAsync(Guid applicationId, CancellationToken cancellationToken);
 
+    /// <summary>Stages a new onboarding checklist for insertion.</summary>
+    /// <param name="checklist">The checklist to add.</param>
+    void AddOnboardingChecklist(OnboardingChecklist checklist);
+
+    /// <summary>Loads the onboarding checklist for an application, or null if none.</summary>
+    /// <param name="applicationId">The application id.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<OnboardingChecklist?> GetChecklistByApplicationAsync(Guid applicationId, CancellationToken cancellationToken);
+
+    /// <summary>Loads an onboarding checklist by id, or null if not present.</summary>
+    /// <param name="id">The checklist id.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<OnboardingChecklist?> GetChecklistAsync(OnboardingChecklistId id, CancellationToken cancellationToken);
+
+    /// <summary>Stages a new onboarding task for insertion.</summary>
+    /// <param name="task">The task to add.</param>
+    void AddOnboardingTask(OnboardingTask task);
+
+    /// <summary>Removes an onboarding task.</summary>
+    /// <param name="task">The task to remove.</param>
+    void RemoveOnboardingTask(OnboardingTask task);
+
+    /// <summary>Loads an onboarding task for update, or null if not present.</summary>
+    /// <param name="id">The task id.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<OnboardingTask?> GetOnboardingTaskAsync(OnboardingTaskId id, CancellationToken cancellationToken);
+
+    /// <summary>Lists a checklist's tasks in order.</summary>
+    /// <param name="checklistId">The checklist id.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<IReadOnlyList<OnboardingTask>> ListTasksForChecklistAsync(OnboardingChecklistId checklistId, CancellationToken cancellationToken);
+
     /// <summary>Commits staged changes to the data store.</summary>
     /// <param name="cancellationToken">Cancellation token.</param>
     Task SaveChangesAsync(CancellationToken cancellationToken);
