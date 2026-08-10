@@ -98,6 +98,11 @@ export default function Admin({ session }: { session: Session }) {
   const [contacts, setContacts] = useState<CrmContact[] | null>(null);
   const [newClient, setNewClient] = useState({ name: "", industry: "", city: "" });
   const [newContact, setNewContact] = useState({ name: "", title: "", email: "", phone: "", isPrimary: false });
+  // Offers (per selected pipeline application).
+  type Offer = { id: string; title: string; salaryAmount: number; currency: string; startDate: string; status: string };
+  const [offerAppId, setOfferAppId] = useState<string | null>(null);
+  const [offers, setOffers] = useState<Offer[] | null>(null);
+  const [newOffer, setNewOffer] = useState({ title: "", salaryAmount: "", startDate: "" });
   useEffect(() => { fetch(import.meta.env.BASE_URL + "admin.json").then((r) => r.json()).then(setD); }, []);
   // Live platform signals from the microservices (via BFF → gateway). Talent count and talent-by-city are
   // real (Candidates service); finance/ops tiles (MRR, subscriptions, tickets, verifications) have no backing
@@ -158,6 +163,14 @@ export default function Admin({ session }: { session: Session }) {
       .then((v) => { if (v?.contacts) setContacts(v.contacts); })
       .catch(() => { /* keep empty */ });
   }, [selClient]);
+  // Offers for the application selected on a pipeline card.
+  useEffect(() => {
+    if (!offerAppId) { setOffers(null); return; }
+    fetch(`/api/recruitment/applications/${offerAppId}/offers`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((v) => { if (Array.isArray(v)) setOffers(v); })
+      .catch(() => { /* keep empty */ });
+  }, [offerAppId]);
   if (!d) return <div className="grid place-items-center h-screen text-ink-mid font-mono text-sm animate-pulse">{t("admin.loading")}</div>;
 
   const k = d.kpis;
@@ -224,6 +237,21 @@ export default function Admin({ session }: { session: Session }) {
       setContacts((cs) => cs?.filter((c) => c.id !== contactId) ?? cs);
       setClients((cs) => cs?.map((cl) => (cl.id === selClient ? { ...cl, contactCount: Math.max(0, cl.contactCount - 1) } : cl)) ?? cs);
     }
+  };
+  const createAndSendOffer = async () => {
+    if (!offerAppId || !newOffer.title.trim() || !newOffer.salaryAmount || !newOffer.startDate) return;
+    const r = await fetch(`/api/recruitment/applications/${offerAppId}/offers`, { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: JSON.stringify({ title: newOffer.title, salaryAmount: Number(newOffer.salaryAmount), currency: "NAD", startDate: newOffer.startDate, notes: null }) });
+    if (!r.ok) return;
+    const o: Offer = await r.json();
+    // Immediately extend it to the candidate.
+    const sent = await fetch(`/api/recruitment/offers/${o.id}/send`, { method: "POST", credentials: "same-origin" });
+    const finalOffer: Offer = sent.ok ? await sent.json().catch(() => ({ ...o, status: "sent" })) : o;
+    setOffers((os) => [finalOffer, ...(os ?? [])]);
+    setNewOffer({ title: "", salaryAmount: "", startDate: "" });
+  };
+  const withdrawOffer = async (id: string) => {
+    const r = await fetch(`/api/recruitment/offers/${id}/withdraw`, { method: "POST", credentials: "same-origin" });
+    if (r.ok) { const u = await r.json().catch(() => null); setOffers((os) => os?.map((o) => (o.id === id ? { ...o, status: u?.status ?? "withdrawn" } : o)) ?? os); }
   };
   const pipelineStages = ["applied", "reviewed", "shortlisted", "hired", "rejected"];
   const degraded = d.services.filter((s) => s.status !== "operational").length;
@@ -469,6 +497,9 @@ export default function Admin({ session }: { session: Session }) {
                                 <button onClick={() => transitionApp(a.id, "reject")} className="rounded bg-pink/15 px-2 py-0.5 text-[10px] font-semibold text-pink hover:bg-pink/25 transition">{t("admin.pipeline.reject", "Reject")}</button>
                               </div>
                             )}
+                            {(stage === "shortlisted" || stage === "hired") && (
+                              <button onClick={() => setOfferAppId(a.id)} className={`mt-1.5 w-full rounded px-2 py-0.5 text-[10px] font-semibold transition ${offerAppId === a.id ? "bg-gold/25 text-gold" : "bg-panel/60 text-ink-lo hover:text-ink-hi"}`}>{t("admin.offer.manage", "Offer")}</button>
+                            )}
                           </div>
                         ))}
                         {cards.length === 0 && <div className="text-[10px] text-ink-lo py-1">—</div>}
@@ -477,6 +508,30 @@ export default function Admin({ session }: { session: Session }) {
                   );
                 })}
               </div>
+              {offerAppId && (
+                <div className="mt-4 border-t border-line/40 pt-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="eyebrow">{t("admin.offer.title", "Offers for selected applicant")}</span>
+                    <button onClick={() => setOfferAppId(null)} className="text-[11px] text-ink-lo hover:text-ink-hi transition">{t("admin.offer.close", "Close")}</button>
+                  </div>
+                  <div className="space-y-2">
+                    {(offers ?? []).map((o) => (
+                      <div key={o.id} className="flex items-center gap-3 rounded-lg border border-line/50 bg-panel2/40 px-3 py-2">
+                        <div className="min-w-0 flex-1"><div className="text-[13px] font-semibold text-ink-hi truncate">{o.title}</div><div className="text-[11px] text-ink-lo">{o.currency} {o.salaryAmount.toLocaleString()} · starts {o.startDate}</div></div>
+                        <span className={`chip !text-[10px] capitalize ${o.status === "accepted" ? "!text-brand-bright !border-brand/30" : o.status === "declined" || o.status === "withdrawn" ? "!text-pink !border-pink/30" : "!text-gold !border-gold/30"}`}>{o.status}</span>
+                        {(o.status === "draft" || o.status === "sent") && <button onClick={() => withdrawOffer(o.id)} className="rounded px-2 py-1 text-[10px] font-semibold text-ink-lo hover:text-pink transition">{t("admin.offer.withdraw", "Withdraw")}</button>}
+                      </div>
+                    ))}
+                    {offers && offers.length === 0 && <div className="py-2 text-center text-[12px] text-ink-lo">{t("admin.offer.none", "No offers yet.")}</div>}
+                  </div>
+                  <div className="mt-3 grid gap-2 sm:grid-cols-[2fr_1fr_1fr_auto] items-center">
+                    <input className="rounded-lg border border-line/70 bg-panel2/50 px-2.5 py-1.5 text-[12px] text-ink-hi placeholder:text-ink-lo focus:border-brand/50 focus:outline-none" value={newOffer.title} onChange={(e) => setNewOffer((f) => ({ ...f, title: e.target.value }))} placeholder={t("admin.offer.roleTitle", "Role title")} />
+                    <input type="number" className="rounded-lg border border-line/70 bg-panel2/50 px-2.5 py-1.5 text-[12px] text-ink-hi placeholder:text-ink-lo focus:border-brand/50 focus:outline-none" value={newOffer.salaryAmount} onChange={(e) => setNewOffer((f) => ({ ...f, salaryAmount: e.target.value }))} placeholder={t("admin.offer.salary", "Salary (N$)")} />
+                    <input type="date" className="rounded-lg border border-line/70 bg-panel2/50 px-2.5 py-1.5 text-[12px] text-ink-hi focus:border-brand/50 focus:outline-none" value={newOffer.startDate} onChange={(e) => setNewOffer((f) => ({ ...f, startDate: e.target.value }))} />
+                    <button onClick={createAndSendOffer} disabled={!newOffer.title.trim() || !newOffer.salaryAmount || !newOffer.startDate} className="rounded-lg bg-brand/15 px-3 py-1.5 text-[11px] font-semibold text-brand-bright hover:bg-brand/25 transition disabled:opacity-50">{t("admin.offer.send", "Draft & send")}</button>
+                  </div>
+                </div>
+              )}
             </motion.section>
           )}
 

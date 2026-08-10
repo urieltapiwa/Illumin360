@@ -169,6 +169,21 @@ public sealed class RecruitmentRepository(RecruitmentDbContext db) : IRecruitmen
             .ConfigureAwait(false);
 
     /// <inheritdoc />
+    public void AddOffer(Offer offer) => _db.Offers.Add(offer);
+
+    /// <inheritdoc />
+    public async Task<Offer?> GetOfferAsync(OfferId id, CancellationToken cancellationToken)
+        => await _db.Offers.FirstOrDefaultAsync(o => o.Id == id, cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<Offer>> ListOffersForApplicationAsync(Guid applicationId, CancellationToken cancellationToken)
+        => await _db.Offers.AsNoTracking()
+            .Where(o => o.ApplicationId == applicationId)
+            .OrderByDescending(o => o.CreatedAt)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+    /// <inheritdoc />
     public async Task SaveChangesAsync(CancellationToken cancellationToken)
         => await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 

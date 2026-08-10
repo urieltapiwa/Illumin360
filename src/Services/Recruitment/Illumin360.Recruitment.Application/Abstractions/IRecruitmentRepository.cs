@@ -134,6 +134,20 @@ public interface IRecruitmentRepository
     /// <param name="cancellationToken">Cancellation token.</param>
     Task<IReadOnlyList<ClientContact>> ListContactsForClientAsync(ClientId clientId, CancellationToken cancellationToken);
 
+    /// <summary>Stages a new offer for insertion.</summary>
+    /// <param name="offer">The offer to add.</param>
+    void AddOffer(Offer offer);
+
+    /// <summary>Loads an offer for update (change-tracked), or null if not present.</summary>
+    /// <param name="id">The offer id.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<Offer?> GetOfferAsync(OfferId id, CancellationToken cancellationToken);
+
+    /// <summary>Lists an application's offers, newest first.</summary>
+    /// <param name="applicationId">The application id.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<IReadOnlyList<Offer>> ListOffersForApplicationAsync(Guid applicationId, CancellationToken cancellationToken);
+
     /// <summary>Commits staged changes to the data store.</summary>
     /// <param name="cancellationToken">Cancellation token.</param>
     Task SaveChangesAsync(CancellationToken cancellationToken);

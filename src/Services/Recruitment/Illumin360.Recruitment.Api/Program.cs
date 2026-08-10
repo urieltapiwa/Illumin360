@@ -353,6 +353,105 @@ v1.MapPost("/applications/{id:guid}/reject", async (
     .ProducesProblem(StatusCodes.Status404NotFound)
     .ProducesProblem(StatusCodes.Status409Conflict);
 
+// --- Offers: employment offers on an application (draft → sent → accepted/declined) ---
+v1.MapGet("/applications/{applicationId:guid}/offers", async (
+        Guid applicationId,
+        IQueryHandler<GetOffersQuery, IReadOnlyList<OfferDto>> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new GetOffersQuery(applicationId), ct);
+        return result.ToHttpResult();
+    })
+    .WithName("GetOffers")
+    .WithSummary("List an application's employment offers.")
+    .Produces<IReadOnlyList<OfferDto>>(StatusCodes.Status200OK);
+
+v1.MapPost("/applications/{applicationId:guid}/offers", async (
+        Guid applicationId,
+        CreateOfferBody body,
+        ICommandHandler<CreateOfferCommand, OfferDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(
+            new CreateOfferCommand(applicationId, body.Title, body.SalaryAmount, body.Currency, body.StartDate, body.Notes), ct);
+        return result.ToCreatedResult(dto => $"/v1/recruitment/offers/{dto.Id}");
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminWritePolicy)
+    .WithName("CreateOffer")
+    .WithSummary("Draft an employment offer for an application. Requires an admin (write) role.")
+    .Produces<OfferDto>(StatusCodes.Status201Created)
+    .ProducesProblem(StatusCodes.Status400BadRequest)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden);
+
+v1.MapPost("/offers/{id:guid}/send", async (
+        Guid id,
+        ICommandHandler<TransitionOfferCommand, OfferDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new TransitionOfferCommand(id, OfferAction.Send), ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminWritePolicy)
+    .WithName("SendOffer")
+    .WithSummary("Extend a draft offer to the candidate. Requires an admin (write) role.")
+    .Produces<OfferDto>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden)
+    .ProducesProblem(StatusCodes.Status404NotFound)
+    .ProducesProblem(StatusCodes.Status409Conflict);
+
+v1.MapPost("/offers/{id:guid}/withdraw", async (
+        Guid id,
+        ICommandHandler<TransitionOfferCommand, OfferDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new TransitionOfferCommand(id, OfferAction.Withdraw), ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminWritePolicy)
+    .WithName("WithdrawOffer")
+    .WithSummary("Withdraw an offer before a decision. Requires an admin (write) role.")
+    .Produces<OfferDto>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden)
+    .ProducesProblem(StatusCodes.Status404NotFound)
+    .ProducesProblem(StatusCodes.Status409Conflict);
+
+v1.MapPost("/offers/{id:guid}/accept", async (
+        Guid id,
+        ICommandHandler<TransitionOfferCommand, OfferDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new TransitionOfferCommand(id, OfferAction.Accept), ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.ProfessionalPolicy)
+    .WithName("AcceptOffer")
+    .WithSummary("Candidate accepts a sent offer. Requires a signed-in talent.")
+    .Produces<OfferDto>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden)
+    .ProducesProblem(StatusCodes.Status404NotFound)
+    .ProducesProblem(StatusCodes.Status409Conflict);
+
+v1.MapPost("/offers/{id:guid}/decline", async (
+        Guid id,
+        ICommandHandler<TransitionOfferCommand, OfferDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new TransitionOfferCommand(id, OfferAction.Decline), ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.ProfessionalPolicy)
+    .WithName("DeclineOffer")
+    .WithSummary("Candidate declines a sent offer. Requires a signed-in talent.")
+    .Produces<OfferDto>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden)
+    .ProducesProblem(StatusCodes.Status404NotFound)
+    .ProducesProblem(StatusCodes.Status409Conflict);
+
 // --- Public branded careers pages (SEO-friendly server-rendered HTML; no auth) ---
 // Served publicly at /careers via the gateway (which rewrites /careers/** → /v1/recruitment/careers/**).
 const string careersBrand = "Illumin360";
@@ -509,6 +608,14 @@ internal sealed record AddContactBody(string Name, string? Title, string? Email,
 /// <param name="TalentId">The applying talent's id.</param>
 /// <param name="TalentType">Talent type (<c>student</c>/<c>professional</c>); defaults to professional.</param>
 internal sealed record ApplyToRequestBody(Guid TalentId, string? TalentType);
+
+/// <summary>Request body for drafting an employment offer.</summary>
+/// <param name="Title">Role title.</param>
+/// <param name="SalaryAmount">Salary amount.</param>
+/// <param name="Currency">Optional currency code (defaults to NAD).</param>
+/// <param name="StartDate">Proposed start date (yyyy-MM-dd).</param>
+/// <param name="Notes">Optional notes.</param>
+internal sealed record CreateOfferBody(string Title, decimal SalaryAmount, string? Currency, DateOnly StartDate, string? Notes);
 
 /// <summary>Request body for creating a saved search.</summary>
 /// <param name="TalentId">Owning talent id.</param>

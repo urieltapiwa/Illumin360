@@ -92,11 +92,11 @@ flip the status to ✅ (add the commit/PR ref).
 ## F. Offers & onboarding
 | Feature | Status | Notes |
 |---|---|---|
-| Offer management | ⬜ | |
+| Offer management | ✅ | `offers` table in Recruitment; `/v1/recruitment/applications/{id}/offers` + `/offers/{id}/send\|accept\|decline\|withdraw` with a draft→sent→accepted/declined state machine (409 guards); admin pipeline offer drawer (draft & send, withdraw) |
 | Offer letter / e-sign | ⬜ | |
 | Onboarding checklist | ⬜ | Horilla/Frappe HR have this |
 
-- [ ] Offer create/accept/decline workflow
+- [x] Offer create/accept/decline workflow — `Offer` aggregate + `offers` table, `/v1/recruitment` endpoints: create (admin), send/withdraw (admin), accept/decline (talent), list per application; draft→sent→accepted/declined/withdrawn state machine with 409 conflict guards; unit tests; admin pipeline "Offer" drawer (draft & send, status, withdraw). Candidate accept/decline UI on the professional portal is a follow-up
 - [ ] Onboarding checklist on hire
 
 ## G. Communication & notifications
@@ -170,7 +170,7 @@ flip the status to ✅ (add the commit/PR ref).
 
 ### Progress
 - Total build items: 32
-- Done: 24
+- Done: 25
 - In progress: 0
 
 **Changelog of ticks**
@@ -200,5 +200,6 @@ flip the status to ✅ (add the commit/PR ref).
 - Employer team roles — `employer_team_members` + `/v1/employers/me/team` CRUD (owner/recruiter/viewer), last-owner invariant, portal team panel (2026-08-10).
 - Recruiter CRM — `clients`/`client_contacts` in Recruitment + `/v1/recruitment/clients` CRUD, status lifecycle, seeded demo clients, admin-portal Client CRM panel (2026-08-10).
 - Branded careers page — public SSR `/careers` + `/careers/{id}` with SEO meta + schema.org JSON-LD, gateway-exposed (2026-08-10).
+- Offer management — `offers` in Recruitment + create/send/accept/decline/withdraw state machine, admin pipeline offer drawer (2026-08-10).
 
 _Update this file as items are ticked; link the commit/PR that delivered each._

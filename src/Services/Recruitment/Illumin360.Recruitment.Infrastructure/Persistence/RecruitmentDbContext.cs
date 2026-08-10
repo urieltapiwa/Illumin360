@@ -31,6 +31,9 @@ public sealed class RecruitmentDbContext(DbContextOptions<RecruitmentDbContext> 
     /// <summary>CRM client contacts set (owned + migration-managed by this service).</summary>
     public DbSet<ClientContact> ClientContacts => Set<ClientContact>();
 
+    /// <summary>Employment offers set (owned + migration-managed by this service).</summary>
+    public DbSet<Offer> Offers => Set<Offer>();
+
     /// <inheritdoc />
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -143,6 +146,29 @@ public sealed class RecruitmentDbContext(DbContextOptions<RecruitmentDbContext> 
             b.Property(c => c.CreatedAt).HasColumnName("created_at");
             b.HasIndex(c => c.ClientId);
             b.Ignore(c => c.DomainEvents);
+        });
+
+        modelBuilder.Entity<Offer>(b =>
+        {
+            b.ToTable("offers");
+            b.HasKey(o => o.Id);
+            b.Property(o => o.Id)
+                .HasColumnName("id")
+                .HasConversion(id => id.Value, value => new OfferId(value));
+            b.Property(o => o.ApplicationId).HasColumnName("application_id");
+            b.Property(o => o.Title).HasColumnName("title").HasMaxLength(150);
+            b.Property(o => o.SalaryAmount).HasColumnName("salary_amount").HasPrecision(12, 2);
+            b.Property(o => o.Currency).HasColumnName("currency").HasMaxLength(3);
+            b.Property(o => o.StartDate).HasColumnName("start_date");
+            b.Property(o => o.Status)
+                .HasColumnName("status")
+                .HasMaxLength(20)
+                .HasConversion(s => s.ToString(), s => Enum.Parse<OfferStatus>(s));
+            b.Property(o => o.Notes).HasColumnName("notes").HasMaxLength(2000);
+            b.Property(o => o.CreatedAt).HasColumnName("created_at");
+            b.Property(o => o.DecidedAt).HasColumnName("decided_at");
+            b.HasIndex(o => o.ApplicationId);
+            b.Ignore(o => o.DomainEvents);
         });
 
         modelBuilder.Entity<RecruitmentApplication>(b =>
