@@ -53,4 +53,51 @@ public sealed class RecruitmentApplication : Entity<ApplicationId>
 
     /// <summary>When a decision was reached (UTC), if any.</summary>
     public DateTimeOffset? DecidedAt { get; private set; }
+
+    /// <summary>Ordered non-terminal pipeline stages a recruiter advances an application through.</summary>
+    private static readonly string[] Stages = ["applied", "reviewed", "shortlisted", "hired"];
+
+    /// <summary>Whether the application has reached a terminal decision (hired or rejected).</summary>
+    public bool IsDecided => IsHire || string.Equals(Status, "rejected", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Advances the application to the next pipeline stage (applied → reviewed → shortlisted → hired).
+    /// Reaching <c>hired</c> is a terminal decision.
+    /// </summary>
+    /// <param name="decidedAt">Timestamp used if this advance reaches a terminal decision (UTC).</param>
+    /// <returns>Success, or a conflict if already decided.</returns>
+    public Result<RecruitmentApplication> Advance(DateTimeOffset decidedAt)
+    {
+        if (IsDecided)
+        {
+            return Error.Conflict("application.already_decided", "This application has already been decided.");
+        }
+
+        var current = Array.FindIndex(Stages, s => string.Equals(s, Status, StringComparison.OrdinalIgnoreCase));
+        var nextIndex = current < 0 ? 1 : Math.Min(current + 1, Stages.Length - 1);
+        Status = Stages[nextIndex];
+
+        if (string.Equals(Status, "hired", StringComparison.OrdinalIgnoreCase))
+        {
+            IsHire = true;
+            DecidedAt = decidedAt;
+        }
+
+        return this;
+    }
+
+    /// <summary>Rejects the application (terminal).</summary>
+    /// <param name="decidedAt">When the decision was reached (UTC).</param>
+    /// <returns>Success, or a conflict if already decided.</returns>
+    public Result<RecruitmentApplication> Reject(DateTimeOffset decidedAt)
+    {
+        if (IsDecided)
+        {
+            return Error.Conflict("application.already_decided", "This application has already been decided.");
+        }
+
+        Status = "rejected";
+        DecidedAt = decidedAt;
+        return this;
+    }
 }

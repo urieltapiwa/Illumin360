@@ -52,13 +52,13 @@ flip the status to ✅ (add the commit/PR ref).
 |---|---|---|
 | Apply to role | ✅ | marketplace apply + student/prof match apply |
 | Applications-per-request listing | ✅ | `GET /requests/{id}/applications` |
-| Pipeline stages (applied→reviewed→shortlist→interview→hire) | 🟡 | Stages exist in data/funnel; no transition API |
-| Advance / reject application (with reason) | ⬜ | |
+| Pipeline stages (applied→reviewed→shortlist→interview→hire) | ✅ | Recruiter transition endpoints advance/reject with terminal-decision guards (409) |
+| Advance / reject application (with reason) | 🟡 | Advance/reject endpoints (admin-gated); a free-text reason needs a new column on the externally-seeded `applications` table (pending) |
 | Kanban drag-drop pipeline UI | ⬜ | Horilla has this |
 | Bulk actions | ⬜ | |
 | Application status visible to applicant | 🟡 | Own match status shown |
 
-- [ ] Application stage-transition endpoints (advance/reject + reason)
+- [x] Application stage-transition endpoints — `POST /v1/recruitment/applications/{id}/advance|reject` (admin-gated), domain stage machine (applied→reviewed→shortlisted→hired) with terminal-conflict guards. Free-text reject reason pending (needs a column on the externally-seeded `applications` table)
 - [ ] Recruiter pipeline board (kanban) per requisition
 - [ ] Applicant-facing application status timeline
 
@@ -163,7 +163,7 @@ flip the status to ✅ (add the commit/PR ref).
 
 ### Progress
 - Total build items: 30
-- Done: 6
+- Done: 7
 - In progress: 0
 
 **Changelog of ticks**
@@ -177,5 +177,6 @@ flip the status to ✅ (add the commit/PR ref).
 - Resume parsing (`Illumin360.Resume`) — CV text extraction + skill detection, wired to Professionals `/me/cv/parse` + UI (2026-08-10).
 - Auto-apply detected CV skills to the professional profile (`/me/cv/apply-skills`), reflected live (2026-08-10).
 - Extended CV parse/apply-skills to students (same `/me/cv/apply-skills` + "Scan CV" UI) (2026-08-10).
+- Application pipeline stage-transition endpoints (advance/reject) with a domain stage machine (2026-08-10).
 
 _Update this file as items are ticked; link the commit/PR that delivered each._
