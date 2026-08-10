@@ -242,6 +242,13 @@ public sealed class RecruitmentRepository(RecruitmentDbContext db) : IRecruitmen
     public void RemoveRequisitionTag(RequisitionTag tag) => _db.RequisitionTags.Remove(tag);
 
     /// <inheritdoc />
+    public async Task<RequisitionApproval?> GetApprovalAsync(Guid requestId, CancellationToken cancellationToken)
+        => await _db.RequisitionApprovals.FirstOrDefaultAsync(a => a.RequestId == requestId, cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
+    public void AddApproval(RequisitionApproval approval) => _db.RequisitionApprovals.Add(approval);
+
+    /// <inheritdoc />
     public async Task SaveChangesAsync(CancellationToken cancellationToken)
         => await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 

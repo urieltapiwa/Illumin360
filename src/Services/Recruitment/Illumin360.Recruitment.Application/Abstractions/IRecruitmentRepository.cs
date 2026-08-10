@@ -214,6 +214,15 @@ public interface IRecruitmentRepository
     /// <param name="tag">The tag to remove.</param>
     void RemoveRequisitionTag(RequisitionTag tag);
 
+    /// <summary>Loads a requisition's approval record (change-tracked), or null if none.</summary>
+    /// <param name="requestId">The requisition id.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<RequisitionApproval?> GetApprovalAsync(Guid requestId, CancellationToken cancellationToken);
+
+    /// <summary>Stages a new approval record for insertion.</summary>
+    /// <param name="approval">The approval to add.</param>
+    void AddApproval(RequisitionApproval approval);
+
     /// <summary>Commits staged changes to the data store.</summary>
     /// <param name="cancellationToken">Cancellation token.</param>
     Task SaveChangesAsync(CancellationToken cancellationToken);

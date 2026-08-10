@@ -122,6 +122,12 @@ public static class DependencyInjection
             ICommandHandler<RemoveRequisitionTagCommand, IReadOnlyList<string>>,
             RemoveRequisitionTagCommandHandler>();
         services.AddScoped<
+            IQueryHandler<GetApprovalQuery, ApprovalDto>,
+            GetApprovalQueryHandler>();
+        services.AddScoped<
+            ICommandHandler<TransitionApprovalCommand, ApprovalDto>,
+            TransitionApprovalCommandHandler>();
+        services.AddScoped<
             ICommandHandler<ToggleOnboardingTaskCommand, OnboardingTaskDto>,
             ToggleOnboardingTaskCommandHandler>();
         services.AddScoped<

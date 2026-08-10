@@ -129,6 +129,8 @@ export default function Admin({ session }: { session: Session }) {
   type ReqDetail = { salaryMin: number | null; salaryMax: number | null; currency: string; employmentType: string; remote: boolean; tags: string[] };
   const [reqDetail, setReqDetail] = useState<ReqDetail | null>(null);
   const [reqTagDraft, setReqTagDraft] = useState("");
+  type Approval = { status: string; approver: string | null; reason: string | null };
+  const [approval, setApproval] = useState<Approval | null>(null);
   useEffect(() => { fetch(import.meta.env.BASE_URL + "admin.json").then((r) => r.json()).then(setD); }, []);
   // Live platform signals from the microservices (via BFF → gateway). Talent count and talent-by-city are
   // real (Candidates service); finance/ops tiles (MRR, subscriptions, tickets, verifications) have no backing
@@ -176,6 +178,10 @@ export default function Admin({ session }: { session: Session }) {
     fetch(`/api/recruitment/requests/${pipelineReqId}/details`)
       .then((r) => (r.ok ? r.json() : null))
       .then((v) => { if (v) setReqDetail(v); })
+      .catch(() => { /* keep empty */ });
+    fetch(`/api/recruitment/requests/${pipelineReqId}/approval`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((v) => { if (v) setApproval(v); })
       .catch(() => { /* keep empty */ });
   }, [pipelineReqId]);
   // Recruiter CRM: client list (re-fetched on status-filter change).
@@ -362,6 +368,18 @@ export default function Admin({ session }: { session: Session }) {
   const removeReqTag = async (label: string) => {
     const r = await fetch(`/api/recruitment/requests/${pipelineReqId}/tags/${encodeURIComponent(label)}`, { method: "DELETE", credentials: "same-origin" });
     if (r.ok) { const tags = await r.json(); setReqDetail((d) => (d ? { ...d, tags } : d)); }
+  };
+  const approvalAction = async (action: "submit" | "approve" | "reject") => {
+    if (!pipelineReqId) return;
+    let body: Record<string, string> | undefined;
+    if (action === "approve") body = { approver: session.name || "Approver" };
+    if (action === "reject") {
+      const reason = window.prompt(t("admin.approval.reasonPrompt", "Rejection reason:")) || "";
+      if (!reason.trim()) return;
+      body = { approver: session.name || "Approver", reason };
+    }
+    const r = await fetch(`/api/recruitment/requests/${pipelineReqId}/approval/${action}`, { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: body ? JSON.stringify(body) : undefined });
+    if (r.ok) setApproval(await r.json());
   };
   const pipelineStages = ["applied", "reviewed", "shortlisted", "hired", "rejected"];
   const degraded = d.services.filter((s) => s.status !== "operational").length;
@@ -612,6 +630,21 @@ export default function Admin({ session }: { session: Session }) {
                     ))}
                     <input value={reqTagDraft} onChange={(e) => setReqTagDraft(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") addReqTag(); }} placeholder={t("admin.req.addTag", "Add tag")} className="w-28 rounded-lg border border-line/70 bg-panel2/50 px-2 py-1 text-[11px] text-ink-hi placeholder:text-ink-lo focus:border-brand/50 focus:outline-none" />
                   </div>
+                  {approval && (
+                    <div className="mt-3 border-t border-line/40 pt-3 flex flex-wrap items-center gap-2">
+                      <span className="eyebrow">{t("admin.approval.title", "Approval")}</span>
+                      <span className={`chip !text-[10px] capitalize ${approval.status === "approved" ? "!text-brand-bright !border-brand/30" : approval.status === "rejected" ? "!text-pink !border-pink/30" : approval.status === "submitted" ? "!text-gold !border-gold/30" : "!text-ink-lo !border-line/70"}`}>{approval.status}</span>
+                      {approval.approver && <span className="text-[11px] text-ink-lo">by {approval.approver}</span>}
+                      {approval.reason && <span className="text-[11px] text-pink" title={approval.reason}>— {approval.reason}</span>}
+                      <div className="ml-auto flex gap-1.5">
+                        {(approval.status === "draft" || approval.status === "rejected") && <button onClick={() => approvalAction("submit")} className="rounded-lg bg-brand/15 px-2.5 py-1 text-[11px] font-semibold text-brand-bright hover:bg-brand/25 transition">{t("admin.approval.submit", "Submit")}</button>}
+                        {approval.status === "submitted" && <>
+                          <button onClick={() => approvalAction("approve")} className="rounded-lg bg-brand/15 px-2.5 py-1 text-[11px] font-semibold text-brand-bright hover:bg-brand/25 transition">{t("admin.approval.approve", "Approve")}</button>
+                          <button onClick={() => approvalAction("reject")} className="rounded-lg bg-pink/15 px-2.5 py-1 text-[11px] font-semibold text-pink hover:bg-pink/25 transition">{t("admin.approval.reject", "Reject")}</button>
+                        </>}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
               <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3">
