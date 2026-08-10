@@ -17,7 +17,7 @@ flip the status to ✅ (add the commit/PR ref).
 | Candidate & talent profiles (student/professional) | ✅ | Candidates + Students + Professionals services |
 | Availability status | ✅ | `SetAvailability` on students & professionals |
 | Skills & proficiency | 🟡 | Seeded skill rows; not user-editable |
-| Resume/CV upload & storage | 🟡 | Professionals done (MinIO-backed upload/download via `Illumin360.Storage`); students & candidates pending |
+| Resume/CV upload & storage | ✅ | MinIO-backed upload/download for professionals & students (self-service `/me/cv`) and candidates (per-id, admin) via `Illumin360.Storage` |
 | Resume parsing (skills/experience extraction) | ⬜ | EazyRecruit/OpenCATS have this |
 | Candidate search (boolean / faceted) | 🟡 | City ILIKE filter only |
 | Recruiter notes / private activity log | 🟡 | Read-only activity feed; no recruiter notes |
@@ -26,7 +26,7 @@ flip the status to ✅ (add the commit/PR ref).
 | Duplicate detection | ⬜ | |
 
 - [x] Shared object-storage building block (`Illumin360.Storage`) + Professionals CV upload/download → MinIO (verified end-to-end with a Testcontainers MinIO roundtrip)
-- [ ] Extend CV upload to students & candidates
+- [x] Extend CV upload to students (self-service `/me/cv`, UI + MinIO integration test) & candidates (per-id `/{id}/cv`, admin-gated)
 - [ ] Resume parsing to prefill skills/experience
 - [ ] Editable skills with proficiency
 - [ ] Faceted candidate search (skills, city, availability)
@@ -163,11 +163,12 @@ flip the status to ✅ (add the commit/PR ref).
 
 ### Progress
 - Total build items: 30
-- Done: 2
+- Done: 3
 - In progress: 0
 
 **Changelog of ticks**
 - Admin portal tickets + accounts panels — completed the ticket Assign action (2026-08-10).
 - Shared object storage + Professionals CV upload/download (MinIO), end-to-end tested (2026-08-10).
+- CV upload extended to Students (self-service + UI) and Candidates (per-id, admin), MinIO-tested (2026-08-10).
 
 _Update this file as items are ticked; link the commit/PR that delivered each._

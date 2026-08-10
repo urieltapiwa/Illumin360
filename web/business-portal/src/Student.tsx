@@ -44,7 +44,16 @@ export default function Student(_props: { session: Session }) {
   const [d, setD] = useState<StudentData | null>(null);
   const [live, setLive] = useState(false);
   const [matchFilter, setMatchFilter] = useState<"all" | "saved" | "applied">("all");
+  const [cv, setCv] = useState<{ fileName: string; uploadedAt: string } | null>(null);
+  const [cvBusy, setCvBusy] = useState<"idle" | "uploading" | "error">("idle");
   const { t } = useTranslation();
+  // Current CV metadata (if any). Reads are open; upload requires an authenticated student.
+  useEffect(() => {
+    fetch("/api/students/me/cv")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((v) => { if (v && v.fileName) setCv({ fileName: v.fileName, uploadedAt: v.uploadedAt }); })
+      .catch(() => { /* no CV / offline */ });
+  }, []);
   // Live-first: read the student's dashboard from the Students service (via the BFF/gateway); fall back to
   // the bundled snapshot if the API is unavailable. Mirrors the Business dashboard's live-data pattern.
   useEffect(() => {
@@ -73,6 +82,25 @@ export default function Student(_props: { session: Session }) {
     if (r.ok) {
       const updated = await r.json().catch(() => null);
       setD((prev) => (prev ? { ...prev, matches: prev.matches.map((m) => (m.id === matchId ? { ...m, status: updated?.status ?? action + "d" } : m)) } : prev));
+    }
+  };
+  const uploadCv = async (files: FileList | null) => {
+    const file = files?.[0];
+    if (!file) return;
+    setCvBusy("uploading");
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const r = await fetch("/api/students/me/cv", { method: "POST", credentials: "same-origin", body: fd });
+      if (r.ok) {
+        const v = await r.json().catch(() => null);
+        setCv({ fileName: v?.fileName ?? file.name, uploadedAt: v?.uploadedAt ?? new Date().toISOString() });
+        setCvBusy("idle");
+      } else {
+        setCvBusy("error");
+      }
+    } catch {
+      setCvBusy("error");
     }
   };
   const toggleAvailability = async () => {
@@ -121,6 +149,29 @@ export default function Student(_props: { session: Session }) {
               </div>
             </motion.section>
           </div>
+          <motion.section variants={fade} className="card p-5">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div>
+                <h3 className="font-display text-[15px] font-bold text-ink-hi">{t("student.cv.title", "CV / Résumé")}</h3>
+                <p className="text-[11px] text-ink-lo mt-0.5">
+                  {cv
+                    ? t("student.cv.current", "{{name}} · uploaded {{date}}", { name: cv.fileName, date: new Date(cv.uploadedAt).toLocaleDateString() })
+                    : t("student.cv.none", "No CV uploaded yet. PDF or Word, up to 5 MB.")}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                {cv && (
+                  <a href="/api/students/me/cv/download" className="chip !text-[11px] !text-ink-mid hover:!text-ink-hi transition">{t("student.cv.download", "Download")}</a>
+                )}
+                {live && (
+                  <label className={`rounded-lg px-3 py-1.5 text-[11px] font-semibold transition cursor-pointer ${cvBusy === "uploading" ? "bg-panel2/70 text-ink-lo" : "bg-brand/15 text-brand-bright hover:bg-brand/25"}`}>
+                    {cvBusy === "uploading" ? t("student.cv.uploading", "Uploading…") : cvBusy === "error" ? t("student.cv.retry", "Retry upload") : cv ? t("student.cv.replace", "Replace CV") : t("student.cv.upload", "Upload CV")}
+                    <input type="file" accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" className="hidden" disabled={cvBusy === "uploading"} onChange={(e) => uploadCv(e.target.files)} />
+                  </label>
+                )}
+              </div>
+            </div>
+          </motion.section>
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
             <motion.section variants={fade} className="card p-5 xl:col-span-2">
               <div className="flex items-center justify-between mb-3">

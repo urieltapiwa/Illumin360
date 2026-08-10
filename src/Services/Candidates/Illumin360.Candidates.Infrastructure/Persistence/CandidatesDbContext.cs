@@ -38,6 +38,12 @@ public sealed class CandidatesDbContext(DbContextOptions<CandidatesDbContext> op
             b.Property(c => c.Availability).HasColumnName("availability_status").HasConversion<string>().HasMaxLength(30);
             b.Property(c => c.PublicHeadline).HasColumnName("public_headline").HasMaxLength(150);
             b.Property(c => c.CreatedAt).HasColumnName("created_at");
+            b.Property(c => c.CvObjectKey).HasColumnName("cv_object_key").HasMaxLength(400);
+            b.Property(c => c.CvFileName).HasColumnName("cv_file_name").HasMaxLength(260);
+            b.Property(c => c.CvContentType).HasColumnName("cv_content_type").HasMaxLength(120);
+            b.Property(c => c.CvSize).HasColumnName("cv_size");
+            b.Property(c => c.CvUploadedAt).HasColumnName("cv_uploaded_at");
+            b.Ignore(c => c.HasCv);
             b.Ignore(c => c.DomainEvents);
             b.HasIndex(c => c.City);
         });

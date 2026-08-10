@@ -1,3 +1,4 @@
+using Illumin360.Storage;
 using Illumin360.Students.Application.Abstractions;
 using Illumin360.Students.Infrastructure.Messaging;
 using Illumin360.Students.Infrastructure.Persistence;
@@ -26,6 +27,9 @@ public static class DependencyInjection
 
         services.AddDbContext<StudentsDbContext>(o => o.UseNpgsql(connectionString));
         services.AddScoped<IStudentRepository, StudentRepository>();
+
+        // Object storage (MinIO/S3) for CV uploads.
+        services.AddIllumin360Storage(configuration);
 
         // --- Messaging: MassTransit + RabbitMQ with the EF Core transactional bus outbox ---
         // Integration events published by handlers are stored in the students database's outbox
