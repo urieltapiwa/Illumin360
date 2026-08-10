@@ -223,6 +223,24 @@ public interface IRecruitmentRepository
     /// <param name="approval">The approval to add.</param>
     void AddApproval(RequisitionApproval approval);
 
+    /// <summary>Stages a new interview attendee for insertion.</summary>
+    /// <param name="attendee">The attendee to add.</param>
+    void AddInterviewAttendee(InterviewAttendee attendee);
+
+    /// <summary>Removes an interview attendee.</summary>
+    /// <param name="attendee">The attendee to remove.</param>
+    void RemoveInterviewAttendee(InterviewAttendee attendee);
+
+    /// <summary>Loads an interview attendee by id, or null if not present.</summary>
+    /// <param name="id">The attendee id.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<InterviewAttendee?> GetInterviewAttendeeAsync(Guid id, CancellationToken cancellationToken);
+
+    /// <summary>Lists an interview's panel attendees, in add order.</summary>
+    /// <param name="interviewId">The interview id.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<IReadOnlyList<InterviewAttendee>> ListInterviewAttendeesAsync(Guid interviewId, CancellationToken cancellationToken);
+
     /// <summary>Stages a new job template for insertion.</summary>
     /// <param name="template">The template to add.</param>
     void AddJobTemplate(JobTemplate template);

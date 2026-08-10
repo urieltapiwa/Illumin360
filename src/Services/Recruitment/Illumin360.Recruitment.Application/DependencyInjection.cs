@@ -71,6 +71,15 @@ public static class DependencyInjection
             IQueryHandler<GetInterviewIcsQuery, string>,
             GetInterviewIcsQueryHandler>();
         services.AddScoped<
+            IQueryHandler<GetInterviewAttendeesQuery, IReadOnlyList<InterviewAttendeeDto>>,
+            GetInterviewAttendeesQueryHandler>();
+        services.AddScoped<
+            ICommandHandler<AddInterviewAttendeeCommand, InterviewAttendeeDto>,
+            AddInterviewAttendeeCommandHandler>();
+        services.AddScoped<
+            ICommandHandler<RemoveInterviewAttendeeCommand, bool>,
+            RemoveInterviewAttendeeCommandHandler>();
+        services.AddScoped<
             IQueryHandler<ListClientsQuery, IReadOnlyList<ClientDto>>,
             ListClientsQueryHandler>();
         services.AddScoped<

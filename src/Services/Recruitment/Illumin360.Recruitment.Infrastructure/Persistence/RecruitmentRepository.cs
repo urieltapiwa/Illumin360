@@ -249,6 +249,23 @@ public sealed class RecruitmentRepository(RecruitmentDbContext db) : IRecruitmen
     public void AddApproval(RequisitionApproval approval) => _db.RequisitionApprovals.Add(approval);
 
     /// <inheritdoc />
+    public void AddInterviewAttendee(InterviewAttendee attendee) => _db.InterviewAttendees.Add(attendee);
+
+    /// <inheritdoc />
+    public void RemoveInterviewAttendee(InterviewAttendee attendee) => _db.InterviewAttendees.Remove(attendee);
+
+    /// <inheritdoc />
+    public async Task<InterviewAttendee?> GetInterviewAttendeeAsync(Guid id, CancellationToken cancellationToken)
+        => await _db.InterviewAttendees.FirstOrDefaultAsync(a => a.Id == id, cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<InterviewAttendee>> ListInterviewAttendeesAsync(Guid interviewId, CancellationToken cancellationToken)
+        => await _db.InterviewAttendees.AsNoTracking()
+            .Where(a => a.InterviewId == interviewId)
+            .OrderBy(a => a.CreatedAt)
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
     public void AddJobTemplate(JobTemplate template) => _db.JobTemplates.Add(template);
 
     /// <inheritdoc />

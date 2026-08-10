@@ -30,10 +30,11 @@ public sealed record InterviewDto(Guid Id, Guid ApplicationId, DateTimeOffset Sc
 /// <summary>Builds a minimal iCalendar (.ics) invite for an interview.</summary>
 public static class Ics
 {
-    /// <summary>Renders a single-event VCALENDAR for the interview.</summary>
+    /// <summary>Renders a single-event VCALENDAR for the interview, optionally listing the panel.</summary>
     /// <param name="interview">The interview.</param>
+    /// <param name="attendees">The interview panel, if any (emitted as ATTENDEE lines).</param>
     /// <returns>The .ics text.</returns>
-    public static string Build(Interview interview)
+    public static string Build(Interview interview, IReadOnlyList<InterviewAttendee>? attendees = null)
     {
         ArgumentNullException.ThrowIfNull(interview);
         var start = interview.ScheduledAt.UtcDateTime;
@@ -51,6 +52,12 @@ public static class Ics
         sb.Append(CultureInfo.InvariantCulture, $"DTEND:{Fmt(end)}\r\n");
         sb.Append("SUMMARY:Illumin360 interview\r\n");
         sb.Append(CultureInfo.InvariantCulture, $"LOCATION:{Escape(interview.Location)}\r\n");
+        foreach (var attendee in attendees ?? [])
+        {
+            var contact = string.IsNullOrWhiteSpace(attendee.Email) ? "invalid:nomail" : $"mailto:{attendee.Email}";
+            sb.Append(CultureInfo.InvariantCulture, $"ATTENDEE;CN={Escape(attendee.Name)}:{contact}\r\n");
+        }
+
         sb.Append("END:VEVENT\r\n");
         sb.Append("END:VCALENDAR\r\n");
         return sb.ToString();
@@ -192,6 +199,7 @@ public sealed class GetInterviewIcsQueryHandler(IRecruitmentRepository repositor
             return Error.NotFound("interview.not_found", "No matching interview was found.");
         }
 
-        return Ics.Build(interview);
+        var attendees = await _repository.ListInterviewAttendeesAsync(query.InterviewId, cancellationToken).ConfigureAwait(false);
+        return Ics.Build(interview, attendees);
     }
 }

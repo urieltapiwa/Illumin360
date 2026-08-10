@@ -88,9 +88,10 @@ flip the status to ✅ (add the commit/PR ref).
 | Interview scheduling | ✅ | Schedule/list/cancel interviews per application (`interviews` table + admin-gated endpoints) |
 | Calendar integration (ICS/Google) | 🟡 | `.ics` invite download (`/interviews/{id}/ics`, importable to Google/Outlook); no direct calendar-API sync |
 | Interview scorecards / feedback | ✅ | Rating (1–5) + comment completes an interview |
-| Panel interviews | ⬜ | Single interviewer only (no attendees list yet) |
+| Panel interviews | ✅ | `interview_attendees` table + `GET/POST/DELETE /v1/recruitment/interviews/{id}/attendees`; the `.ics` invite lists the panel as ATTENDEE lines. Admin attendee-management UI is a follow-up |
 
-- [x] Schedule interview (slot, location/mode, `.ics` invite) — schedule/list/cancel + `/interviews/{id}/ics`. Multi-attendee panels are a follow-up
+- [x] Schedule interview (slot, location/mode, `.ics` invite) — schedule/list/cancel + `/interviews/{id}/ics`
+- [x] Panel interviews — `InterviewAttendee` aggregate + `interview_attendees` table; `GET/POST/DELETE /v1/recruitment/interviews/{id}/attendees` (writes admin-gated, name+email validation), and the `.ics` invite now emits an ATTENDEE line per panellist (mailto or invalid:nomail); domain/handler unit tests. Admin attendee-management UI is a follow-up
 - [x] Interview scorecard + feedback capture — rating (1–5) + comment completes the interview
 
 ## F. Offers & onboarding
@@ -175,7 +176,7 @@ flip the status to ✅ (add the commit/PR ref).
 
 ### Progress
 - Total build items: 48
-- Done: 37
+- Done: 38
 - In progress: 0
 
 **Changelog of ticks**
