@@ -160,6 +160,38 @@ public sealed class RegisterCandidateApiTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Faceted_search_filters_and_returns_facets()
+    {
+        var admin = AdminClient();
+        (await admin.PostAsJsonAsync("/v1/candidates", new RegisterCandidateCommand("Search", "Dev", "Windhoek", "Namibian", "OpenToOpportunities", "Senior backend engineer"))).EnsureSuccessStatusCode();
+        (await admin.PostAsJsonAsync("/v1/candidates", new RegisterCandidateCommand("Search", "Chef", "Windhoek", "Namibian", "NotAvailable", "Head chef"))).EnsureSuccessStatusCode();
+        (await admin.PostAsJsonAsync("/v1/candidates", new RegisterCandidateCommand("Search", "Analyst", "Swakopmund", "Namibian", "OpenToOpportunities", "Data analyst"))).EnsureSuccessStatusCode();
+
+        var client = _factory.CreateClient();
+
+        // Keyword facet: only the engineer matches "engineer".
+        var byKeyword = await client.GetFromJsonAsync<SearchResult>("/v1/candidates/search?q=engineer");
+        byKeyword!.Items.Should().OnlyContain(c => c.LastName == "Dev");
+
+        // City + availability filter narrows to the Windhoek OpenToOpportunities candidate.
+        var narrowed = await client.GetFromJsonAsync<SearchResult>("/v1/candidates/search?city=Windhoek&availability=OpenToOpportunities");
+        narrowed!.Items.Should().OnlyContain(c => c.City == "Windhoek");
+        narrowed.Facets.Availability.Should().Contain(f => f.Label == "OpenToOpportunities");
+
+        // Availability facet excludes its own filter, so it still sees the NotAvailable Windhoek candidate.
+        narrowed.Facets.Availability.Should().Contain(f => f.Label == "NotAvailable");
+
+        // Invalid availability is a 400.
+        (await client.GetAsync("/v1/candidates/search?availability=Whenever")).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    private sealed record SearchResult(List<CandidateDto> Items, int Total, int Page, int PageSize, Facets Facets);
+
+    private sealed record Facets(List<FacetCount> Cities, List<FacetCount> Availability);
+
+    private sealed record FacetCount(string Label, int Count);
+
+    [Fact]
     public async Task Get_unknown_id_returns_404()
     {
         var client = _factory.CreateClient();

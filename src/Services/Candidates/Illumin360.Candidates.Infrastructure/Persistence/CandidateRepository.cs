@@ -30,6 +30,82 @@ public sealed class CandidateRepository(CandidatesDbContext db) : ICandidateRepo
     }
 
     /// <inheritdoc />
+    public async Task<(IReadOnlyList<Candidate> Items, int Total)> SearchAsync(
+        CandidateSearchCriteria criteria, int skip, int take, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(criteria);
+        var query = Apply(_db.Candidates.AsNoTracking(), criteria, applyCity: true, applyAvailability: true);
+
+        var total = await query.CountAsync(cancellationToken).ConfigureAwait(false);
+        var items = await query
+            .OrderByDescending(c => c.CreatedAt)
+            .Skip(skip)
+            .Take(take)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return (items, total);
+    }
+
+    /// <inheritdoc />
+    public async Task<CandidateFacetsDto> GetCandidateFacetsAsync(CandidateSearchCriteria criteria, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(criteria);
+
+        // Each facet excludes its own dimension so the counts show what selecting that value would yield.
+        var cityRaw = await Apply(_db.Candidates.AsNoTracking(), criteria, applyCity: false, applyAvailability: true)
+            .GroupBy(c => c.City)
+            .Select(g => new { City = g.Key, Count = g.Count() })
+            .OrderByDescending(x => x.Count)
+            .Take(12)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        var availabilityRaw = await Apply(_db.Candidates.AsNoTracking(), criteria, applyCity: true, applyAvailability: false)
+            .GroupBy(c => c.Availability)
+            .Select(g => new { Status = g.Key, Count = g.Count() })
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        var cities = cityRaw.Select(x => new CountByLabel(x.City, x.Count)).ToList();
+        var availability = availabilityRaw
+            .Select(x => new CountByLabel(x.Status.ToString(), x.Count))
+            .OrderByDescending(x => x.Count)
+            .ToList();
+
+        return new CandidateFacetsDto(cities, availability);
+    }
+
+    private static IQueryable<Candidate> Apply(IQueryable<Candidate> query, CandidateSearchCriteria c, bool applyCity, bool applyAvailability)
+    {
+        if (applyCity && !string.IsNullOrWhiteSpace(c.City))
+        {
+            query = query.Where(x => EF.Functions.ILike(x.City, c.City));
+        }
+
+        if (applyAvailability && c.Availability is { } availability)
+        {
+            query = query.Where(x => x.Availability == availability);
+        }
+
+        if (!string.IsNullOrWhiteSpace(c.Query))
+        {
+            var keyword = $"%{c.Query}%";
+            query = query.Where(x =>
+                EF.Functions.ILike(x.FirstName, keyword)
+                || EF.Functions.ILike(x.LastName, keyword)
+                || (x.PublicHeadline != null && EF.Functions.ILike(x.PublicHeadline, keyword)));
+        }
+
+        if (c.HasCv is { } hasCv)
+        {
+            query = query.Where(x => (x.CvObjectKey != null) == hasCv);
+        }
+
+        return query;
+    }
+
+    /// <inheritdoc />
     public async Task<Candidate?> GetByIdAsync(CandidateId id, CancellationToken cancellationToken)
         => await _db.Candidates.FirstOrDefaultAsync(c => c.Id == id, cancellationToken).ConfigureAwait(false);
 

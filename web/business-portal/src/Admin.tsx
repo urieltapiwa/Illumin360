@@ -107,6 +107,14 @@ export default function Admin({ session }: { session: Session }) {
   type OnbTask = { id: string; label: string; isDone: boolean; sortOrder: number };
   type Onboarding = { id: string; applicationId: string; roleTitle: string; completed: number; total: number; tasks: OnbTask[] };
   const [onboarding, setOnboarding] = useState<Onboarding | "none" | null>(null);
+  // Faceted candidate search.
+  type SearchCandidate = { id: string; firstName: string; lastName: string; city: string; availability: string; publicHeadline: string | null };
+  type FacetCount = { label: string; count: number };
+  type SearchResult = { items: SearchCandidate[]; total: number; facets: { cities: FacetCount[]; availability: FacetCount[] } };
+  const [csQuery, setCsQuery] = useState("");
+  const [csCity, setCsCity] = useState("");
+  const [csAvailability, setCsAvailability] = useState("");
+  const [csResult, setCsResult] = useState<SearchResult | null>(null);
   useEffect(() => { fetch(import.meta.env.BASE_URL + "admin.json").then((r) => r.json()).then(setD); }, []);
   // Live platform signals from the microservices (via BFF → gateway). Talent count and talent-by-city are
   // real (Candidates service); finance/ops tiles (MRR, subscriptions, tickets, verifications) have no backing
@@ -167,6 +175,22 @@ export default function Admin({ session }: { session: Session }) {
       .then((v) => { if (v?.contacts) setContacts(v.contacts); })
       .catch(() => { /* keep empty */ });
   }, [selClient]);
+  // Faceted candidate search — re-run whenever a filter changes.
+  useEffect(() => {
+    const qs = new URLSearchParams();
+    if (csQuery.trim()) qs.set("q", csQuery.trim());
+    if (csCity) qs.set("city", csCity);
+    if (csAvailability) qs.set("availability", csAvailability);
+    qs.set("pageSize", "10");
+    const id = setTimeout(() => {
+      fetch("/api/candidates/search?" + qs.toString())
+        .then((r) => (r.ok ? r.json() : null))
+        .then((v) => { if (v?.items) setCsResult(v); })
+        .catch(() => { /* offline */ });
+    }, 250);
+    return () => clearTimeout(id);
+  }, [csQuery, csCity, csAvailability]);
+
   // Offers + onboarding for the application selected on a pipeline card.
   useEffect(() => {
     if (!offerAppId) { setOffers(null); setOnboarding(null); return; }
@@ -575,6 +599,42 @@ export default function Admin({ session }: { session: Session }) {
                   </div>
                 </div>
               )}
+            </motion.section>
+          )}
+
+          {csResult && (
+            <motion.section variants={fade} className="card p-5">
+              <div className="flex items-center justify-between mb-3 gap-3 flex-wrap">
+                <div><h3 className="font-display text-[15px] font-bold text-ink-hi">{t("admin.search.title", "Candidate search")}</h3><p className="text-[11px] text-ink-lo mt-0.5">{t("admin.search.sub", "Filter the talent pool by keyword, city and availability.")}</p></div>
+                <span className="chip !text-[10px]">{t("admin.search.total", "{{n}} match(es)", { n: csResult.total })}</span>
+              </div>
+              <div className="flex flex-wrap gap-2 mb-3">
+                <input className="flex-1 min-w-[180px] rounded-lg border border-line/70 bg-panel2/50 px-3 py-1.5 text-[12px] text-ink-hi placeholder:text-ink-lo focus:border-brand/50 focus:outline-none" value={csQuery} onChange={(e) => setCsQuery(e.target.value)} placeholder={t("admin.search.keyword", "Name or headline…")} />
+                <select value={csAvailability} onChange={(e) => setCsAvailability(e.target.value)} className="rounded-lg border border-line/70 bg-panel2/50 px-2 py-1.5 text-[12px] text-ink-hi focus:border-brand/50 focus:outline-none">
+                  <option value="">{t("admin.search.anyAvail", "Any availability")}</option>
+                  {["ActivelyLooking", "OpenToOpportunities", "NotAvailable"].map((a) => <option key={a} value={a}>{a}</option>)}
+                </select>
+                {csCity && <button onClick={() => setCsCity("")} className="chip !text-[11px] !text-brand-bright !border-brand/30">{csCity} ✕</button>}
+              </div>
+              <div className="grid gap-4 lg:grid-cols-[1fr_200px]">
+                <div className="space-y-2">
+                  {csResult.items.length === 0 && <div className="py-4 text-center text-[12px] text-ink-lo">{t("admin.search.empty", "No candidates match.")}</div>}
+                  {csResult.items.map((c) => (
+                    <div key={c.id} className="flex items-center gap-3 rounded-xl border border-line/60 bg-panel2/40 px-3.5 py-2.5">
+                      <div className="min-w-0 flex-1"><div className="text-sm font-semibold text-ink-hi truncate">{c.firstName} {c.lastName}</div><div className="text-[11px] text-ink-lo truncate">{c.publicHeadline || "—"} · {c.city}</div></div>
+                      <span className="chip !text-[10px] !text-gold !border-gold/30">{c.availability}</span>
+                    </div>
+                  ))}
+                </div>
+                <div>
+                  <div className="eyebrow mb-2">{t("admin.search.cities", "Cities")}</div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {csResult.facets.cities.map((f) => (
+                      <button key={f.label} onClick={() => setCsCity(f.label === csCity ? "" : f.label)} className={`rounded-lg px-2 py-1 text-[11px] font-semibold transition ${csCity === f.label ? "bg-brand/20 text-brand-bright" : "bg-panel2/60 text-ink-lo hover:text-ink-hi"}`}>{f.label} <span className="num text-ink-lo">{f.count}</span></button>
+                    ))}
+                  </div>
+                </div>
+              </div>
             </motion.section>
           )}
 
