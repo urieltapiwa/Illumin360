@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Illumin360.Email</RootNamespace>
+  </PropertyGroup>
+  <!-- Shared transactional email: an SMTP sender (Mailpit in dev) + templated notification bodies. -->
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="MailKit" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- The unit test project lives under tests/; keep its sources out of this library. -->
+    <Compile Remove="tests/**/*.cs" />
+  </ItemGroup>
+</Project>
