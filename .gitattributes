@@ -1,0 +1,2 @@
+# Shell scripts must use LF line endings, or the shebang breaks on checkout.
+*.sh text eol=lf
