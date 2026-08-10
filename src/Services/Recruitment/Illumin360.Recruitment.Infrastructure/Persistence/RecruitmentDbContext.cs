@@ -19,6 +19,9 @@ public sealed class RecruitmentDbContext(DbContextOptions<RecruitmentDbContext> 
     /// <summary>The applications read-model set.</summary>
     public DbSet<RecruitmentApplication> Applications => Set<RecruitmentApplication>();
 
+    /// <summary>Talent saved-searches set (owned + migration-managed by this service).</summary>
+    public DbSet<SavedSearch> SavedSearches => Set<SavedSearch>();
+
     /// <inheritdoc />
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -53,6 +56,24 @@ public sealed class RecruitmentDbContext(DbContextOptions<RecruitmentDbContext> 
             b.Property(r => r.CreatedAt).HasColumnName("created_at");
             b.Property(r => r.FilledAt).HasColumnName("filled_at");
             b.Ignore(r => r.DomainEvents);
+        });
+
+        modelBuilder.Entity<SavedSearch>(b =>
+        {
+            // Owned by this service — created/altered by migrations (unlike requests/applications).
+            b.ToTable("saved_searches");
+            b.HasKey(s => s.Id);
+            b.Property(s => s.Id)
+                .HasColumnName("id")
+                .HasConversion(id => id.Value, value => new SavedSearchId(value));
+            b.Property(s => s.TalentId).HasColumnName("talent_id");
+            b.Property(s => s.Label).HasColumnName("label").HasMaxLength(120);
+            b.Property(s => s.City).HasColumnName("city").HasMaxLength(100);
+            b.Property(s => s.Keyword).HasColumnName("keyword").HasMaxLength(120);
+            b.Property(s => s.AlertsEnabled).HasColumnName("alerts_enabled");
+            b.Property(s => s.CreatedAt).HasColumnName("created_at");
+            b.HasIndex(s => s.TalentId);
+            b.Ignore(s => s.DomainEvents);
         });
 
         modelBuilder.Entity<RecruitmentApplication>(b =>

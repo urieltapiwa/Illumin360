@@ -53,6 +53,24 @@ public interface IRecruitmentRepository
     /// <returns>The tracked application, or null.</returns>
     Task<RecruitmentApplication?> GetApplicationAsync(ApplicationId id, CancellationToken cancellationToken);
 
+    /// <summary>Stages a new saved search for insertion.</summary>
+    /// <param name="savedSearch">The saved search to add.</param>
+    void AddSavedSearch(SavedSearch savedSearch);
+
+    /// <summary>Removes a saved search.</summary>
+    /// <param name="savedSearch">The saved search to remove.</param>
+    void RemoveSavedSearch(SavedSearch savedSearch);
+
+    /// <summary>Lists a talent's saved searches, most recent first.</summary>
+    /// <param name="talentId">The talent id.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<IReadOnlyList<SavedSearch>> ListSavedSearchesForTalentAsync(Guid talentId, CancellationToken cancellationToken);
+
+    /// <summary>Loads a saved search for update, or null if not present.</summary>
+    /// <param name="id">The saved-search id.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<SavedSearch?> GetSavedSearchAsync(SavedSearchId id, CancellationToken cancellationToken);
+
     /// <summary>Lists a talent's applications, most recent first.</summary>
     /// <param name="talentId">The talent id.</param>
     /// <param name="skip">Number of records to skip.</param>

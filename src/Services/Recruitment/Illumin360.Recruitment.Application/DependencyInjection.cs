@@ -39,6 +39,21 @@ public static class DependencyInjection
         services.AddScoped<
             IQueryHandler<GetTalentApplicationsQuery, IReadOnlyList<TalentApplicationDto>>,
             GetTalentApplicationsQueryHandler>();
+        services.AddScoped<
+            ICommandHandler<CreateSavedSearchCommand, SavedSearchDto>,
+            CreateSavedSearchCommandHandler>();
+        services.AddScoped<
+            ICommandHandler<DeleteSavedSearchCommand, bool>,
+            DeleteSavedSearchCommandHandler>();
+        services.AddScoped<
+            ICommandHandler<ToggleSavedSearchAlertsCommand, SavedSearchDto>,
+            ToggleSavedSearchAlertsCommandHandler>();
+        services.AddScoped<
+            IQueryHandler<GetSavedSearchesQuery, IReadOnlyList<SavedSearchDto>>,
+            GetSavedSearchesQueryHandler>();
+        services.AddScoped<
+            IQueryHandler<RunSavedSearchQuery, IReadOnlyList<RecruitmentRequestDto>>,
+            RunSavedSearchQueryHandler>();
         return services;
     }
 }

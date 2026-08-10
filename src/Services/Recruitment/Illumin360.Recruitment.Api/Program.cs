@@ -153,6 +153,82 @@ v1.MapGet("/talents/{talentId:guid}/applications", async (
     .WithSummary("A talent's applications with role details and status, most recent first.")
     .Produces<IReadOnlyList<TalentApplicationDto>>(StatusCodes.Status200OK);
 
+// --- Saved searches + job alerts (talent-owned) ---
+v1.MapGet("/saved-searches", async (
+        Guid talentId,
+        IQueryHandler<GetSavedSearchesQuery, IReadOnlyList<SavedSearchDto>> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new GetSavedSearchesQuery(talentId), ct);
+        return result.ToHttpResult();
+    })
+    .WithName("GetSavedSearches")
+    .WithSummary("List a talent's saved searches.")
+    .Produces<IReadOnlyList<SavedSearchDto>>(StatusCodes.Status200OK);
+
+v1.MapGet("/saved-searches/{id:guid}/results", async (
+        Guid id,
+        IQueryHandler<RunSavedSearchQuery, IReadOnlyList<RecruitmentRequestDto>> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new RunSavedSearchQuery(id), ct);
+        return result.ToHttpResult();
+    })
+    .WithName("RunSavedSearch")
+    .WithSummary("Run a saved search — the open roles currently matching its criteria.")
+    .Produces<IReadOnlyList<RecruitmentRequestDto>>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status404NotFound);
+
+v1.MapPost("/saved-searches", async (
+        CreateSavedSearchBody body,
+        ICommandHandler<CreateSavedSearchCommand, SavedSearchDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(
+            new CreateSavedSearchCommand(body.TalentId, body.Label, body.City, body.Keyword, body.AlertsEnabled), ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.ProfessionalPolicy)
+    .WithName("CreateSavedSearch")
+    .WithSummary("Save a role search. Requires a signed-in talent role.")
+    .Produces<SavedSearchDto>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status400BadRequest)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden);
+
+v1.MapPost("/saved-searches/{id:guid}/alerts", async (
+        Guid id,
+        ToggleAlertsBody body,
+        ICommandHandler<ToggleSavedSearchAlertsCommand, SavedSearchDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new ToggleSavedSearchAlertsCommand(id, body.Enabled), ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.ProfessionalPolicy)
+    .WithName("ToggleSavedSearchAlerts")
+    .WithSummary("Enable/disable job alerts for a saved search. Requires a signed-in talent role.")
+    .Produces<SavedSearchDto>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden)
+    .ProducesProblem(StatusCodes.Status404NotFound);
+
+v1.MapDelete("/saved-searches/{id:guid}", async (
+        Guid id,
+        ICommandHandler<DeleteSavedSearchCommand, bool> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new DeleteSavedSearchCommand(id), ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.ProfessionalPolicy)
+    .WithName("DeleteSavedSearch")
+    .WithSummary("Delete a saved search. Requires a signed-in talent role.")
+    .Produces<bool>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden)
+    .ProducesProblem(StatusCodes.Status404NotFound);
+
 // --- Recruiter pipeline transitions on an application (admin/recruiter) ---
 v1.MapPost("/applications/{id:guid}/advance", async (
         Guid id,
@@ -194,6 +270,18 @@ app.Run();
 /// <param name="TalentId">The applying talent's id.</param>
 /// <param name="TalentType">Talent type (<c>student</c>/<c>professional</c>); defaults to professional.</param>
 internal sealed record ApplyToRequestBody(Guid TalentId, string? TalentType);
+
+/// <summary>Request body for creating a saved search.</summary>
+/// <param name="TalentId">Owning talent id.</param>
+/// <param name="Label">Label.</param>
+/// <param name="City">Optional city filter.</param>
+/// <param name="Keyword">Optional title keyword.</param>
+/// <param name="AlertsEnabled">Whether alerts are enabled.</param>
+internal sealed record CreateSavedSearchBody(Guid TalentId, string Label, string? City, string? Keyword, bool AlertsEnabled);
+
+/// <summary>Request body for toggling job alerts.</summary>
+/// <param name="Enabled">Whether alerts should be enabled.</param>
+internal sealed record ToggleAlertsBody(bool Enabled);
 
 /// <summary>Exposed so integration tests can use <c>WebApplicationFactory</c> (charter Part 14).</summary>
 public partial class Program;

@@ -88,6 +88,8 @@ export default function Professional(_props: { session: Session }) {
   const [roleScores, setRoleScores] = useState<Record<string, number>>({});
   const [matchFilter, setMatchFilter] = useState<"all" | "saved" | "applied">("all");
   const [myApps, setMyApps] = useState<{ id: string; roleTitle: string; city: string; status: string; appliedAt: string; decidedAt: string | null }[] | null>(null);
+  const [savedSearches, setSavedSearches] = useState<{ id: string; label: string; city: string | null; keyword: string | null; alertsEnabled: boolean }[] | null>(null);
+  const [ssForm, setSsForm] = useState({ label: "", city: "", keyword: "" });
   // Open-roles the professional has applied to this session (marketplace panel is otherwise stateless).
   const [appliedRoles, setAppliedRoles] = useState<Record<string, "pending" | "done" | "error">>({});
   const [cv, setCv] = useState<{ fileName: string; uploadedAt: string } | null>(null);
@@ -146,6 +148,10 @@ export default function Professional(_props: { session: Session }) {
     fetch(`/api/recruitment/talents/${id}/applications`)
       .then((r) => (r.ok ? r.json() : null))
       .then((v) => { if (Array.isArray(v)) setMyApps(v); })
+      .catch(() => { /* recruitment unavailable */ });
+    fetch(`/api/recruitment/saved-searches?talentId=${id}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((v) => { if (Array.isArray(v)) setSavedSearches(v); })
       .catch(() => { /* recruitment unavailable */ });
   }, [d?.id]);
   const { t } = useTranslation();
@@ -220,6 +226,20 @@ export default function Professional(_props: { session: Session }) {
     } catch {
       setAppliedRoles((prev) => ({ ...prev, [roleId]: "error" }));
     }
+  };
+  // Saved searches + job alerts (Recruitment service).
+  const saveSearch = async () => {
+    if (!d.id || !ssForm.label.trim()) return;
+    const r = await fetch("/api/recruitment/saved-searches", { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: JSON.stringify({ talentId: d.id, label: ssForm.label.trim(), city: ssForm.city.trim() || null, keyword: ssForm.keyword.trim() || null, alertsEnabled: false }) });
+    if (r.ok) { const v = await r.json().catch(() => null); if (v) setSavedSearches((prev) => [v, ...(prev ?? [])]); setSsForm({ label: "", city: "", keyword: "" }); }
+  };
+  const deleteSearch = async (id: string) => {
+    const r = await fetch(`/api/recruitment/saved-searches/${id}`, { method: "DELETE", credentials: "same-origin" });
+    if (r.ok) setSavedSearches((prev) => (prev ? prev.filter((s) => s.id !== id) : prev));
+  };
+  const toggleAlerts = async (id: string, enabled: boolean) => {
+    const r = await fetch(`/api/recruitment/saved-searches/${id}/alerts`, { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: JSON.stringify({ enabled }) });
+    if (r.ok) { const v = await r.json().catch(() => null); setSavedSearches((prev) => (prev ? prev.map((s) => (s.id === id ? { ...s, alertsEnabled: v?.alertsEnabled ?? enabled } : s)) : prev)); }
   };
   const navItems: [React.ReactNode, string, string][] = [[ICN.user, "pro.nav.profile", "pro-top"], [ICN.spark2, "pro.nav.matches", "pro-matches"], [ICN.brief, "pro.nav.applications", "pro-applications"], [ICN.chart, "pro.nav.insights", "pro-insights"], [ICN.gear, "pro.nav.settings", "pro-top"]];
   const goto = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -478,6 +498,34 @@ export default function Professional(_props: { session: Session }) {
                     );
                   })}
                 </div>
+              </motion.section>
+            </div>
+          )}
+
+          {/* saved searches + job alerts */}
+          {live && d.id && (
+            <div className="grid grid-cols-1 gap-5">
+              <motion.section variants={fade} className="card p-5">
+                <div className="mb-3"><h3 className="font-display text-[15px] font-bold text-ink-hi">{t("pro.saved.title", "Saved searches")}</h3><p className="text-[11px] text-ink-lo mt-0.5">{t("pro.saved.sub", "Save a role search and switch on job alerts.")}</p></div>
+                <div className="flex flex-wrap gap-2 mb-3">
+                  <input value={ssForm.label} onChange={(e) => setSsForm({ ...ssForm, label: e.target.value })} placeholder={t("pro.saved.label", "Label")} className="rounded-lg bg-panel2/60 border border-line/60 px-2.5 py-1.5 text-[12px] text-ink-hi placeholder:text-ink-lo" />
+                  <input value={ssForm.city} onChange={(e) => setSsForm({ ...ssForm, city: e.target.value })} placeholder={t("pro.saved.city", "City (optional)")} className="rounded-lg bg-panel2/60 border border-line/60 px-2.5 py-1.5 text-[12px] text-ink-hi placeholder:text-ink-lo" />
+                  <input value={ssForm.keyword} onChange={(e) => setSsForm({ ...ssForm, keyword: e.target.value })} placeholder={t("pro.saved.keyword", "Keyword (optional)")} className="rounded-lg bg-panel2/60 border border-line/60 px-2.5 py-1.5 text-[12px] text-ink-hi placeholder:text-ink-lo" />
+                  <button onClick={saveSearch} disabled={!ssForm.label.trim()} className="rounded-lg bg-brand/15 px-3 py-1.5 text-[12px] font-semibold text-brand-bright hover:bg-brand/25 transition disabled:opacity-50">{t("pro.saved.save", "Save")}</button>
+                </div>
+                {savedSearches && savedSearches.length > 0 ? (
+                  <div className="space-y-2">
+                    {savedSearches.map((s) => (
+                      <div key={s.id} className="flex items-center gap-2 rounded-xl border border-line/60 bg-panel2/40 px-3 py-2">
+                        <div className="min-w-0 flex-1"><div className="text-[12px] text-ink-hi truncate">{s.label}</div><div className="text-[10px] text-ink-lo truncate">{[s.city, s.keyword].filter(Boolean).join(" · ") || t("pro.saved.any", "any city · any role")}</div></div>
+                        <button onClick={() => toggleAlerts(s.id, !s.alertsEnabled)} className={`chip !text-[10px] transition ${s.alertsEnabled ? "!text-brand-bright !border-brand/30" : "!text-ink-lo !border-line/70"}`}>{s.alertsEnabled ? t("pro.saved.alertsOn", "Alerts on") : t("pro.saved.alertsOff", "Alerts off")}</button>
+                        <button onClick={() => deleteSearch(s.id)} className="text-[11px] text-ink-lo hover:text-pink transition">{t("pro.saved.delete", "Delete")}</button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-[12px] text-ink-lo">{t("pro.saved.none", "No saved searches yet.")}</div>
+                )}
               </motion.section>
             </div>
           )}
