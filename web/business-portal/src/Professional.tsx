@@ -85,6 +85,7 @@ export default function Professional(_props: { session: Session }) {
   const [d, setD] = useState<Prof | null>(null);
   const [live, setLive] = useState(false);
   const [openRoles, setOpenRoles] = useState<OpenRole[] | null>(null);
+  const [roleScores, setRoleScores] = useState<Record<string, number>>({});
   const [matchFilter, setMatchFilter] = useState<"all" | "saved" | "applied">("all");
   // Open-roles the professional has applied to this session (marketplace panel is otherwise stateless).
   const [appliedRoles, setAppliedRoles] = useState<Record<string, "pending" | "done" | "error">>({});
@@ -101,7 +102,19 @@ export default function Professional(_props: { session: Session }) {
   useEffect(() => {
     fetch("/api/recruitment/requests?status=open&pageSize=6")
       .then((r) => (r.ok ? r.json() : null))
-      .then((v) => { if (Array.isArray(v)) setOpenRoles(v); })
+      .then(async (v) => {
+        if (!Array.isArray(v)) return;
+        setOpenRoles(v);
+        // Rank the open roles for "me" via the shared match engine (Professionals service).
+        try {
+          const body = v.map((r: OpenRole) => ({ id: r.id, title: r.title, city: r.city, industry: "" }));
+          const s = await fetch("/api/professionals/me/role-scores", { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: JSON.stringify(body) });
+          if (s.ok) {
+            const scores: { id: string; score: number }[] = await s.json();
+            if (Array.isArray(scores)) setRoleScores(Object.fromEntries(scores.map((x) => [x.id, x.score])));
+          }
+        } catch { /* ranking unavailable — show unranked */ }
+      })
       .catch(() => { /* marketplace unavailable — panel simply hidden */ });
   }, []);
   // Live-first: read the professional's dashboard from the Professionals service (via the BFF/gateway);
@@ -370,12 +383,20 @@ export default function Professional(_props: { session: Session }) {
                   <span className="chip !text-[10px] !text-brand-bright !border-brand/30"><span className="h-1.5 w-1.5 rounded-full bg-brand-bright animate-pulse" /> LIVE · {openRoles.length}</span>
                 </div>
                 <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {openRoles.map((r) => {
+                  {[...openRoles].sort((a, b) => (roleScores[b.id] ?? -1) - (roleScores[a.id] ?? -1)).map((r) => {
                     const state = appliedRoles[r.id];
+                    const score = roleScores[r.id];
                     return (
                     <div key={r.id} className={`rounded-xl border p-3.5 transition ${state === "done" ? "border-brand/50 bg-brand/[0.06]" : "border-line/60 bg-panel2/40 hover:border-brand/40"}`}>
-                      <div className="text-sm font-semibold text-ink-hi truncate">{r.title}</div>
-                      <div className="text-[11px] text-ink-mid truncate">{r.city}</div>
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <div className="text-sm font-semibold text-ink-hi truncate">{r.title}</div>
+                          <div className="text-[11px] text-ink-mid truncate">{r.city}</div>
+                        </div>
+                        {score !== undefined && (
+                          <div className="text-right shrink-0"><div className="num text-base font-bold text-brand-bright">{score}%</div><div className="text-[9px] text-ink-lo uppercase tracking-wide">{t("pro.matches.match")}</div></div>
+                        )}
+                      </div>
                       <div className="mt-2 flex items-center justify-between text-[10px] text-ink-lo"><span>{r.positions} position{r.positions === 1 ? "" : "s"}</span><span className="text-brand-bright">Open</span></div>
                       {live && (
                         <div className="mt-2.5 border-t border-line/40 pt-2.5">
