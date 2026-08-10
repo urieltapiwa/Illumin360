@@ -126,13 +126,13 @@ flip the status to ✅ (add the commit/PR ref).
 | Feature | Status | Notes |
 |---|---|---|
 | Verification queue (approve/reject) | ✅ | Admin service |
-| Support tickets (assign/resolve) | ✅ | Backend done; portal panel pending |
-| User account management (suspend/activate) | ✅ | Backend done; portal panel pending |
+| Support tickets (assign/resolve) | ✅ | Backend + Admin portal panel live (assign + resolve) |
+| User account management (suspend/activate) | ✅ | Backend + Admin portal panel live (suspend/activate) |
 | Service-layer RBAC | ✅ | `Illumin360.Security` |
 | Audit trail (viewable) | 🟡 | Outbox events exist; no audit UI |
 | GDPR data export / delete | ⬜ | |
 
-- [ ] Admin portal panels for tickets + accounts (wire to existing APIs)
+- [x] Admin portal panels for tickets + accounts (wire to existing APIs) — panels were already wired; completed by adding the ticket **Assign** action + assignee display (`Admin.tsx`)
 - [ ] Viewable audit trail
 - [ ] GDPR export / erase-me
 
@@ -162,7 +162,10 @@ flip the status to ✅ (add the commit/PR ref).
 
 ### Progress
 - Total build items: 30
-- Done: 0
+- Done: 1
 - In progress: 0
+
+**Changelog of ticks**
+- Admin portal tickets + accounts panels — completed the ticket Assign action (2026-08-10).
 
 _Update this file as items are ticked; link the commit/PR that delivered each._
