@@ -1,3 +1,4 @@
+using Illumin360.Matching;
 using Illumin360.Students.Application.Abstractions;
 using Illumin360.Students.Domain;
 
@@ -115,6 +116,14 @@ public sealed record StudentDashboardDto(
         var s = d.Student;
         var skillsDone = d.Learning.Count(l => string.Equals(l.Tag, "done", StringComparison.OrdinalIgnoreCase));
 
+        // Real match scoring: rank the student's matches by the shared engine (city + field/role affinity
+        // + skill overlap) instead of the static seeded score.
+        var talent = new TalentProfile(s.City, s.Field, [.. d.Skills.Select(sk => sk.Name)]);
+        var scoredMatches = d.Matches
+            .Select(m => (Match: m, Score: MatchScorer.Score(talent, new RoleListing(m.Role, m.City, m.Type))))
+            .OrderByDescending(x => x.Score)
+            .ToList();
+
         return new StudentDashboardDto(
             s.Id.Value,
             new PersonaDto(s.FullName, s.Field, s.School, s.Year, s.Graduating, s.Readiness, s.Program, s.City, s.Availability),
@@ -127,7 +136,7 @@ public sealed record StudentDashboardDto(
                 s.MentorSessions,
                 s.Readiness),
             s.ViewsTrend,
-            [.. d.Matches.Select(m => new MatchDto(m.Role, m.Company, m.City, m.MatchScore, m.StipendLo, m.StipendHi, m.Type, m.PostedLabel, m.Id, m.Status switch { MatchStatus.Saved => "saved", MatchStatus.Dismissed => "dismissed", MatchStatus.Applied => "applied", _ => "new" }))],
+            [.. scoredMatches.Select(x => new MatchDto(x.Match.Role, x.Match.Company, x.Match.City, x.Score, x.Match.StipendLo, x.Match.StipendHi, x.Match.Type, x.Match.PostedLabel, x.Match.Id, x.Match.Status switch { MatchStatus.Saved => "saved", MatchStatus.Dismissed => "dismissed", MatchStatus.Applied => "applied", _ => "new" }))],
             [.. d.Learning.Select(l => new LearningDto(l.Name, l.Progress, l.Tag))],
             [.. d.Pipeline.Select(p => new PipelineDto(p.Stage, p.Value))],
             [.. d.Skills.Select(sk => new SkillDto(sk.Name, sk.Level))],
