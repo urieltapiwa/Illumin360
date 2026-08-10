@@ -65,15 +65,15 @@ flip the status to ✅ (add the commit/PR ref).
 ## D. Matching / sourcing
 | Feature | Status | Notes |
 |---|---|---|
-| Match score candidate↔role | 🟡 | Scores seeded, no engine |
-| Real matching engine (skills/location weighting) | ⬜ | TalentMatch = reference |
-| Personalized recommendations | 🟡 | Flat marketplace list |
+| Match score candidate↔role | ✅ | Real engine (`Illumin360.Matching`) computes professional match scores from city + role + skills |
+| Real matching engine (skills/location weighting) | 🟡 | Shared weighted engine built + applied to professionals; students & marketplace ranking pending |
+| Personalized recommendations | 🟡 | Professional matches now ranked by engine score; marketplace ranking pending |
 | Saved searches | ⬜ | |
 | Job alerts / email digests | ⬜ | |
 | Talent pools / shortlists | ⬜ | |
 
-- [ ] Matching engine (weighted skills + city + availability) producing real scores
-- [ ] "Recommended roles for you" / "top candidates for this role"
+- [x] Matching engine (weighted city + role + skills) producing real scores — shared `Illumin360.Matching`, applied to professional matches (ranked by score); extend to students & the marketplace next
+- [ ] "Recommended roles for you" / "top candidates for this role" (rank the marketplace open roles per talent)
 - [ ] Saved searches + job alert digests
 - [ ] Shortlists / talent pools
 
@@ -163,12 +163,13 @@ flip the status to ✅ (add the commit/PR ref).
 
 ### Progress
 - Total build items: 30
-- Done: 3
+- Done: 4
 - In progress: 0
 
 **Changelog of ticks**
 - Admin portal tickets + accounts panels — completed the ticket Assign action (2026-08-10).
 - Shared object storage + Professionals CV upload/download (MinIO), end-to-end tested (2026-08-10).
 - CV upload extended to Students (self-service + UI) and Candidates (per-id, admin), MinIO-tested (2026-08-10).
+- Shared matching engine (`Illumin360.Matching`) — real weighted scores + ranking on professional matches (2026-08-10).
 
 _Update this file as items are ticked; link the commit/PR that delivered each._
