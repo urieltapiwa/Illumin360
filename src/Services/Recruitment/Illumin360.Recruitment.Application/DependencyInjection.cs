@@ -140,6 +140,9 @@ public static class DependencyInjection
             ICommandHandler<UseJobTemplateCommand, RecruitmentRequestDto>,
             UseJobTemplateCommandHandler>();
         services.AddScoped<
+            ICommandHandler<BulkTransitionApplicationsCommand, BulkTransitionResultDto>,
+            BulkTransitionApplicationsCommandHandler>();
+        services.AddScoped<
             ICommandHandler<ToggleOnboardingTaskCommand, OnboardingTaskDto>,
             ToggleOnboardingTaskCommandHandler>();
         services.AddScoped<

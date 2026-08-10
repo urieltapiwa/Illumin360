@@ -89,6 +89,7 @@ export default function Admin({ session }: { session: Session }) {
   const [pipelineReqs, setPipelineReqs] = useState<{ id: string; title: string; city: string }[] | null>(null);
   const [pipelineReqId, setPipelineReqId] = useState<string | null>(null);
   const [pipelineApps, setPipelineApps] = useState<{ id: string; talentType: string; matchScore: number; status: string }[] | null>(null);
+  const [selectedApps, setSelectedApps] = useState<Set<string>>(new Set());
   // Recruiter CRM (clients + contacts).
   type CrmClient = { id: string; name: string; industry: string | null; city: string | null; status: string; contactCount: number };
   type CrmContact = { id: string; name: string; title: string | null; email: string | null; phone: string | null; isPrimary: boolean };
@@ -365,6 +366,23 @@ export default function Admin({ session }: { session: Session }) {
     const r = await fetch(`/api/candidates/${csOpen}/tags/${encodeURIComponent(label)}`, { method: "DELETE", credentials: "same-origin" });
     if (r.ok) setCsTags(await r.json());
   };
+  const toggleAppSelect = (id: string) => setSelectedApps((prev) => {
+    const next = new Set(prev);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    return next;
+  });
+  const bulkTransition = async (action: "advance" | "reject") => {
+    const ids = [...selectedApps];
+    if (ids.length === 0) return;
+    const r = await fetch("/api/recruitment/applications/bulk", { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: JSON.stringify({ applicationIds: ids, action }) });
+    if (r.ok) {
+      const res = await r.json().catch(() => null);
+      const ok = new Set<string>((res?.items ?? []).filter((i: { ok: boolean }) => i.ok).map((i: { applicationId: string }) => i.applicationId));
+      setPipelineApps((prev) => (prev ? prev.map((a) => (ok.has(a.id) ? { ...a, status: action === "reject" ? "rejected" : nextStage(a.status) } : a)) : prev));
+      setSelectedApps(new Set());
+    }
+  };
+  const nextStage = (s: string) => ({ applied: "reviewed", reviewed: "shortlisted", shortlisted: "hired" }[s] ?? s);
   const saveReqDetail = async (patch: Partial<ReqDetail>) => {
     if (!pipelineReqId || !reqDetail) return;
     const next = { ...reqDetail, ...patch };
@@ -629,6 +647,14 @@ export default function Admin({ session }: { session: Session }) {
                   ))}
                 </div>
               </div>
+              {selectedApps.size > 0 && (
+                <div className="mb-3 flex items-center gap-2 rounded-xl border border-brand/30 bg-brand/[0.06] px-3.5 py-2">
+                  <span className="text-[12px] text-ink-hi">{t("admin.bulk.selected", "{{n}} selected", { n: selectedApps.size })}</span>
+                  <button onClick={() => bulkTransition("advance")} className="rounded-lg bg-brand/15 px-2.5 py-1 text-[11px] font-semibold text-brand-bright hover:bg-brand/25 transition">{t("admin.bulk.advance", "Advance all")}</button>
+                  <button onClick={() => bulkTransition("reject")} className="rounded-lg bg-pink/15 px-2.5 py-1 text-[11px] font-semibold text-pink hover:bg-pink/25 transition">{t("admin.bulk.reject", "Reject all")}</button>
+                  <button onClick={() => setSelectedApps(new Set())} className="ml-auto text-[11px] text-ink-lo hover:text-ink-hi transition">{t("admin.bulk.clear", "Clear")}</button>
+                </div>
+              )}
               {reqDetail && (
                 <div className="mb-4 rounded-xl border border-line/60 bg-panel2/30 p-3.5">
                   <div className="flex flex-wrap items-end gap-3">
@@ -678,7 +704,7 @@ export default function Admin({ session }: { session: Session }) {
                       <div className="space-y-2">
                         {cards.map((a) => (
                           <div key={a.id} className={`rounded-lg border p-2 ${stage === "hired" ? "border-brand/40 bg-brand/[0.06]" : stage === "rejected" ? "border-pink/30 bg-pink/[0.05]" : "border-line/50 bg-panel/40"}`}>
-                            <div className="flex items-center justify-between"><span className="text-[11px] text-ink-hi capitalize">{a.talentType}</span><span className="num text-[11px] text-brand-bright">{Math.round(a.matchScore)}%</span></div>
+                            <div className="flex items-center justify-between gap-1"><label className="flex items-center gap-1.5 min-w-0"><input type="checkbox" checked={selectedApps.has(a.id)} onChange={() => toggleAppSelect(a.id)} /><span className="text-[11px] text-ink-hi capitalize truncate">{a.talentType}</span></label><span className="num text-[11px] text-brand-bright">{Math.round(a.matchScore)}%</span></div>
                             {!terminal && (
                               <div className="mt-1.5 flex gap-1.5">
                                 <button onClick={() => transitionApp(a.id, "advance")} className="rounded bg-brand/15 px-2 py-0.5 text-[10px] font-semibold text-brand-bright hover:bg-brand/25 transition">{t("admin.pipeline.advance", "Advance")}</button>

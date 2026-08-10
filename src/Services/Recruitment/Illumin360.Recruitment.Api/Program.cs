@@ -802,6 +802,26 @@ v1.MapGet("/careers/{id:guid}", async (
     .WithSummary("Public branded careers detail page for a single role (HTML + JobPosting JSON-LD).")
     .Produces(StatusCodes.Status200OK, contentType: "text/html");
 
+// --- Bulk pipeline actions (advance/reject many applications at once) ---
+v1.MapPost("/applications/bulk", async (
+        BulkApplicationsBody body,
+        ICommandHandler<BulkTransitionApplicationsCommand, BulkTransitionResultDto> handler,
+        CancellationToken ct) =>
+    {
+        var action = string.Equals(body.Action, "reject", StringComparison.OrdinalIgnoreCase)
+            ? ApplicationBulkAction.Reject
+            : ApplicationBulkAction.Advance;
+        var result = await handler.HandleAsync(new BulkTransitionApplicationsCommand(body.ApplicationIds ?? [], action), ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminWritePolicy)
+    .WithName("BulkTransitionApplications")
+    .WithSummary("Advance or reject many applications at once. Requires an admin (write) role.")
+    .Produces<BulkTransitionResultDto>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status400BadRequest)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden);
+
 // --- Recruiter CRM: client companies + contacts (internal recruiter tooling) ---
 v1.MapGet("/clients", async (
         string? status,
@@ -961,6 +981,11 @@ internal sealed record JobTemplateBody(string Name, string Title, string? City, 
 /// <summary>Request body for applying a template.</summary>
 /// <param name="CompanyId">Hiring company id.</param>
 internal sealed record UseTemplateBody(Guid CompanyId);
+
+/// <summary>Request body for a bulk pipeline action.</summary>
+/// <param name="ApplicationIds">The applications to transition.</param>
+/// <param name="Action">The action (<c>advance</c>/<c>reject</c>).</param>
+internal sealed record BulkApplicationsBody(IReadOnlyList<Guid>? ApplicationIds, string Action);
 
 /// <summary>Request body for starting an onboarding checklist.</summary>
 /// <param name="RoleTitle">The hired role title.</param>
