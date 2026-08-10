@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Illumin360.Resume</RootNamespace>
+  </PropertyGroup>
+  <!-- Resume text extraction (PDF/DOCX/TXT) + deterministic skill detection against a vocabulary. -->
+  <ItemGroup>
+    <PackageReference Include="PdfPig" />
+    <PackageReference Include="DocumentFormat.OpenXml" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- The unit test project lives under tests/; keep its sources out of this library. -->
+    <Compile Remove="tests/**/*.cs" />
+  </ItemGroup>
+</Project>

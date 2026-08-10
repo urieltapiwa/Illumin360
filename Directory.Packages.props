@@ -40,6 +40,11 @@
     <PackageVersion Include="AWSSDK.S3" Version="4.0.102" />
   </ItemGroup>
 
+  <ItemGroup Label="Document parsing">
+    <PackageVersion Include="PdfPig" Version="0.1.15" />
+    <PackageVersion Include="DocumentFormat.OpenXml" Version="3.5.1" />
+  </ItemGroup>
+
   <ItemGroup Label="Messaging / Workflow">
     <PackageVersion Include="MassTransit" Version="8.3.0" />
     <PackageVersion Include="MassTransit.RabbitMQ" Version="8.3.0" />
