@@ -11,6 +11,7 @@
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
     <PackageReference Include="Testcontainers.PostgreSql" />
+    <PackageReference Include="Testcontainers.Minio" />
     <PackageReference Include="coverlet.collector" />
     <PackageReference Include="MassTransit.EntityFrameworkCore" />
     <ProjectReference Include="..\..\Illumin360.Professionals.Api\Illumin360.Professionals.Api.csproj" />
