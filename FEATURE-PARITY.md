@@ -22,7 +22,7 @@ flip the status to ✅ (add the commit/PR ref).
 | Candidate search (boolean / faceted) | ✅ | `GET /v1/candidates/search` — city + availability + keyword (name/headline) + has-CV filters, paged, with facet counts (each facet excludes its own filter); admin-portal candidate-search panel |
 | Recruiter notes / private activity log | ✅ | Private recruiter notes per candidate — `candidate_notes` table + `/v1/candidates/{id}/notes` list/add/delete (writes admin-gated); admin candidate-search notes panel |
 | Tags / labels | ✅ | Candidate tags — `candidate_tags` table (unique per candidate, normalised) + `/v1/candidates/{id}/tags` list/add(idempotent)/remove; tag chips in the admin candidate-search panel |
-| Skill endorsements / references | ⬜ | |
+| Skill endorsements / references | ✅ | `skill_endorsements` table + denormalised count on `professional_skills`; `POST/GET /v1/professionals/skills/{id}/endorsements` (endorse admin-gated, dedup per endorser, optional reference note); endorsement ★ count shown on the professional skills panel |
 | Duplicate detection | ⬜ | |
 
 - [x] Shared object-storage building block (`Illumin360.Storage`) + Professionals CV upload/download → MinIO (verified end-to-end with a Testcontainers MinIO roundtrip)
@@ -31,6 +31,7 @@ flip the status to ✅ (add the commit/PR ref).
 - [x] Editable skills with proficiency — Professionals `POST/PUT/DELETE /v1/professionals/me/skills` (add with 0–100 level + dedup-by-name conflict, update level with range validation, remove), skill ids surfaced on the dashboard; professional-portal skills panel now has proficiency sliders + an add-skill row + remove; handler/domain unit tests
 - [x] Faceted candidate search — `GET /v1/candidates/search` filtering on city, availability, keyword (name/headline ILIKE) and CV presence, paged with a total, returning facet counts for cities + availability (each facet excludes its own active filter); handler unit test + Testcontainers integration test; admin-portal search panel with clickable city facets. (Skill facets await structured candidate skills)
 - [x] Recruiter notes + tags on a candidate — `CandidateNote`/`CandidateTag` aggregates + `candidate_notes`/`candidate_tags` tables (tags unique + normalised per candidate); `/v1/candidates/{id}/notes` (list/add/delete) and `/v1/candidates/{id}/tags` (list/add-idempotent/remove), writes admin-gated; unit + Testcontainers integration tests; expandable notes/tags panel per candidate in the admin search results
+- [x] Skill endorsements / references — `SkillEndorsement` aggregate + `skill_endorsements` table (dedup per endorser, optional reference note) with a denormalised `endorsements` count on `professional_skills`; `POST /v1/professionals/skills/{id}/endorsements` (admin-gated, 404/409 guards) + `GET` list; endorsement count surfaced on the professional skills panel; domain/handler unit tests
 
 ## B. Jobs / recruitment requisitions
 | Feature | Status | Notes |
@@ -170,8 +171,8 @@ flip the status to ✅ (add the commit/PR ref).
 ---
 
 ### Progress
-- Total build items: 32
-- Done: 31
+- Total build items: 48
+- Done: 32
 - In progress: 0
 
 **Changelog of ticks**

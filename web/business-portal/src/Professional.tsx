@@ -15,7 +15,7 @@ interface Prof {
   matches: Match[];
   pipeline: { stage: string; value: number }[];
   skillDemand: { role: string; value: number }[];
-  skills: { id?: string; name: string; level: number; trend: string }[];
+  skills: { id?: string; name: string; level: number; trend: string; endorsements?: number }[];
   salary: { role: string; p25: number; median: number; p75: number; you: number };
   activity: { icon: string; text: string; when: string }[];
 }
@@ -596,7 +596,7 @@ export default function Professional(_props: { session: Session }) {
                 {d.skills.map((s, i) => (
                   <div key={s.id ?? i}>
                     <div className="flex items-center justify-between text-xs mb-1">
-                      <span className="text-ink-hi font-medium">{s.name}</span>
+                      <span className="text-ink-hi font-medium">{s.name}{(s.endorsements ?? 0) > 0 && <span className="ml-1.5 text-[10px] text-gold" title={t("pro.skills.endorsed", "{{n}} endorsement(s)", { n: s.endorsements })}>★ {s.endorsements}</span>}</span>
                       <div className="flex items-center gap-2">
                         <span className="num text-[11px] text-ink-mid">{s.level}%</span>
                         {live && s.id

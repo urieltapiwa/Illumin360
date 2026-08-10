@@ -235,6 +235,15 @@ public sealed class ProfessionalSkill : Entity<Guid>
     /// <summary>Display order.</summary>
     public int Sort { get; private set; }
 
+    /// <summary>Number of endorsements this skill has received.</summary>
+    public int Endorsements { get; private set; }
+
+    /// <summary>Records one more endorsement for this skill.</summary>
+    public void Endorse() => Endorsements += 1;
+
+    /// <summary>Removes one endorsement (never below zero).</summary>
+    public void Unendorse() => Endorsements = Math.Max(0, Endorsements - 1);
+
     /// <summary>Updates the self-assessed proficiency level.</summary>
     /// <param name="level">New proficiency (0–100).</param>
     /// <returns>Success, or a validation error if out of range.</returns>
