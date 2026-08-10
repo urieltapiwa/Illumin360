@@ -98,6 +98,28 @@ public sealed class ProfessionalActionsAuthTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Role_scores_rank_a_matching_city_role_above_an_unrelated_one()
+    {
+        var client = _factory.CreateClient();
+
+        // The seeded demo professional is a Windhoek software developer; score two contrasting roles.
+        var roles = new[]
+        {
+            new { id = Guid.NewGuid(), title = "Software Developer", city = "Windhoek", industry = "Technology" },
+            new { id = Guid.NewGuid(), title = "Chef", city = "Walvis Bay", industry = "Hospitality" },
+        };
+
+        var response = await client.PostAsJsonAsync("/v1/professionals/me/role-scores", roles);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var scores = await response.Content.ReadFromJsonAsync<List<RoleScore>>();
+        scores.Should().HaveCount(2);
+        var dev = scores!.Single(s => s.Id == roles[0].id).Score;
+        var chef = scores!.Single(s => s.Id == roles[1].id).Score;
+        dev.Should().BeGreaterThan(chef);
+    }
+
+    [Fact]
     public async Task Professional_can_toggle_availability()
     {
         var client = _factory.CreateClient();
@@ -129,6 +151,8 @@ public sealed class ProfessionalActionsAuthTests : IAsyncLifetime
             }
         }
     }
+
+    private sealed record RoleScore(Guid Id, int Score);
 
     private static void Authorize(HttpClient client, string[] roles) =>
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", TestJwt.ForRoles(roles));

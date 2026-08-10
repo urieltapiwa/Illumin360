@@ -33,6 +33,9 @@ public static class DependencyInjection
         services.AddScoped<
             IQueryHandler<DownloadCvQuery, CvContent>,
             DownloadCvQueryHandler>();
+        services.AddScoped<
+            IQueryHandler<ScoreRolesQuery, IReadOnlyList<RoleScoreDto>>,
+            ScoreRolesQueryHandler>();
         return services;
     }
 }

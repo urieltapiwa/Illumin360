@@ -189,6 +189,19 @@ v1.MapGet("/me/cv/download", async (
     .Produces(StatusCodes.Status200OK)
     .ProducesProblem(StatusCodes.Status404NotFound);
 
+// --- Rank marketplace roles for the current ("me") professional via the shared match engine ---
+v1.MapPost("/me/role-scores", async (
+        List<RoleToScore> roles,
+        IQueryHandler<ScoreRolesQuery, IReadOnlyList<RoleScoreDto>> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new ScoreRolesQuery(roles ?? []), ct);
+        return result.ToHttpResult();
+    })
+    .WithName("ScoreOpenRoles")
+    .WithSummary("Score a set of marketplace roles against the current profile (recommendations).")
+    .Produces<IReadOnlyList<RoleScoreDto>>(StatusCodes.Status200OK);
+
 app.Run();
 
 /// <summary>Exposed so integration tests can use <c>WebApplicationFactory</c> (charter Part 14).</summary>
