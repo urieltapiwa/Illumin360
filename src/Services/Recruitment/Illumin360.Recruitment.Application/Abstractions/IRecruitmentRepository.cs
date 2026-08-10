@@ -53,6 +53,14 @@ public interface IRecruitmentRepository
     /// <returns>The tracked application, or null.</returns>
     Task<RecruitmentApplication?> GetApplicationAsync(ApplicationId id, CancellationToken cancellationToken);
 
+    /// <summary>Lists a talent's applications, most recent first.</summary>
+    /// <param name="talentId">The talent id.</param>
+    /// <param name="skip">Number of records to skip.</param>
+    /// <param name="take">Page size.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The talent's applications.</returns>
+    Task<IReadOnlyList<RecruitmentApplication>> ListApplicationsForTalentAsync(Guid talentId, int skip, int take, CancellationToken cancellationToken);
+
     /// <summary>Commits staged changes to the data store.</summary>
     /// <param name="cancellationToken">Cancellation token.</param>
     Task SaveChangesAsync(CancellationToken cancellationToken);

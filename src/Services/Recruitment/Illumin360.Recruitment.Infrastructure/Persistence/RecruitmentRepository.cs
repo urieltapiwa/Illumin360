@@ -72,6 +72,16 @@ public sealed class RecruitmentRepository(RecruitmentDbContext db) : IRecruitmen
         => await _db.Applications.FirstOrDefaultAsync(a => a.Id == id, cancellationToken).ConfigureAwait(false);
 
     /// <inheritdoc />
+    public async Task<IReadOnlyList<RecruitmentApplication>> ListApplicationsForTalentAsync(Guid talentId, int skip, int take, CancellationToken cancellationToken)
+        => await _db.Applications.AsNoTracking()
+            .Where(a => a.TalentId == talentId)
+            .OrderByDescending(a => a.AppliedAt)
+            .Skip(skip)
+            .Take(take)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+    /// <inheritdoc />
     public async Task SaveChangesAsync(CancellationToken cancellationToken)
         => await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 

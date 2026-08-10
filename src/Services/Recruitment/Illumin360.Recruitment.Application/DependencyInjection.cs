@@ -36,6 +36,9 @@ public static class DependencyInjection
         services.AddScoped<
             ICommandHandler<RejectApplicationCommand, ApplicationDto>,
             RejectApplicationCommandHandler>();
+        services.AddScoped<
+            IQueryHandler<GetTalentApplicationsQuery, IReadOnlyList<TalentApplicationDto>>,
+            GetTalentApplicationsQueryHandler>();
         return services;
     }
 }
