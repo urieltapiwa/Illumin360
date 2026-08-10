@@ -30,6 +30,12 @@ public static class DependencyInjection
         services.AddScoped<
             ICommandHandler<ApplyToRequestCommand, ApplicationDto>,
             ApplyToRequestCommandHandler>();
+        services.AddScoped<
+            ICommandHandler<AdvanceApplicationCommand, ApplicationDto>,
+            AdvanceApplicationCommandHandler>();
+        services.AddScoped<
+            ICommandHandler<RejectApplicationCommand, ApplicationDto>,
+            RejectApplicationCommandHandler>();
         return services;
     }
 }

@@ -140,6 +140,41 @@ v1.MapPost("/requests/{id:guid}/apply", async (
     .ProducesProblem(StatusCodes.Status404NotFound)
     .ProducesProblem(StatusCodes.Status409Conflict);
 
+// --- Recruiter pipeline transitions on an application (admin/recruiter) ---
+v1.MapPost("/applications/{id:guid}/advance", async (
+        Guid id,
+        ICommandHandler<AdvanceApplicationCommand, ApplicationDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new AdvanceApplicationCommand(id), ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminWritePolicy)
+    .WithName("AdvanceApplication")
+    .WithSummary("Advance an application to the next stage (applied→reviewed→shortlisted→hired). Requires an admin (write) role.")
+    .Produces<ApplicationDto>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden)
+    .ProducesProblem(StatusCodes.Status404NotFound)
+    .ProducesProblem(StatusCodes.Status409Conflict);
+
+v1.MapPost("/applications/{id:guid}/reject", async (
+        Guid id,
+        ICommandHandler<RejectApplicationCommand, ApplicationDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new RejectApplicationCommand(id), ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminWritePolicy)
+    .WithName("RejectApplication")
+    .WithSummary("Reject an application (terminal). Requires an admin (write) role.")
+    .Produces<ApplicationDto>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden)
+    .ProducesProblem(StatusCodes.Status404NotFound)
+    .ProducesProblem(StatusCodes.Status409Conflict);
+
 app.Run();
 
 /// <summary>Request body for applying to a recruitment request.</summary>

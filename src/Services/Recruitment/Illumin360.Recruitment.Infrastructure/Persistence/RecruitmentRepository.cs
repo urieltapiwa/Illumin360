@@ -2,6 +2,7 @@ using Illumin360.Recruitment.Application.Abstractions;
 using Illumin360.Recruitment.Application.Recruitment;
 using Illumin360.Recruitment.Domain;
 using Microsoft.EntityFrameworkCore;
+using ApplicationId = Illumin360.Recruitment.Domain.ApplicationId;
 
 namespace Illumin360.Recruitment.Infrastructure.Persistence;
 
@@ -65,6 +66,10 @@ public sealed class RecruitmentRepository(RecruitmentDbContext db) : IRecruitmen
 
     /// <inheritdoc />
     public void AddApplication(RecruitmentApplication application) => _db.Applications.Add(application);
+
+    /// <inheritdoc />
+    public async Task<RecruitmentApplication?> GetApplicationAsync(ApplicationId id, CancellationToken cancellationToken)
+        => await _db.Applications.FirstOrDefaultAsync(a => a.Id == id, cancellationToken).ConfigureAwait(false);
 
     /// <inheritdoc />
     public async Task SaveChangesAsync(CancellationToken cancellationToken)

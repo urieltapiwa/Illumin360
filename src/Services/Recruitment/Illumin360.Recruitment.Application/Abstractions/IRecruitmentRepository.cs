@@ -1,5 +1,6 @@
 using Illumin360.Recruitment.Application.Recruitment;
 using Illumin360.Recruitment.Domain;
+using ApplicationId = Illumin360.Recruitment.Domain.ApplicationId;
 
 namespace Illumin360.Recruitment.Application.Abstractions;
 
@@ -45,6 +46,12 @@ public interface IRecruitmentRepository
     /// <summary>Stages a new application for insertion. Persisted on <see cref="SaveChangesAsync"/>.</summary>
     /// <param name="application">The application to add.</param>
     void AddApplication(RecruitmentApplication application);
+
+    /// <summary>Loads an application for update (change-tracked), or null if not present.</summary>
+    /// <param name="id">The application id.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The tracked application, or null.</returns>
+    Task<RecruitmentApplication?> GetApplicationAsync(ApplicationId id, CancellationToken cancellationToken);
 
     /// <summary>Commits staged changes to the data store.</summary>
     /// <param name="cancellationToken">Cancellation token.</param>
