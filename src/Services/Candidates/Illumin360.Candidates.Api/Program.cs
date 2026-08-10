@@ -103,6 +103,61 @@ v1.MapPost("/", async (
     .ProducesProblem(StatusCodes.Status401Unauthorized)
     .ProducesProblem(StatusCodes.Status403Forbidden);
 
+// --- Per-candidate CV upload / download (recruiter/admin registry) ---
+v1.MapPost("/{id:guid}/cv", async (
+        Guid id,
+        IFormFile file,
+        ICommandHandler<UploadCandidateCvCommand, CvDto> handler,
+        CancellationToken ct) =>
+    {
+        if (file is null || file.Length == 0)
+        {
+            return Results.BadRequest();
+        }
+
+        await using var stream = file.OpenReadStream();
+        var result = await handler.HandleAsync(
+            new UploadCandidateCvCommand(id, file.FileName, file.ContentType, file.Length, stream), ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminWritePolicy)
+    .DisableAntiforgery()
+    .WithName("UploadCandidateCv")
+    .WithSummary("Upload or replace a candidate's CV (PDF/DOC/DOCX, ≤5MB). Requires an admin (write) role.")
+    .Produces<CvDto>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status400BadRequest)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden)
+    .ProducesProblem(StatusCodes.Status404NotFound);
+
+v1.MapGet("/{id:guid}/cv", async (
+        Guid id,
+        IQueryHandler<GetCandidateCvMetadataQuery, CvDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new GetCandidateCvMetadataQuery(id), ct);
+        return result.ToHttpResult();
+    })
+    .WithName("GetCandidateCvMetadata")
+    .WithSummary("Metadata for a candidate's CV, if uploaded.")
+    .Produces<CvDto>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status404NotFound);
+
+v1.MapGet("/{id:guid}/cv/download", async (
+        Guid id,
+        IQueryHandler<DownloadCandidateCvQuery, CvContent> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new DownloadCandidateCvQuery(id), ct);
+        return result.IsSuccess
+            ? Results.File(result.Value!.Content, result.Value!.ContentType, result.Value!.FileName)
+            : result.ToHttpResult();
+    })
+    .WithName("DownloadCandidateCv")
+    .WithSummary("Download a candidate's CV, if uploaded.")
+    .Produces(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status404NotFound);
+
 app.Run();
 
 /// <summary>Exposed so integration tests can use <c>WebApplicationFactory</c> (charter Part 14).</summary>

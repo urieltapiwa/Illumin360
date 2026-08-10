@@ -74,8 +74,14 @@ public sealed class StudentsDbContext(DbContextOptions<StudentsDbContext> option
                 .HasColumnType("integer[]")
                 .HasConversion(v => v.ToArray(), v => v.ToList(), trendComparer);
             b.Property(s => s.CreatedAt).HasColumnName("created_at");
+            b.Property(s => s.CvObjectKey).HasColumnName("cv_object_key").HasMaxLength(400);
+            b.Property(s => s.CvFileName).HasColumnName("cv_file_name").HasMaxLength(260);
+            b.Property(s => s.CvContentType).HasColumnName("cv_content_type").HasMaxLength(120);
+            b.Property(s => s.CvSize).HasColumnName("cv_size");
+            b.Property(s => s.CvUploadedAt).HasColumnName("cv_uploaded_at");
             b.Ignore(s => s.DomainEvents);
             b.Ignore(s => s.FullName);
+            b.Ignore(s => s.HasCv);
         });
 
         modelBuilder.Entity<StudentSkill>(b =>

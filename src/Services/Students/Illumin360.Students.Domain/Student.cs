@@ -87,6 +87,24 @@ public sealed class Student : Entity<StudentId>
     /// <summary>When the student record was created (UTC).</summary>
     public DateTimeOffset CreatedAt { get; private set; }
 
+    /// <summary>Storage object key of the uploaded CV, or null if none.</summary>
+    public string? CvObjectKey { get; private set; }
+
+    /// <summary>Original file name of the uploaded CV, or null if none.</summary>
+    public string? CvFileName { get; private set; }
+
+    /// <summary>MIME type of the uploaded CV, or null if none.</summary>
+    public string? CvContentType { get; private set; }
+
+    /// <summary>Size in bytes of the uploaded CV.</summary>
+    public long CvSize { get; private set; }
+
+    /// <summary>When the CV was last uploaded (UTC), or null if none.</summary>
+    public DateTimeOffset? CvUploadedAt { get; private set; }
+
+    /// <summary>Whether a CV has been uploaded.</summary>
+    public bool HasCv => CvObjectKey is not null;
+
     /// <summary>The student's full display name.</summary>
     public string FullName => $"{FirstName} {LastName}".Trim();
 
@@ -94,6 +112,21 @@ public sealed class Student : Entity<StudentId>
     /// <param name="availability">New availability label.</param>
     public void SetAvailability(string availability) =>
         Availability = string.IsNullOrWhiteSpace(availability) ? Availability : availability.Trim();
+
+    /// <summary>Records an uploaded CV's storage location and metadata.</summary>
+    /// <param name="objectKey">Storage object key.</param>
+    /// <param name="fileName">Original file name.</param>
+    /// <param name="contentType">MIME type.</param>
+    /// <param name="size">Size in bytes.</param>
+    /// <param name="uploadedAt">Upload timestamp (UTC).</param>
+    public void SetCv(string objectKey, string fileName, string contentType, long size, DateTimeOffset uploadedAt)
+    {
+        CvObjectKey = objectKey;
+        CvFileName = fileName;
+        CvContentType = contentType;
+        CvSize = size;
+        CvUploadedAt = uploadedAt;
+    }
 
     /// <summary>Records that the student submitted an application (bumps the counter).</summary>
     public void RecordApplication() => ApplicationsCount++;

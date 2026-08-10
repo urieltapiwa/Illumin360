@@ -13,4 +13,7 @@
     <PackageReference Include="MassTransit.EntityFrameworkCore" />
     <ProjectReference Include="..\Illumin360.Students.Application\Illumin360.Students.Application.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\BuildingBlocks\Storage\Illumin360.Storage.csproj" />
+  </ItemGroup>
 </Project>

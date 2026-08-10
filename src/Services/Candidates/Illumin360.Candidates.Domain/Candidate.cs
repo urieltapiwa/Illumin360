@@ -50,6 +50,39 @@ public sealed class Candidate : Entity<CandidateId>
     /// <summary>When the candidate record was created (UTC).</summary>
     public DateTimeOffset CreatedAt { get; private set; }
 
+    /// <summary>Storage object key of the uploaded CV, or null if none.</summary>
+    public string? CvObjectKey { get; private set; }
+
+    /// <summary>Original file name of the uploaded CV, or null if none.</summary>
+    public string? CvFileName { get; private set; }
+
+    /// <summary>MIME type of the uploaded CV, or null if none.</summary>
+    public string? CvContentType { get; private set; }
+
+    /// <summary>Size in bytes of the uploaded CV.</summary>
+    public long CvSize { get; private set; }
+
+    /// <summary>When the CV was last uploaded (UTC), or null if none.</summary>
+    public DateTimeOffset? CvUploadedAt { get; private set; }
+
+    /// <summary>Whether a CV has been uploaded.</summary>
+    public bool HasCv => CvObjectKey is not null;
+
+    /// <summary>Records an uploaded CV's storage location and metadata.</summary>
+    /// <param name="objectKey">Storage object key.</param>
+    /// <param name="fileName">Original file name.</param>
+    /// <param name="contentType">MIME type.</param>
+    /// <param name="size">Size in bytes.</param>
+    /// <param name="uploadedAt">Upload timestamp (UTC).</param>
+    public void SetCv(string objectKey, string fileName, string contentType, long size, DateTimeOffset uploadedAt)
+    {
+        CvObjectKey = objectKey;
+        CvFileName = fileName;
+        CvContentType = contentType;
+        CvSize = size;
+        CvUploadedAt = uploadedAt;
+    }
+
     /// <summary>
     /// Registers a new candidate, enforcing domain invariants. Returns a validation
     /// <see cref="Error"/> instead of throwing for expected bad input (charter Part 18).

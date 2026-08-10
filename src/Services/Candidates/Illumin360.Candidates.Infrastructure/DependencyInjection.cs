@@ -1,6 +1,7 @@
 using Illumin360.Candidates.Application.Abstractions;
 using Illumin360.Candidates.Infrastructure.Messaging;
 using Illumin360.Candidates.Infrastructure.Persistence;
+using Illumin360.Storage;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -26,6 +27,9 @@ public static class DependencyInjection
 
         services.AddDbContext<CandidatesDbContext>(o => o.UseNpgsql(connectionString));
         services.AddScoped<ICandidateRepository, CandidateRepository>();
+
+        // Object storage (MinIO/S3) for candidate CV uploads.
+        services.AddIllumin360Storage(configuration);
 
         // --- Messaging: MassTransit + RabbitMQ with the EF Core transactional bus outbox ---
         // Integration events published by handlers are stored in the candidate database's outbox
