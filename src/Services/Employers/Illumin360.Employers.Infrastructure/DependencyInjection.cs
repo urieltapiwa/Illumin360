@@ -20,6 +20,7 @@ public static class DependencyInjection
 
         services.AddDbContext<EmployersDbContext>(o => o.UseNpgsql(connectionString));
         services.AddScoped<IEmployerRepository, EmployerRepository>();
+        services.AddScoped<ITeamMemberRepository, TeamMemberRepository>();
 
         services.AddHealthChecks()
             .AddNpgSql(connectionString, name: "employers-db", tags: ["ready", "startup"]);

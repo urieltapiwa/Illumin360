@@ -119,14 +119,14 @@ flip the status to ✅ (add the commit/PR ref).
 | Employer self-registration (identity + role) | ✅ | via BFF `/register` |
 | Employer/company profile service | ✅ | New `Illumin360.Employers` microservice — company profile get/register/update (`/v1/employers`), DB-per-service + migration + seed, gateway route |
 | Employer portal UI | ✅ | `?portal=employer` page — company profile view + inline edit (industry/city/website/about) against `/api/employers/me`, plus a "top candidates for a role" panel wired to `/api/candidates/top` |
-| Multi-user employer teams + roles | ⬜ | |
+| Multi-user employer teams + roles | ✅ | `employer_team_members` table + `/v1/employers/me/team` list/invite/change-role/remove (owner/recruiter/viewer), "at least one owner" invariant, unique email per employer; team panel in the employer portal |
 | Recruiter CRM (clients/contacts) | ⬜ | OpenCATS has this |
 | Branded careers page | ⬜ | |
 
 - [x] Employers service — new `Illumin360.Employers` microservice (Domain/Application/Infrastructure/Api) with company profile get/register/update, DB-per-service (migrate + seed), gateway route `/api/employers/**`, unit + Testcontainers integration tests
 - [x] Employers deploy — chiseled non-root Dockerfile + `employers-api` service in `docker-compose.apps.yml` (port 5206, gateway dependency; `illumin360_employers` DB already provisioned by the init script)
 - [x] Employer portal UI — `?portal=employer` company-profile page: live profile view + inline edit (industry/city/website/about; company name fixed) via `PUT /api/employers/me`, and a "top candidates for a role" ranking panel (`GET /api/candidates/top`). Read-only snapshot fallback when the API is offline. Company **members/teams** are the follow-up
-- [ ] Employer team roles (owner/recruiter/viewer)
+- [x] Employer team roles (owner/recruiter/viewer) — `TeamMember` aggregate + `employer_team_members` table (unique email per employer), `/v1/employers/me/team` list/invite/change-role/remove (writes admin-gated), "at least one owner" invariant guarding demotion & removal (409), seeded founding owner, unit + Testcontainers integration tests, and a team-management panel in the employer portal
 
 ## I. Admin & governance
 | Feature | Status | Notes |
@@ -168,7 +168,7 @@ flip the status to ✅ (add the commit/PR ref).
 
 ### Progress
 - Total build items: 32
-- Done: 20
+- Done: 21
 - In progress: 0
 
 **Changelog of ticks**
@@ -195,5 +195,6 @@ flip the status to ✅ (add the commit/PR ref).
 - New Illumin360.Employers microservice — company profile get/register/update + gateway route (2026-08-10).
 - Employers service wired into docker-compose (Dockerfile + `employers-api` on 5206, gateway dependency) (2026-08-10).
 - Employer portal UI — `?portal=employer` company-profile view + inline edit + top-candidates panel (2026-08-10).
+- Employer team roles — `employer_team_members` + `/v1/employers/me/team` CRUD (owner/recruiter/viewer), last-owner invariant, portal team panel (2026-08-10).
 
 _Update this file as items are ticked; link the commit/PR that delivered each._

@@ -104,6 +104,74 @@ v1.MapPut("/me", async (
     .ProducesProblem(StatusCodes.Status403Forbidden)
     .ProducesProblem(StatusCodes.Status404NotFound);
 
+// --- Team members (multi-user employer accounts with owner/recruiter/viewer roles) ---
+var team = v1.MapGroup("/me/team").WithTags("Employer team");
+
+team.MapGet("/", async (
+        IQueryHandler<ListTeamMembersQuery, IReadOnlyList<TeamMemberDto>> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new ListTeamMembersQuery(), ct);
+        return result.ToHttpResult();
+    })
+    .WithName("ListTeamMembers")
+    .WithSummary("List the current employer's team members.")
+    .Produces<IReadOnlyList<TeamMemberDto>>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status404NotFound);
+
+team.MapPost("/", async (
+        InviteTeamMemberCommand command,
+        ICommandHandler<InviteTeamMemberCommand, TeamMemberDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(command, ct);
+        return result.ToCreatedResult(dto => $"/v1/employers/me/team/{dto.Id}");
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminWritePolicy)
+    .WithName("InviteTeamMember")
+    .WithSummary("Invite a new team member (owner/recruiter/viewer). Requires an admin (write) role.")
+    .Produces<TeamMemberDto>(StatusCodes.Status201Created)
+    .ProducesProblem(StatusCodes.Status400BadRequest)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden)
+    .ProducesProblem(StatusCodes.Status409Conflict);
+
+team.MapPut("/{memberId:guid}/role", async (
+        Guid memberId,
+        ChangeRoleRequest body,
+        ICommandHandler<ChangeTeamMemberRoleCommand, TeamMemberDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new ChangeTeamMemberRoleCommand(memberId, body.Role), ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminWritePolicy)
+    .WithName("ChangeTeamMemberRole")
+    .WithSummary("Change a team member's role. Requires an admin (write) role.")
+    .Produces<TeamMemberDto>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status400BadRequest)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden)
+    .ProducesProblem(StatusCodes.Status404NotFound)
+    .ProducesProblem(StatusCodes.Status409Conflict);
+
+team.MapDelete("/{memberId:guid}", async (
+        Guid memberId,
+        ICommandHandler<RemoveTeamMemberCommand, bool> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new RemoveTeamMemberCommand(memberId), ct);
+        return result.IsSuccess ? Results.NoContent() : result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminWritePolicy)
+    .WithName("RemoveTeamMember")
+    .WithSummary("Remove a team member. Requires an admin (write) role.")
+    .Produces(StatusCodes.Status204NoContent)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden)
+    .ProducesProblem(StatusCodes.Status404NotFound)
+    .ProducesProblem(StatusCodes.Status409Conflict);
+
 app.Run();
 
 /// <summary>Exposed so integration tests can use <c>WebApplicationFactory</c> (charter Part 14).</summary>
