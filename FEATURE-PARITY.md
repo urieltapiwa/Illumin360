@@ -20,8 +20,8 @@ flip the status to ✅ (add the commit/PR ref).
 | Resume/CV upload & storage | ✅ | MinIO-backed upload/download for professionals & students (self-service `/me/cv`) and candidates (per-id, admin) via `Illumin360.Storage` |
 | Resume parsing (skills/experience extraction) | 🟡 | Shared `Illumin360.Resume` extracts CV text (PDF/DOCX/TXT) + detects skills; **professionals & students** `/me/cv/apply-skills` auto-add new skills to the profile ("Scan CV & add skills" UI). Candidates + experience/education extraction pending |
 | Candidate search (boolean / faceted) | ✅ | `GET /v1/candidates/search` — city + availability + keyword (name/headline) + has-CV filters, paged, with facet counts (each facet excludes its own filter); admin-portal candidate-search panel |
-| Recruiter notes / private activity log | 🟡 | Read-only activity feed; no recruiter notes |
-| Tags / labels | ⬜ | |
+| Recruiter notes / private activity log | ✅ | Private recruiter notes per candidate — `candidate_notes` table + `/v1/candidates/{id}/notes` list/add/delete (writes admin-gated); admin candidate-search notes panel |
+| Tags / labels | ✅ | Candidate tags — `candidate_tags` table (unique per candidate, normalised) + `/v1/candidates/{id}/tags` list/add(idempotent)/remove; tag chips in the admin candidate-search panel |
 | Skill endorsements / references | ⬜ | |
 | Duplicate detection | ⬜ | |
 
@@ -30,7 +30,7 @@ flip the status to ✅ (add the commit/PR ref).
 - [x] Resume parsing — shared `Illumin360.Resume` (PdfPig + OpenXml text extraction, deterministic skill detection); `POST /me/cv/apply-skills` **auto-adds** newly detected skills to the Professionals profile (reflected live in the skills panel). Extending to students/candidates + parsing experience/education = follow-up
 - [x] Editable skills with proficiency — Professionals `POST/PUT/DELETE /v1/professionals/me/skills` (add with 0–100 level + dedup-by-name conflict, update level with range validation, remove), skill ids surfaced on the dashboard; professional-portal skills panel now has proficiency sliders + an add-skill row + remove; handler/domain unit tests
 - [x] Faceted candidate search — `GET /v1/candidates/search` filtering on city, availability, keyword (name/headline ILIKE) and CV presence, paged with a total, returning facet counts for cities + availability (each facet excludes its own active filter); handler unit test + Testcontainers integration test; admin-portal search panel with clickable city facets. (Skill facets await structured candidate skills)
-- [ ] Recruiter notes + tags on a candidate
+- [x] Recruiter notes + tags on a candidate — `CandidateNote`/`CandidateTag` aggregates + `candidate_notes`/`candidate_tags` tables (tags unique + normalised per candidate); `/v1/candidates/{id}/notes` (list/add/delete) and `/v1/candidates/{id}/tags` (list/add-idempotent/remove), writes admin-gated; unit + Testcontainers integration tests; expandable notes/tags panel per candidate in the admin search results
 
 ## B. Jobs / recruitment requisitions
 | Feature | Status | Notes |
@@ -171,7 +171,7 @@ flip the status to ✅ (add the commit/PR ref).
 
 ### Progress
 - Total build items: 32
-- Done: 29
+- Done: 31
 - In progress: 0
 
 **Changelog of ticks**

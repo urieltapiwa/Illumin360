@@ -115,6 +115,13 @@ export default function Admin({ session }: { session: Session }) {
   const [csCity, setCsCity] = useState("");
   const [csAvailability, setCsAvailability] = useState("");
   const [csResult, setCsResult] = useState<SearchResult | null>(null);
+  // Notes + tags for a candidate expanded in the search results.
+  type CandNote = { id: string; author: string; body: string; createdAt: string };
+  const [csOpen, setCsOpen] = useState<string | null>(null);
+  const [csNotes, setCsNotes] = useState<CandNote[]>([]);
+  const [csTags, setCsTags] = useState<string[]>([]);
+  const [csNoteDraft, setCsNoteDraft] = useState("");
+  const [csTagDraft, setCsTagDraft] = useState("");
   useEffect(() => { fetch(import.meta.env.BASE_URL + "admin.json").then((r) => r.json()).then(setD); }, []);
   // Live platform signals from the microservices (via BFF → gateway). Talent count and talent-by-city are
   // real (Candidates service); finance/ops tiles (MRR, subscriptions, tickets, verifications) have no backing
@@ -190,6 +197,13 @@ export default function Admin({ session }: { session: Session }) {
     }, 250);
     return () => clearTimeout(id);
   }, [csQuery, csCity, csAvailability]);
+
+  // Notes + tags for the candidate expanded in search results.
+  useEffect(() => {
+    if (!csOpen) { setCsNotes([]); setCsTags([]); return; }
+    fetch(`/api/candidates/${csOpen}/notes`).then((r) => (r.ok ? r.json() : [])).then((v) => Array.isArray(v) && setCsNotes(v)).catch(() => { /* offline */ });
+    fetch(`/api/candidates/${csOpen}/tags`).then((r) => (r.ok ? r.json() : [])).then((v) => Array.isArray(v) && setCsTags(v)).catch(() => { /* offline */ });
+  }, [csOpen]);
 
   // Offers + onboarding for the application selected on a pipeline card.
   useEffect(() => {
@@ -295,6 +309,24 @@ export default function Admin({ session }: { session: Session }) {
     if (r.ok) {
       setOnboarding((ob) => (ob && ob !== "none" ? { ...ob, tasks: ob.tasks.map((t) => (t.id === taskId ? { ...t, isDone: done } : t)), completed: ob.tasks.reduce((n, t) => n + (t.id === taskId ? (done ? 1 : 0) : t.isDone ? 1 : 0), 0) } : ob));
     }
+  };
+  const addCandNote = async () => {
+    if (!csOpen || !csNoteDraft.trim()) return;
+    const r = await fetch(`/api/candidates/${csOpen}/notes`, { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: JSON.stringify({ author: session.name || "Recruiter", body: csNoteDraft.trim() }) });
+    if (r.ok) { const n: CandNote = await r.json(); setCsNotes((ns) => [n, ...ns]); setCsNoteDraft(""); }
+  };
+  const removeCandNote = async (noteId: string) => {
+    const r = await fetch(`/api/candidates/notes/${noteId}`, { method: "DELETE", credentials: "same-origin" });
+    if (r.ok) setCsNotes((ns) => ns.filter((n) => n.id !== noteId));
+  };
+  const addCandTag = async () => {
+    if (!csOpen || !csTagDraft.trim()) return;
+    const r = await fetch(`/api/candidates/${csOpen}/tags`, { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: JSON.stringify({ label: csTagDraft.trim() }) });
+    if (r.ok) { setCsTags(await r.json()); setCsTagDraft(""); }
+  };
+  const removeCandTag = async (label: string) => {
+    const r = await fetch(`/api/candidates/${csOpen}/tags/${encodeURIComponent(label)}`, { method: "DELETE", credentials: "same-origin" });
+    if (r.ok) setCsTags(await r.json());
   };
   const pipelineStages = ["applied", "reviewed", "shortlisted", "hired", "rejected"];
   const degraded = d.services.filter((s) => s.status !== "operational").length;
@@ -620,9 +652,44 @@ export default function Admin({ session }: { session: Session }) {
                 <div className="space-y-2">
                   {csResult.items.length === 0 && <div className="py-4 text-center text-[12px] text-ink-lo">{t("admin.search.empty", "No candidates match.")}</div>}
                   {csResult.items.map((c) => (
-                    <div key={c.id} className="flex items-center gap-3 rounded-xl border border-line/60 bg-panel2/40 px-3.5 py-2.5">
-                      <div className="min-w-0 flex-1"><div className="text-sm font-semibold text-ink-hi truncate">{c.firstName} {c.lastName}</div><div className="text-[11px] text-ink-lo truncate">{c.publicHeadline || "—"} · {c.city}</div></div>
-                      <span className="chip !text-[10px] !text-gold !border-gold/30">{c.availability}</span>
+                    <div key={c.id} className="rounded-xl border border-line/60 bg-panel2/40">
+                      <button onClick={() => setCsOpen(csOpen === c.id ? null : c.id)} className="flex w-full items-center gap-3 px-3.5 py-2.5 text-left">
+                        <div className="min-w-0 flex-1"><div className="text-sm font-semibold text-ink-hi truncate">{c.firstName} {c.lastName}</div><div className="text-[11px] text-ink-lo truncate">{c.publicHeadline || "—"} · {c.city}</div></div>
+                        <span className="chip !text-[10px] !text-gold !border-gold/30">{c.availability}</span>
+                        <span className="text-ink-lo text-[11px]">{csOpen === c.id ? "▲" : "▼"}</span>
+                      </button>
+                      {csOpen === c.id && (
+                        <div className="border-t border-line/40 px-3.5 py-3 space-y-3">
+                          <div>
+                            <div className="flex flex-wrap items-center gap-1.5 mb-2">
+                              {csTags.map((tag) => (
+                                <span key={tag} className="chip !text-[10px] !text-brand-bright !border-brand/30">{tag} <button onClick={() => removeCandTag(tag)} className="ml-1 hover:text-pink">✕</button></span>
+                              ))}
+                              {csTags.length === 0 && <span className="text-[11px] text-ink-lo">{t("admin.notes.noTags", "No tags")}</span>}
+                            </div>
+                            <div className="flex gap-2">
+                              <input value={csTagDraft} onChange={(e) => setCsTagDraft(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") addCandTag(); }} placeholder={t("admin.notes.addTag", "Add tag")} className="flex-1 rounded-lg border border-line/70 bg-panel2/50 px-2.5 py-1 text-[12px] text-ink-hi placeholder:text-ink-lo focus:border-brand/50 focus:outline-none" />
+                              <button onClick={addCandTag} disabled={!csTagDraft.trim()} className="rounded-lg bg-brand/15 px-2.5 py-1 text-[11px] font-semibold text-brand-bright hover:bg-brand/25 transition disabled:opacity-50">{t("admin.notes.tag", "Tag")}</button>
+                            </div>
+                          </div>
+                          <div>
+                            <div className="eyebrow mb-1.5">{t("admin.notes.title", "Recruiter notes")}</div>
+                            <div className="space-y-1.5 mb-2">
+                              {csNotes.map((n) => (
+                                <div key={n.id} className="flex items-start gap-2 rounded-lg border border-line/50 bg-panel/40 px-2.5 py-1.5">
+                                  <div className="min-w-0 flex-1"><div className="text-[12px] text-ink-mid">{n.body}</div><div className="text-[10px] text-ink-lo">{n.author} · {new Date(n.createdAt).toLocaleDateString()}</div></div>
+                                  <button onClick={() => removeCandNote(n.id)} className="text-ink-lo hover:text-pink text-[11px]">✕</button>
+                                </div>
+                              ))}
+                              {csNotes.length === 0 && <div className="text-[11px] text-ink-lo">{t("admin.notes.none", "No notes yet.")}</div>}
+                            </div>
+                            <div className="flex gap-2">
+                              <input value={csNoteDraft} onChange={(e) => setCsNoteDraft(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") addCandNote(); }} placeholder={t("admin.notes.addNote", "Add a private note…")} className="flex-1 rounded-lg border border-line/70 bg-panel2/50 px-2.5 py-1 text-[12px] text-ink-hi placeholder:text-ink-lo focus:border-brand/50 focus:outline-none" />
+                              <button onClick={addCandNote} disabled={!csNoteDraft.trim()} className="rounded-lg bg-brand/15 px-2.5 py-1 text-[11px] font-semibold text-brand-bright hover:bg-brand/25 transition disabled:opacity-50">{t("admin.notes.note", "Note")}</button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>

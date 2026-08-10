@@ -267,11 +267,114 @@ v1.MapDelete("/pools/{id:guid}/members/{candidateId:guid}", async (
     .ProducesProblem(StatusCodes.Status403Forbidden)
     .ProducesProblem(StatusCodes.Status404NotFound);
 
+// --- Recruiter notes on a candidate ---
+v1.MapGet("/{id:guid}/notes", async (
+        Guid id,
+        IQueryHandler<GetCandidateNotesQuery, IReadOnlyList<CandidateNoteDto>> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new GetCandidateNotesQuery(id), ct);
+        return result.ToHttpResult();
+    })
+    .WithName("GetCandidateNotes")
+    .WithSummary("List a candidate's recruiter notes.")
+    .Produces<IReadOnlyList<CandidateNoteDto>>(StatusCodes.Status200OK);
+
+v1.MapPost("/{id:guid}/notes", async (
+        Guid id,
+        AddNoteBody body,
+        ICommandHandler<AddCandidateNoteCommand, CandidateNoteDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new AddCandidateNoteCommand(id, body.Author, body.Body), ct);
+        return result.ToCreatedResult(dto => $"/v1/candidates/{id}/notes/{dto.Id}");
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminWritePolicy)
+    .WithName("AddCandidateNote")
+    .WithSummary("Add a recruiter note to a candidate. Requires an admin (write) role.")
+    .Produces<CandidateNoteDto>(StatusCodes.Status201Created)
+    .ProducesProblem(StatusCodes.Status400BadRequest)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden)
+    .ProducesProblem(StatusCodes.Status404NotFound);
+
+v1.MapDelete("/notes/{noteId:guid}", async (
+        Guid noteId,
+        ICommandHandler<RemoveCandidateNoteCommand, bool> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new RemoveCandidateNoteCommand(noteId), ct);
+        return result.IsSuccess ? Results.NoContent() : result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminWritePolicy)
+    .WithName("RemoveCandidateNote")
+    .WithSummary("Remove a recruiter note. Requires an admin (write) role.")
+    .Produces(StatusCodes.Status204NoContent)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden)
+    .ProducesProblem(StatusCodes.Status404NotFound);
+
+// --- Tags / labels on a candidate ---
+v1.MapGet("/{id:guid}/tags", async (
+        Guid id,
+        IQueryHandler<GetCandidateTagsQuery, IReadOnlyList<string>> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new GetCandidateTagsQuery(id), ct);
+        return result.ToHttpResult();
+    })
+    .WithName("GetCandidateTags")
+    .WithSummary("List a candidate's tags.")
+    .Produces<IReadOnlyList<string>>(StatusCodes.Status200OK);
+
+v1.MapPost("/{id:guid}/tags", async (
+        Guid id,
+        AddTagBody body,
+        ICommandHandler<AddCandidateTagCommand, IReadOnlyList<string>> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new AddCandidateTagCommand(id, body.Label), ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminWritePolicy)
+    .WithName("AddCandidateTag")
+    .WithSummary("Add a tag to a candidate (idempotent). Requires an admin (write) role.")
+    .Produces<IReadOnlyList<string>>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status400BadRequest)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden)
+    .ProducesProblem(StatusCodes.Status404NotFound);
+
+v1.MapDelete("/{id:guid}/tags/{label}", async (
+        Guid id,
+        string label,
+        ICommandHandler<RemoveCandidateTagCommand, IReadOnlyList<string>> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new RemoveCandidateTagCommand(id, label), ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminWritePolicy)
+    .WithName("RemoveCandidateTag")
+    .WithSummary("Remove a tag from a candidate. Requires an admin (write) role.")
+    .Produces<IReadOnlyList<string>>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden);
+
 app.Run();
 
 /// <summary>Request body for creating a talent pool.</summary>
 /// <param name="Name">Pool name.</param>
 internal sealed record CreatePoolBody(string Name);
+
+/// <summary>Request body for adding a recruiter note.</summary>
+/// <param name="Author">Author display name.</param>
+/// <param name="Body">Note body.</param>
+internal sealed record AddNoteBody(string? Author, string Body);
+
+/// <summary>Request body for adding a tag.</summary>
+/// <param name="Label">The tag label.</param>
+internal sealed record AddTagBody(string Label);
 
 /// <summary>Exposed so integration tests can use <c>WebApplicationFactory</c> (charter Part 14).</summary>
 public partial class Program;
