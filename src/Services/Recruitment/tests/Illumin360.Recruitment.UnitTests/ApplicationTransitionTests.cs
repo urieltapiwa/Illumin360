@@ -50,7 +50,7 @@ public class ApplicationTransitionTests
     {
         var repo = Substitute.For<IRecruitmentRepository>();
         repo.GetApplicationAsync(Arg.Any<ApplicationId>(), Arg.Any<CancellationToken>()).Returns((RecruitmentApplication?)null);
-        var handler = new AdvanceApplicationCommandHandler(repo);
+        var handler = new AdvanceApplicationCommandHandler(repo, Substitute.For<IIntegrationEventPublisher>());
 
         var result = await handler.HandleAsync(new AdvanceApplicationCommand(Guid.NewGuid()), CancellationToken.None);
 
@@ -64,7 +64,7 @@ public class ApplicationTransitionTests
         var app = Applied();
         var repo = Substitute.For<IRecruitmentRepository>();
         repo.GetApplicationAsync(Arg.Any<ApplicationId>(), Arg.Any<CancellationToken>()).Returns(app);
-        var handler = new AdvanceApplicationCommandHandler(repo);
+        var handler = new AdvanceApplicationCommandHandler(repo, Substitute.For<IIntegrationEventPublisher>());
 
         var result = await handler.HandleAsync(new AdvanceApplicationCommand(app.Id.Value), CancellationToken.None);
 
