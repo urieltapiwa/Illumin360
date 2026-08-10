@@ -54,12 +54,12 @@ flip the status to ✅ (add the commit/PR ref).
 | Applications-per-request listing | ✅ | `GET /requests/{id}/applications` |
 | Pipeline stages (applied→reviewed→shortlist→interview→hire) | ✅ | Recruiter transition endpoints advance/reject with terminal-decision guards (409) |
 | Advance / reject application (with reason) | 🟡 | Advance/reject endpoints (admin-gated); a free-text reason needs a new column on the externally-seeded `applications` table (pending) |
-| Kanban drag-drop pipeline UI | ⬜ | Horilla has this |
+| Kanban pipeline board (per requisition) | ✅ | Admin-portal "Application pipeline" board — role selector + stage columns (applied→…→hired/rejected) with advance/reject. Drag-drop is a polish follow-up |
 | Bulk actions | ⬜ | |
 | Application status visible to applicant | ✅ | "My applications" live status timeline (`GET /recruitment/talents/{id}/applications`) on the professional portal |
 
 - [x] Application stage-transition endpoints — `POST /v1/recruitment/applications/{id}/advance|reject` (admin-gated), domain stage machine (applied→reviewed→shortlisted→hired) with terminal-conflict guards. Free-text reject reason pending (needs a column on the externally-seeded `applications` table)
-- [ ] Recruiter pipeline board (kanban) per requisition
+- [x] Recruiter pipeline board — Admin-portal kanban per requisition (role selector + stage columns, advance/reject on cards, live match %). Drag-drop = polish follow-up
 - [x] Applicant-facing application status timeline — "My applications" panel on the professional portal, live status per applied role (`GET /recruitment/talents/{id}/applications`)
 
 ## D. Matching / sourcing
@@ -165,7 +165,7 @@ flip the status to ✅ (add the commit/PR ref).
 
 ### Progress
 - Total build items: 32
-- Done: 12
+- Done: 13
 - In progress: 0
 
 **Changelog of ticks**
@@ -185,5 +185,6 @@ flip the status to ✅ (add the commit/PR ref).
 - Application-event emails — Recruitment publishes ApplicationSubmitted/StatusChanged (outbox) → worker sends templated emails (2026-08-10).
 - Saved searches (CRUD + run-results) + per-search job-alerts opt-in; professional-portal panel (2026-08-10).
 - Scheduled job-alert digest sender — JobAlertScheduler → JobAlertDigest event → worker emails matches (2026-08-10).
+- Recruiter kanban pipeline board in the Admin portal (stage columns + advance/reject) (2026-08-10).
 
 _Update this file as items are ticked; link the commit/PR that delivered each._
