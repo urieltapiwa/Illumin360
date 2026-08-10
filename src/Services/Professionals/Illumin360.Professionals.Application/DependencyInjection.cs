@@ -43,6 +43,15 @@ public static class DependencyInjection
             ICommandHandler<ApplyCvSkillsCommand, AppliedSkillsDto>,
             ApplyCvSkillsCommandHandler>();
         services.AddScoped<
+            ICommandHandler<AddSkillCommand, EditableSkillDto>,
+            AddSkillCommandHandler>();
+        services.AddScoped<
+            ICommandHandler<UpdateSkillLevelCommand, EditableSkillDto>,
+            UpdateSkillLevelCommandHandler>();
+        services.AddScoped<
+            ICommandHandler<RemoveSkillCommand, bool>,
+            RemoveSkillCommandHandler>();
+        services.AddScoped<
             IQueryHandler<GetNotificationsQuery, IReadOnlyList<NotificationDto>>,
             GetNotificationsQueryHandler>();
         services.AddScoped<

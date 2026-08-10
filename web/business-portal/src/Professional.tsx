@@ -15,7 +15,7 @@ interface Prof {
   matches: Match[];
   pipeline: { stage: string; value: number }[];
   skillDemand: { role: string; value: number }[];
-  skills: { name: string; level: number; trend: string }[];
+  skills: { id?: string; name: string; level: number; trend: string }[];
   salary: { role: string; p25: number; median: number; p75: number; you: number };
   activity: { icon: string; text: string; when: string }[];
 }
@@ -96,6 +96,7 @@ export default function Professional(_props: { session: Session }) {
   const [cv, setCv] = useState<{ fileName: string; uploadedAt: string } | null>(null);
   const [cvBusy, setCvBusy] = useState<"idle" | "uploading" | "error">("idle");
   const [cvSkills, setCvSkills] = useState<string[] | null>(null);
+  const [newSkill, setNewSkill] = useState<{ name: string; level: number }>({ name: "", level: 60 });
   const [cvAdded, setCvAdded] = useState<number | null>(null);
   const [scanning, setScanning] = useState(false);
   // Current CV metadata (if any). Reads are open; upload requires an authenticated professional.
@@ -193,6 +194,25 @@ export default function Professional(_props: { session: Session }) {
       }
     } finally {
       setScanning(false);
+    }
+  };
+  // Editable skills with proficiency (self-service).
+  const updateSkillLevel = async (id: string, level: number) => {
+    setD((prev) => (prev ? { ...prev, skills: prev.skills.map((s) => (s.id === id ? { ...s, level } : s)) } : prev));
+    await fetch(`/api/professionals/me/skills/${id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: JSON.stringify({ level }) });
+  };
+  const removeSkill = async (id: string) => {
+    const r = await fetch(`/api/professionals/me/skills/${id}`, { method: "DELETE", credentials: "same-origin" });
+    if (r.ok) setD((prev) => (prev ? { ...prev, skills: prev.skills.filter((s) => s.id !== id) } : prev));
+  };
+  const addSkill = async () => {
+    const name = newSkill.name.trim();
+    if (!name) return;
+    const r = await fetch("/api/professionals/me/skills", { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: JSON.stringify({ name, level: newSkill.level }) });
+    if (r.ok) {
+      const s = await r.json();
+      setD((prev) => (prev ? { ...prev, skills: [...prev.skills, { id: s.id, name: s.name, level: s.level, trend: s.trend }] } : prev));
+      setNewSkill({ name: "", level: 60 });
     }
   };
   // Upload / replace the professional's CV (stored in MinIO via the Professionals service).
@@ -574,15 +594,31 @@ export default function Professional(_props: { session: Session }) {
               <p className="text-[11px] text-ink-lo mt-0.5 mb-3">{t("pro.skills.subtitle")}</p>
               <div className="space-y-3">
                 {d.skills.map((s, i) => (
-                  <div key={i}>
+                  <div key={s.id ?? i}>
                     <div className="flex items-center justify-between text-xs mb-1">
                       <span className="text-ink-hi font-medium">{s.name}</span>
-                      <span className={`text-[10px] uppercase tracking-wide ${trendColor[s.trend]}`}>{s.trend}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="num text-[11px] text-ink-mid">{s.level}%</span>
+                        {live && s.id
+                          ? <button onClick={() => removeSkill(s.id!)} title={t("pro.skills.remove", "Remove")} className="text-ink-lo hover:text-pink transition text-[11px]">✕</button>
+                          : <span className={`text-[10px] uppercase tracking-wide ${trendColor[s.trend]}`}>{s.trend}</span>}
+                      </div>
                     </div>
-                    <div className="h-2 rounded-full bg-panel2/70 overflow-hidden"><div className="h-full rounded-full bg-gradient-to-r from-brand-deep to-brand-bright" style={{ width: s.level + "%" }} /></div>
+                    {live && s.id ? (
+                      <input type="range" min={0} max={100} value={s.level} onChange={(e) => updateSkillLevel(s.id!, Number(e.target.value))} className="w-full accent-brand-bright" />
+                    ) : (
+                      <div className="h-2 rounded-full bg-panel2/70 overflow-hidden"><div className="h-full rounded-full bg-gradient-to-r from-brand-deep to-brand-bright" style={{ width: s.level + "%" }} /></div>
+                    )}
                   </div>
                 ))}
               </div>
+              {live && (
+                <div className="mt-3 border-t border-line/40 pt-3 flex items-center gap-2">
+                  <input value={newSkill.name} onChange={(e) => setNewSkill((f) => ({ ...f, name: e.target.value }))} onKeyDown={(e) => { if (e.key === "Enter") addSkill(); }} placeholder={t("pro.skills.add", "Add a skill")} className="flex-1 min-w-0 rounded-lg border border-line/70 bg-panel2/50 px-2.5 py-1.5 text-[12px] text-ink-hi placeholder:text-ink-lo focus:border-brand/50 focus:outline-none" />
+                  <input type="number" min={0} max={100} value={newSkill.level} onChange={(e) => setNewSkill((f) => ({ ...f, level: Number(e.target.value) }))} className="w-16 rounded-lg border border-line/70 bg-panel2/50 px-2 py-1.5 text-[12px] text-ink-hi focus:border-brand/50 focus:outline-none" />
+                  <button onClick={addSkill} disabled={!newSkill.name.trim()} className="rounded-lg bg-brand/15 px-3 py-1.5 text-[11px] font-semibold text-brand-bright hover:bg-brand/25 transition disabled:opacity-50">{t("pro.skills.addBtn", "Add")}</button>
+                </div>
+              )}
             </motion.section>
 
             <motion.section variants={fade} className="card p-5">

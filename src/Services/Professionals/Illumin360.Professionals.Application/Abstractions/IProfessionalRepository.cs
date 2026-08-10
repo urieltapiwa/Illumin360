@@ -63,6 +63,21 @@ public interface IProfessionalRepository
     /// <param name="skill">The skill to add.</param>
     void AddSkill(ProfessionalSkill skill);
 
+    /// <summary>Lists a professional's skills in display order.</summary>
+    /// <param name="professionalId">Owning professional.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<IReadOnlyList<ProfessionalSkill>> ListSkillsAsync(ProfessionalId professionalId, CancellationToken cancellationToken);
+
+    /// <summary>Loads one of a professional's skills for update (change-tracked), or null if not found.</summary>
+    /// <param name="professionalId">Owning professional.</param>
+    /// <param name="skillId">The skill id.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<ProfessionalSkill?> GetSkillAsync(ProfessionalId professionalId, Guid skillId, CancellationToken cancellationToken);
+
+    /// <summary>Removes a skill.</summary>
+    /// <param name="skill">The skill to remove.</param>
+    void RemoveSkill(ProfessionalSkill skill);
+
     /// <summary>Stages a new in-app notification for insertion.</summary>
     /// <param name="notification">The notification to add.</param>
     void AddNotification(ProfessionalNotification notification);

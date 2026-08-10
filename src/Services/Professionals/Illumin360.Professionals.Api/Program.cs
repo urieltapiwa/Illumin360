@@ -232,6 +232,58 @@ v1.MapPost("/me/cv/apply-skills", async (
     .ProducesProblem(StatusCodes.Status403Forbidden)
     .ProducesProblem(StatusCodes.Status404NotFound);
 
+// --- Editable skills with proficiency (current "me" profile) ---
+v1.MapPost("/me/skills", async (
+        AddSkillBody body,
+        ICommandHandler<AddSkillCommand, EditableSkillDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new AddSkillCommand(body.Name, body.Level), ct);
+        return result.ToCreatedResult(dto => $"/v1/professionals/me/skills/{dto.Id}");
+    })
+    .RequireAuthorization(AuthenticationExtensions.ProfessionalPolicy)
+    .WithName("AddSkill")
+    .WithSummary("Add a skill with proficiency to the current profile. Requires a professional role.")
+    .Produces<EditableSkillDto>(StatusCodes.Status201Created)
+    .ProducesProblem(StatusCodes.Status400BadRequest)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden)
+    .ProducesProblem(StatusCodes.Status409Conflict);
+
+v1.MapPut("/me/skills/{id:guid}", async (
+        Guid id,
+        UpdateSkillBody body,
+        ICommandHandler<UpdateSkillLevelCommand, EditableSkillDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new UpdateSkillLevelCommand(id, body.Level), ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.ProfessionalPolicy)
+    .WithName("UpdateSkillLevel")
+    .WithSummary("Update a skill's proficiency. Requires a professional role.")
+    .Produces<EditableSkillDto>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status400BadRequest)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden)
+    .ProducesProblem(StatusCodes.Status404NotFound);
+
+v1.MapDelete("/me/skills/{id:guid}", async (
+        Guid id,
+        ICommandHandler<RemoveSkillCommand, bool> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new RemoveSkillCommand(id), ct);
+        return result.IsSuccess ? Results.NoContent() : result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.ProfessionalPolicy)
+    .WithName("RemoveSkill")
+    .WithSummary("Remove a skill from the current profile. Requires a professional role.")
+    .Produces(StatusCodes.Status204NoContent)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden)
+    .ProducesProblem(StatusCodes.Status404NotFound);
+
 // --- In-app notification center for the current ("me") profile ---
 v1.MapGet("/me/notifications", async (
         bool? unreadOnly,
@@ -276,6 +328,15 @@ v1.MapPost("/me/notifications/read-all", async (
     .ProducesProblem(StatusCodes.Status403Forbidden);
 
 app.Run();
+
+/// <summary>Request body for adding a skill.</summary>
+/// <param name="Name">Skill name.</param>
+/// <param name="Level">Proficiency (0–100).</param>
+internal sealed record AddSkillBody(string Name, int Level);
+
+/// <summary>Request body for updating a skill's proficiency.</summary>
+/// <param name="Level">New proficiency (0–100).</param>
+internal sealed record UpdateSkillBody(int Level);
 
 /// <summary>Exposed so integration tests can use <c>WebApplicationFactory</c> (charter Part 14).</summary>
 public partial class Program;
