@@ -97,6 +97,21 @@ public sealed class RecruitmentRepository(RecruitmentDbContext db) : IRecruitmen
             .ConfigureAwait(false);
 
     /// <inheritdoc />
+    public void AddInterview(Interview interview) => _db.Interviews.Add(interview);
+
+    /// <inheritdoc />
+    public async Task<Interview?> GetInterviewAsync(InterviewId id, CancellationToken cancellationToken)
+        => await _db.Interviews.FirstOrDefaultAsync(i => i.Id == id, cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<Interview>> ListInterviewsForApplicationAsync(Guid applicationId, CancellationToken cancellationToken)
+        => await _db.Interviews.AsNoTracking()
+            .Where(i => i.ApplicationId == applicationId)
+            .OrderBy(i => i.ScheduledAt)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+    /// <inheritdoc />
     public async Task<IReadOnlyList<RecruitmentApplication>> ListApplicationsForTalentAsync(Guid talentId, int skip, int take, CancellationToken cancellationToken)
         => await _db.Applications.AsNoTracking()
             .Where(a => a.TalentId == talentId)

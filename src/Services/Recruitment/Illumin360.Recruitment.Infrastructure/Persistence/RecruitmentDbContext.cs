@@ -22,6 +22,9 @@ public sealed class RecruitmentDbContext(DbContextOptions<RecruitmentDbContext> 
     /// <summary>Talent saved-searches set (owned + migration-managed by this service).</summary>
     public DbSet<SavedSearch> SavedSearches => Set<SavedSearch>();
 
+    /// <summary>Interviews set (owned + migration-managed by this service).</summary>
+    public DbSet<Interview> Interviews => Set<Interview>();
+
     /// <inheritdoc />
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -74,6 +77,25 @@ public sealed class RecruitmentDbContext(DbContextOptions<RecruitmentDbContext> 
             b.Property(s => s.CreatedAt).HasColumnName("created_at");
             b.HasIndex(s => s.TalentId);
             b.Ignore(s => s.DomainEvents);
+        });
+
+        modelBuilder.Entity<Interview>(b =>
+        {
+            b.ToTable("interviews");
+            b.HasKey(i => i.Id);
+            b.Property(i => i.Id)
+                .HasColumnName("id")
+                .HasConversion(id => id.Value, value => new InterviewId(value));
+            b.Property(i => i.ApplicationId).HasColumnName("application_id");
+            b.Property(i => i.ScheduledAt).HasColumnName("scheduled_at");
+            b.Property(i => i.DurationMinutes).HasColumnName("duration_minutes");
+            b.Property(i => i.Location).HasColumnName("location").HasMaxLength(200);
+            b.Property(i => i.Status).HasColumnName("status").HasMaxLength(20);
+            b.Property(i => i.FeedbackRating).HasColumnName("feedback_rating");
+            b.Property(i => i.FeedbackComment).HasColumnName("feedback_comment").HasMaxLength(1000);
+            b.Property(i => i.CreatedAt).HasColumnName("created_at");
+            b.HasIndex(i => i.ApplicationId);
+            b.Ignore(i => i.DomainEvents);
         });
 
         modelBuilder.Entity<RecruitmentApplication>(b =>
