@@ -59,6 +59,20 @@ public sealed class ProfessionalRepository(ProfessionalsDbContext db) : IProfess
     public void AddSkill(ProfessionalSkill skill) => _db.Skills.Add(skill);
 
     /// <inheritdoc />
+    public async Task<IReadOnlyList<ProfessionalSkill>> ListSkillsAsync(ProfessionalId professionalId, CancellationToken cancellationToken) =>
+        await _db.Skills.AsNoTracking()
+            .Where(s => s.ProfessionalId == professionalId)
+            .OrderBy(s => s.Sort)
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
+    public async Task<ProfessionalSkill?> GetSkillAsync(ProfessionalId professionalId, Guid skillId, CancellationToken cancellationToken) =>
+        await _db.Skills.FirstOrDefaultAsync(s => s.ProfessionalId == professionalId && s.Id == skillId, cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
+    public void RemoveSkill(ProfessionalSkill skill) => _db.Skills.Remove(skill);
+
+    /// <inheritdoc />
     public void AddNotification(ProfessionalNotification notification) => _db.Notifications.Add(notification);
 
     /// <inheritdoc />

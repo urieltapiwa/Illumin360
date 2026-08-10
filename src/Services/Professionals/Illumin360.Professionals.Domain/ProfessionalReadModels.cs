@@ -234,6 +234,20 @@ public sealed class ProfessionalSkill : Entity<Guid>
 
     /// <summary>Display order.</summary>
     public int Sort { get; private set; }
+
+    /// <summary>Updates the self-assessed proficiency level.</summary>
+    /// <param name="level">New proficiency (0–100).</param>
+    /// <returns>Success, or a validation error if out of range.</returns>
+    public Result<ProfessionalSkill> UpdateLevel(int level)
+    {
+        if (level is < 0 or > 100)
+        {
+            return Error.Validation("skill.level_invalid", "Proficiency must be between 0 and 100.");
+        }
+
+        Level = level;
+        return this;
+    }
 }
 
 /// <summary>An activity-feed entry for the professional.</summary>
