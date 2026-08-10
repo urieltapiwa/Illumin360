@@ -192,6 +192,41 @@ public sealed class RegisterCandidateApiTests : IAsyncLifetime
     private sealed record FacetCount(string Label, int Count);
 
     [Fact]
+    public async Task Notes_and_tags_round_trip()
+    {
+        var admin = AdminClient();
+        var reg = await admin.PostAsJsonAsync("/v1/candidates", new RegisterCandidateCommand("Note", "Target", "Windhoek", "Namibian"));
+        var candidate = await reg.Content.ReadFromJsonAsync<CandidateDto>();
+
+        // Add a note, list it back.
+        var addNote = await admin.PostAsJsonAsync($"/v1/candidates/{candidate!.Id}/notes", new { author = "Rita", body = "Strong second interview." });
+        addNote.StatusCode.Should().Be(HttpStatusCode.Created);
+        var note = await addNote.Content.ReadFromJsonAsync<Note>();
+
+        var client = _factory.CreateClient();
+        var notes = await client.GetFromJsonAsync<List<Note>>($"/v1/candidates/{candidate.Id}/notes");
+        notes.Should().ContainSingle(n => n.Body == "Strong second interview." && n.Author == "Rita");
+
+        // Deleting the note leaves none.
+        (await admin.DeleteAsync($"/v1/candidates/notes/{note!.Id}")).StatusCode.Should().Be(HttpStatusCode.NoContent);
+        (await client.GetFromJsonAsync<List<Note>>($"/v1/candidates/{candidate.Id}/notes"))!.Should().BeEmpty();
+
+        // Tags normalise + dedupe.
+        await admin.PostAsJsonAsync($"/v1/candidates/{candidate.Id}/tags", new { label = "Backend" });
+        var tags = await (await admin.PostAsJsonAsync($"/v1/candidates/{candidate.Id}/tags", new { label = "backend" })).Content.ReadFromJsonAsync<List<string>>();
+        tags.Should().ContainSingle().Which.Should().Be("backend");
+
+        // Removing the tag empties the list.
+        var afterRemove = await (await admin.DeleteAsync($"/v1/candidates/{candidate.Id}/tags/backend")).Content.ReadFromJsonAsync<List<string>>();
+        afterRemove.Should().BeEmpty();
+
+        // Notes on a missing candidate are a 404.
+        (await admin.PostAsJsonAsync($"/v1/candidates/{Guid.NewGuid()}/notes", new { body = "x" })).StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    private sealed record Note(Guid Id, string Author, string Body, DateTimeOffset CreatedAt);
+
+    [Fact]
     public async Task Get_unknown_id_returns_404()
     {
         var client = _factory.CreateClient();

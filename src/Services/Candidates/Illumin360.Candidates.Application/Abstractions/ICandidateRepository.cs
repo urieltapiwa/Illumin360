@@ -40,6 +40,49 @@ public interface ICandidateRepository
     /// <param name="candidate">The candidate to add.</param>
     void Add(Candidate candidate);
 
+    /// <summary>Stages a new recruiter note for insertion.</summary>
+    /// <param name="note">The note to add.</param>
+    void AddNote(CandidateNote note);
+
+    /// <summary>Removes a recruiter note.</summary>
+    /// <param name="note">The note to remove.</param>
+    void RemoveNote(CandidateNote note);
+
+    /// <summary>Loads a recruiter note by id, or null if not present.</summary>
+    /// <param name="id">The note id.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<CandidateNote?> GetNoteAsync(Guid id, CancellationToken cancellationToken);
+
+    /// <summary>Lists a candidate's recruiter notes, newest first.</summary>
+    /// <param name="candidateId">The candidate id.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<IReadOnlyList<CandidateNote>> ListNotesAsync(CandidateId candidateId, CancellationToken cancellationToken);
+
+    /// <summary>Stages a new tag for insertion.</summary>
+    /// <param name="tag">The tag to add.</param>
+    void AddTag(CandidateTag tag);
+
+    /// <summary>Removes a tag.</summary>
+    /// <param name="tag">The tag to remove.</param>
+    void RemoveTag(CandidateTag tag);
+
+    /// <summary>Whether a candidate already has the given (normalised) tag label.</summary>
+    /// <param name="candidateId">The candidate id.</param>
+    /// <param name="label">The normalised tag label.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<bool> TagExistsAsync(CandidateId candidateId, string label, CancellationToken cancellationToken);
+
+    /// <summary>Loads a candidate's tag by normalised label, or null if not present.</summary>
+    /// <param name="candidateId">The candidate id.</param>
+    /// <param name="label">The normalised tag label.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<CandidateTag?> GetTagAsync(CandidateId candidateId, string label, CancellationToken cancellationToken);
+
+    /// <summary>Lists a candidate's tags, alphabetically.</summary>
+    /// <param name="candidateId">The candidate id.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<IReadOnlyList<CandidateTag>> ListTagsAsync(CandidateId candidateId, CancellationToken cancellationToken);
+
     /// <summary>Commits staged changes to the data store.</summary>
     /// <param name="cancellationToken">Cancellation token.</param>
     Task SaveChangesAsync(CancellationToken cancellationToken);
