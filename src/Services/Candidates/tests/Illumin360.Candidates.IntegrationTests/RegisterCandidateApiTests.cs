@@ -4,14 +4,12 @@ using System.Net.Http.Json;
 using FluentAssertions;
 using Illumin360.Candidates.Application.Candidates;
 using Illumin360.Candidates.Infrastructure.Persistence;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Illumin360.TestSupport;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using Testcontainers.PostgreSql;
 using Xunit;
 
@@ -45,24 +43,8 @@ public sealed class RegisterCandidateApiTests : IAsyncLifetime
         {
             b.UseEnvironment("Development");
 
-            // Registering a candidate requires an admin (write) role. Trust a local HS256 test key
-            // instead of Keycloak's JWKS so an admin token can be minted offline.
-            b.ConfigureTestServices(services =>
-            {
-                services.PostConfigure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme, o =>
-                {
-                    o.Authority = null;
-                    o.MetadataAddress = null!;
-                    o.RequireHttpsMetadata = false;
-                    o.Configuration = new OpenIdConnectConfiguration();
-                    o.TokenValidationParameters.ValidateIssuer = false;
-                    o.TokenValidationParameters.ValidateAudience = false;
-                    o.TokenValidationParameters.ValidateLifetime = true;
-                    o.TokenValidationParameters.ValidateIssuerSigningKey = true;
-                    o.TokenValidationParameters.IssuerSigningKey = TestToken.SigningKey;
-                    o.TokenValidationParameters.NameClaimType = "preferred_username";
-                });
-            });
+            // Registering a candidate requires an admin (write) role; trust the local HS256 test key.
+            b.UseTestAuth();
         });
 
         using var scope = _factory.Services.CreateScope();
@@ -82,7 +64,7 @@ public sealed class RegisterCandidateApiTests : IAsyncLifetime
     {
         var client = _factory.CreateClient();
         client.DefaultRequestHeaders.Authorization =
-            new AuthenticationHeaderValue("Bearer", TestToken.ForRoles(["admin.write"]));
+            new AuthenticationHeaderValue("Bearer", TestJwt.ForRoles(["admin.write"]));
         return client;
     }
 

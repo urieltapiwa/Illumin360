@@ -15,4 +15,7 @@
     <PackageReference Include="MassTransit.EntityFrameworkCore" />
     <ProjectReference Include="..\..\Illumin360.Professionals.Api\Illumin360.Professionals.Api.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\..\BuildingBlocks\TestSupport\Illumin360.TestSupport.csproj" />
+  </ItemGroup>
 </Project>

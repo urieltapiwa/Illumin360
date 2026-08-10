@@ -1,17 +1,12 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using System.Security.Claims;
 using System.Text.Json;
 using FluentAssertions;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Illumin360.TestSupport;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.AspNetCore.TestHost;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using Npgsql;
 using Testcontainers.PostgreSql;
 using Xunit;
@@ -50,25 +45,7 @@ public sealed class ProfessionalActionsAuthTests : IAsyncLifetime
         _factory = new WebApplicationFactory<Program>().WithWebHostBuilder(b =>
         {
             b.UseEnvironment("Development");
-
-            // Trust the local HS256 test key instead of Keycloak's JWKS, so tokens can be minted offline.
-            b.ConfigureTestServices(services =>
-            {
-                services.PostConfigure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme, o =>
-                {
-                    o.Authority = null;
-                    o.MetadataAddress = null!;
-                    o.RequireHttpsMetadata = false;
-                    o.Configuration = new OpenIdConnectConfiguration();
-                    o.TokenValidationParameters.ValidateIssuer = false;
-                    o.TokenValidationParameters.ValidateAudience = false;
-                    o.TokenValidationParameters.ValidateLifetime = true;
-                    o.TokenValidationParameters.ValidateIssuerSigningKey = true;
-                    o.TokenValidationParameters.IssuerSigningKey = TestToken.SigningKey;
-                    o.TokenValidationParameters.RoleClaimType = ClaimTypes.Role;
-                    o.TokenValidationParameters.NameClaimType = "preferred_username";
-                });
-            });
+            b.UseTestAuth();
         });
 
         // Build + start the host now (runs the startup migration and demo seed against the container),
@@ -154,7 +131,7 @@ public sealed class ProfessionalActionsAuthTests : IAsyncLifetime
     }
 
     private static void Authorize(HttpClient client, string[] roles) =>
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", TestToken.ForRoles(roles));
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", TestJwt.ForRoles(roles));
 
     private static async Task<Guid> FirstMatchIdAsync(HttpClient client)
     {
