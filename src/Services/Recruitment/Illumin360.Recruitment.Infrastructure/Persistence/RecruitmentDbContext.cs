@@ -25,6 +25,12 @@ public sealed class RecruitmentDbContext(DbContextOptions<RecruitmentDbContext> 
     /// <summary>Interviews set (owned + migration-managed by this service).</summary>
     public DbSet<Interview> Interviews => Set<Interview>();
 
+    /// <summary>CRM clients set (owned + migration-managed by this service).</summary>
+    public DbSet<Client> Clients => Set<Client>();
+
+    /// <summary>CRM client contacts set (owned + migration-managed by this service).</summary>
+    public DbSet<ClientContact> ClientContacts => Set<ClientContact>();
+
     /// <inheritdoc />
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -96,6 +102,47 @@ public sealed class RecruitmentDbContext(DbContextOptions<RecruitmentDbContext> 
             b.Property(i => i.CreatedAt).HasColumnName("created_at");
             b.HasIndex(i => i.ApplicationId);
             b.Ignore(i => i.DomainEvents);
+        });
+
+        var clientStatusConverter = new ValueConverter<ClientStatus, string>(
+            v => v == ClientStatus.Active ? "active" : v == ClientStatus.Inactive ? "inactive" : "prospect",
+            v => v == "active" ? ClientStatus.Active : v == "inactive" ? ClientStatus.Inactive : ClientStatus.Prospect);
+
+        modelBuilder.Entity<Client>(b =>
+        {
+            b.ToTable("clients");
+            b.HasKey(c => c.Id);
+            b.Property(c => c.Id)
+                .HasColumnName("id")
+                .HasConversion(id => id.Value, value => new ClientId(value));
+            b.Property(c => c.Name).HasColumnName("name").HasMaxLength(160);
+            b.Property(c => c.Industry).HasColumnName("industry").HasMaxLength(120);
+            b.Property(c => c.City).HasColumnName("city").HasMaxLength(100);
+            b.Property(c => c.Status).HasColumnName("status").HasConversion(clientStatusConverter).HasMaxLength(20);
+            b.Property(c => c.Notes).HasColumnName("notes").HasMaxLength(2000);
+            b.Property(c => c.CreatedAt).HasColumnName("created_at");
+            b.HasIndex(c => c.Status);
+            b.Ignore(c => c.DomainEvents);
+        });
+
+        modelBuilder.Entity<ClientContact>(b =>
+        {
+            b.ToTable("client_contacts");
+            b.HasKey(c => c.Id);
+            b.Property(c => c.Id)
+                .HasColumnName("id")
+                .HasConversion(id => id.Value, value => new ClientContactId(value));
+            b.Property(c => c.ClientId)
+                .HasColumnName("client_id")
+                .HasConversion(id => id.Value, value => new ClientId(value));
+            b.Property(c => c.Name).HasColumnName("name").HasMaxLength(160);
+            b.Property(c => c.Title).HasColumnName("title").HasMaxLength(120);
+            b.Property(c => c.Email).HasColumnName("email").HasMaxLength(200);
+            b.Property(c => c.Phone).HasColumnName("phone").HasMaxLength(40);
+            b.Property(c => c.IsPrimary).HasColumnName("is_primary");
+            b.Property(c => c.CreatedAt).HasColumnName("created_at");
+            b.HasIndex(c => c.ClientId);
+            b.Ignore(c => c.DomainEvents);
         });
 
         modelBuilder.Entity<RecruitmentApplication>(b =>

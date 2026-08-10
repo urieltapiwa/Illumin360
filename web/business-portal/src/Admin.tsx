@@ -89,6 +89,15 @@ export default function Admin({ session }: { session: Session }) {
   const [pipelineReqs, setPipelineReqs] = useState<{ id: string; title: string; city: string }[] | null>(null);
   const [pipelineReqId, setPipelineReqId] = useState<string | null>(null);
   const [pipelineApps, setPipelineApps] = useState<{ id: string; talentType: string; matchScore: number; status: string }[] | null>(null);
+  // Recruiter CRM (clients + contacts).
+  type CrmClient = { id: string; name: string; industry: string | null; city: string | null; status: string; contactCount: number };
+  type CrmContact = { id: string; name: string; title: string | null; email: string | null; phone: string | null; isPrimary: boolean };
+  const [clients, setClients] = useState<CrmClient[] | null>(null);
+  const [clientFilter, setClientFilter] = useState<string>("");
+  const [selClient, setSelClient] = useState<string | null>(null);
+  const [contacts, setContacts] = useState<CrmContact[] | null>(null);
+  const [newClient, setNewClient] = useState({ name: "", industry: "", city: "" });
+  const [newContact, setNewContact] = useState({ name: "", title: "", email: "", phone: "", isPrimary: false });
   useEffect(() => { fetch(import.meta.env.BASE_URL + "admin.json").then((r) => r.json()).then(setD); }, []);
   // Live platform signals from the microservices (via BFF → gateway). Talent count and talent-by-city are
   // real (Candidates service); finance/ops tiles (MRR, subscriptions, tickets, verifications) have no backing
@@ -134,6 +143,21 @@ export default function Admin({ session }: { session: Session }) {
       .then((v) => { if (Array.isArray(v)) setPipelineApps(v); })
       .catch(() => { /* keep empty */ });
   }, [pipelineReqId]);
+  // Recruiter CRM: client list (re-fetched on status-filter change).
+  useEffect(() => {
+    fetch("/api/recruitment/clients" + (clientFilter ? `?status=${clientFilter}` : ""))
+      .then((r) => (r.ok ? r.json() : null))
+      .then((v) => { if (Array.isArray(v)) setClients(v); })
+      .catch(() => { /* recruitment offline */ });
+  }, [clientFilter]);
+  // Selected client's contacts.
+  useEffect(() => {
+    if (!selClient) { setContacts(null); return; }
+    fetch(`/api/recruitment/clients/${selClient}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((v) => { if (v?.contacts) setContacts(v.contacts); })
+      .catch(() => { /* keep empty */ });
+  }, [selClient]);
   if (!d) return <div className="grid place-items-center h-screen text-ink-mid font-mono text-sm animate-pulse">{t("admin.loading")}</div>;
 
   const k = d.kpis;
@@ -168,6 +192,37 @@ export default function Admin({ session }: { session: Session }) {
     if (r.ok) {
       const u = await r.json().catch(() => null);
       setPipelineApps((prev) => (prev ? prev.map((a) => (a.id === id ? { ...a, status: u?.status ?? (action === "reject" ? "rejected" : a.status) } : a)) : prev));
+    }
+  };
+  const createClient = async () => {
+    if (!newClient.name.trim()) return;
+    const r = await fetch("/api/recruitment/clients", { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: JSON.stringify({ name: newClient.name, industry: newClient.industry || null, city: newClient.city || null, notes: null }) });
+    if (r.ok) {
+      const c: CrmClient = await r.json();
+      setClients((cs) => [c, ...(cs ?? [])]);
+      setNewClient({ name: "", industry: "", city: "" });
+    }
+  };
+  const changeClientStatus = async (id: string, status: string) => {
+    const r = await fetch(`/api/recruitment/clients/${id}/status`, { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: JSON.stringify({ status }) });
+    if (r.ok) setClients((cs) => cs?.map((c) => (c.id === id ? { ...c, status } : c)) ?? cs);
+  };
+  const addContact = async () => {
+    if (!selClient || !newContact.name.trim()) return;
+    const r = await fetch(`/api/recruitment/clients/${selClient}/contacts`, { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: JSON.stringify({ name: newContact.name, title: newContact.title || null, email: newContact.email || null, phone: newContact.phone || null, isPrimary: newContact.isPrimary }) });
+    if (r.ok) {
+      const c: CrmContact = await r.json();
+      setContacts((cs) => [...(cs ?? []), c]);
+      setClients((cs) => cs?.map((cl) => (cl.id === selClient ? { ...cl, contactCount: cl.contactCount + 1 } : cl)) ?? cs);
+      setNewContact({ name: "", title: "", email: "", phone: "", isPrimary: false });
+    }
+  };
+  const removeContact = async (contactId: string) => {
+    if (!selClient) return;
+    const r = await fetch(`/api/recruitment/clients/${selClient}/contacts/${contactId}`, { method: "DELETE", credentials: "same-origin" });
+    if (r.ok) {
+      setContacts((cs) => cs?.filter((c) => c.id !== contactId) ?? cs);
+      setClients((cs) => cs?.map((cl) => (cl.id === selClient ? { ...cl, contactCount: Math.max(0, cl.contactCount - 1) } : cl)) ?? cs);
     }
   };
   const pipelineStages = ["applied", "reviewed", "shortlisted", "hired", "rejected"];
@@ -421,6 +476,67 @@ export default function Admin({ session }: { session: Session }) {
                     </div>
                   );
                 })}
+              </div>
+            </motion.section>
+          )}
+
+          {clients && (
+            <motion.section variants={fade} className="card p-5">
+              <div className="flex items-center justify-between mb-3 gap-3 flex-wrap">
+                <div><h3 className="font-display text-[15px] font-bold text-ink-hi">{t("admin.crm.title", "Client CRM")}</h3><p className="text-[11px] text-ink-lo mt-0.5">{t("admin.crm.sub", "Companies you recruit for and their contacts.")}</p></div>
+                <div className="flex items-center gap-0.5 rounded-lg bg-panel2/50 p-0.5">
+                  {["", "prospect", "active", "inactive"].map((s) => (
+                    <button key={s || "all"} onClick={() => setClientFilter(s)} className={`rounded-md px-2.5 py-1 text-[11px] font-semibold capitalize transition ${clientFilter === s ? "bg-brand/20 text-brand-bright" : "text-ink-lo hover:text-ink-hi"}`}>{s || t("admin.crm.all", "all")}</button>
+                  ))}
+                </div>
+              </div>
+              <div className="grid gap-4 lg:grid-cols-2">
+                <div>
+                  <div className="space-y-2">
+                    {clients.length === 0 && <div className="py-4 text-center text-[12px] text-ink-lo">{t("admin.crm.empty", "No clients yet.")}</div>}
+                    {clients.map((c) => (
+                      <div key={c.id} className={`rounded-xl border p-3 transition cursor-pointer ${selClient === c.id ? "border-brand/50 bg-brand/[0.06]" : "border-line/60 bg-panel2/40 hover:border-brand/40"}`} onClick={() => setSelClient(c.id)}>
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="min-w-0"><div className="text-sm font-semibold text-ink-hi truncate">{c.name}</div><div className="text-[11px] text-ink-lo truncate">{[c.industry, c.city].filter(Boolean).join(" · ") || "—"} · {c.contactCount} {t("admin.crm.contacts", "contacts")}</div></div>
+                          <select value={c.status} onClick={(e) => e.stopPropagation()} onChange={(e) => changeClientStatus(c.id, e.target.value)} className="rounded-lg border border-line/70 bg-panel2/50 px-2 py-1 text-[11px] font-semibold text-ink-hi capitalize focus:border-brand/50 focus:outline-none">
+                            {["prospect", "active", "inactive"].map((s) => <option key={s} value={s}>{s}</option>)}
+                          </select>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-3 border-t border-line/40 pt-3 grid gap-2 sm:grid-cols-[1fr_1fr_auto] items-center">
+                    <input className="rounded-lg border border-line/70 bg-panel2/50 px-2.5 py-1.5 text-[12px] text-ink-hi placeholder:text-ink-lo focus:border-brand/50 focus:outline-none" value={newClient.name} onChange={(e) => setNewClient((f) => ({ ...f, name: e.target.value }))} placeholder={t("admin.crm.namePlaceholder", "Company name")} />
+                    <input className="rounded-lg border border-line/70 bg-panel2/50 px-2.5 py-1.5 text-[12px] text-ink-hi placeholder:text-ink-lo focus:border-brand/50 focus:outline-none" value={newClient.city} onChange={(e) => setNewClient((f) => ({ ...f, city: e.target.value }))} placeholder={t("admin.crm.cityPlaceholder", "City")} />
+                    <button onClick={createClient} disabled={!newClient.name.trim()} className="rounded-lg bg-brand/15 px-3 py-1.5 text-[11px] font-semibold text-brand-bright hover:bg-brand/25 transition disabled:opacity-50">{t("admin.crm.addClient", "Add")}</button>
+                  </div>
+                </div>
+                <div className="rounded-xl border border-line/60 bg-panel2/30 p-3.5">
+                  {!selClient ? (
+                    <div className="py-8 text-center text-[12px] text-ink-lo">{t("admin.crm.pick", "Select a client to see contacts.")}</div>
+                  ) : (
+                    <>
+                      <div className="eyebrow mb-2">{t("admin.crm.contactsTitle", "Contacts")}</div>
+                      <div className="space-y-2">
+                        {(contacts ?? []).map((c) => (
+                          <div key={c.id} className="flex items-center gap-3 rounded-lg border border-line/50 bg-panel/40 px-3 py-2">
+                            <div className="min-w-0 flex-1"><div className="text-[13px] font-semibold text-ink-hi truncate">{c.name}{c.isPrimary && <span className="ml-1.5 chip !text-[9px] !text-gold !border-gold/30">{t("admin.crm.primary", "primary")}</span>}</div><div className="text-[11px] text-ink-lo truncate">{[c.title, c.email, c.phone].filter(Boolean).join(" · ") || "—"}</div></div>
+                            <button onClick={() => removeContact(c.id)} className="rounded-lg px-2 py-1 text-[11px] font-semibold text-ink-lo hover:text-pink transition">✕</button>
+                          </div>
+                        ))}
+                        {contacts && contacts.length === 0 && <div className="py-3 text-center text-[12px] text-ink-lo">{t("admin.crm.noContacts", "No contacts yet.")}</div>}
+                      </div>
+                      <div className="mt-3 border-t border-line/40 pt-3 grid gap-2 sm:grid-cols-2">
+                        <input className="rounded-lg border border-line/70 bg-panel2/50 px-2.5 py-1.5 text-[12px] text-ink-hi placeholder:text-ink-lo focus:border-brand/50 focus:outline-none" value={newContact.name} onChange={(e) => setNewContact((f) => ({ ...f, name: e.target.value }))} placeholder={t("admin.crm.contactName", "Name")} />
+                        <input className="rounded-lg border border-line/70 bg-panel2/50 px-2.5 py-1.5 text-[12px] text-ink-hi placeholder:text-ink-lo focus:border-brand/50 focus:outline-none" value={newContact.title} onChange={(e) => setNewContact((f) => ({ ...f, title: e.target.value }))} placeholder={t("admin.crm.contactTitle", "Title")} />
+                        <input className="rounded-lg border border-line/70 bg-panel2/50 px-2.5 py-1.5 text-[12px] text-ink-hi placeholder:text-ink-lo focus:border-brand/50 focus:outline-none" value={newContact.email} onChange={(e) => setNewContact((f) => ({ ...f, email: e.target.value }))} placeholder={t("admin.crm.contactEmail", "email@company.na")} />
+                        <input className="rounded-lg border border-line/70 bg-panel2/50 px-2.5 py-1.5 text-[12px] text-ink-hi placeholder:text-ink-lo focus:border-brand/50 focus:outline-none" value={newContact.phone} onChange={(e) => setNewContact((f) => ({ ...f, phone: e.target.value }))} placeholder={t("admin.crm.contactPhone", "Phone")} />
+                        <label className="flex items-center gap-2 text-[11px] text-ink-mid"><input type="checkbox" checked={newContact.isPrimary} onChange={(e) => setNewContact((f) => ({ ...f, isPrimary: e.target.checked }))} />{t("admin.crm.primaryLabel", "Primary contact")}</label>
+                        <button onClick={addContact} disabled={!newContact.name.trim()} className="rounded-lg bg-brand/15 px-3 py-1.5 text-[11px] font-semibold text-brand-bright hover:bg-brand/25 transition disabled:opacity-50">{t("admin.crm.addContact", "Add contact")}</button>
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
             </motion.section>
           )}
