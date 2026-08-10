@@ -63,6 +63,26 @@ public interface IProfessionalRepository
     /// <param name="skill">The skill to add.</param>
     void AddSkill(ProfessionalSkill skill);
 
+    /// <summary>Stages a new in-app notification for insertion.</summary>
+    /// <param name="notification">The notification to add.</param>
+    void AddNotification(ProfessionalNotification notification);
+
+    /// <summary>Lists a professional's notifications, newest first.</summary>
+    /// <param name="professionalId">Recipient professional.</param>
+    /// <param name="unreadOnly">Whether to return only unread notifications.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<IReadOnlyList<ProfessionalNotification>> ListNotificationsAsync(ProfessionalId professionalId, bool unreadOnly, CancellationToken cancellationToken);
+
+    /// <summary>Loads a notification for update, or null if not present.</summary>
+    /// <param name="id">Notification id.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<ProfessionalNotification?> GetNotificationAsync(Guid id, CancellationToken cancellationToken);
+
+    /// <summary>Marks all of a professional's notifications read; returns the count updated.</summary>
+    /// <param name="professionalId">Recipient professional.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<int> MarkAllNotificationsReadAsync(ProfessionalId professionalId, CancellationToken cancellationToken);
+
     /// <summary>Commits pending changes (and flushes the outbox in the same transaction).</summary>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The number of state entries written.</returns>

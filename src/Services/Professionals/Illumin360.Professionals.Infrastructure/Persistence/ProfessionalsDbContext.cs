@@ -31,6 +31,9 @@ public sealed class ProfessionalsDbContext(DbContextOptions<ProfessionalsDbConte
     /// <summary>Activity-feed set.</summary>
     public DbSet<ProfessionalActivity> Activity => Set<ProfessionalActivity>();
 
+    /// <summary>In-app notifications set.</summary>
+    public DbSet<ProfessionalNotification> Notifications => Set<ProfessionalNotification>();
+
     /// <inheritdoc />
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -163,6 +166,22 @@ public sealed class ProfessionalsDbContext(DbContextOptions<ProfessionalsDbConte
             b.Property(x => x.Level).HasColumnName("level");
             b.Property(x => x.Trend).HasColumnName("trend").HasMaxLength(20);
             b.Property(x => x.Sort).HasColumnName("sort");
+            b.HasIndex(x => x.ProfessionalId);
+            b.Ignore(x => x.DomainEvents);
+        });
+
+        modelBuilder.Entity<ProfessionalNotification>(b =>
+        {
+            b.ToTable("professional_notifications");
+            b.HasKey(x => x.Id);
+            b.Property(x => x.Id).HasColumnName("id");
+            b.Property(x => x.ProfessionalId)
+                .HasColumnName("professional_id")
+                .HasConversion(id => id.Value, value => new ProfessionalId(value));
+            b.Property(x => x.Kind).HasColumnName("kind").HasMaxLength(40);
+            b.Property(x => x.Text).HasColumnName("text").HasMaxLength(300);
+            b.Property(x => x.IsRead).HasColumnName("is_read");
+            b.Property(x => x.CreatedAt).HasColumnName("created_at");
             b.HasIndex(x => x.ProfessionalId);
             b.Ignore(x => x.DomainEvents);
         });

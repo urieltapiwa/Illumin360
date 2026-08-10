@@ -3,9 +3,12 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using FluentAssertions;
+using Illumin360.Professionals.Domain;
+using Illumin360.Professionals.Infrastructure.Persistence;
 using Illumin360.TestSupport;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Npgsql;
 using Testcontainers.PostgreSql;
@@ -151,6 +154,33 @@ public sealed class ProfessionalActionsAuthTests : IAsyncLifetime
             }
         }
     }
+
+    [Fact]
+    public async Task Notifications_list_then_mark_all_read()
+    {
+        var client = _factory.CreateClient();
+        using var meDoc = JsonDocument.Parse(await client.GetStringAsync("/v1/professionals/me"));
+        var meId = meDoc.RootElement.GetProperty("id").GetGuid();
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ProfessionalsDbContext>();
+            db.Notifications.Add(new ProfessionalNotification(Guid.NewGuid(), new ProfessionalId(meId), "test", "Your application is now shortlisted.", DateTimeOffset.UtcNow));
+            await db.SaveChangesAsync();
+        }
+
+        var list = await client.GetFromJsonAsync<List<Notif>>("/v1/professionals/me/notifications");
+        list.Should().Contain(n => n.Text.Contains("shortlisted") && !n.IsRead);
+
+        Authorize(client, ["client.user"]);
+        var markAll = await client.PostAsync("/v1/professionals/me/notifications/read-all", content: null);
+        markAll.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var after = await client.GetFromJsonAsync<List<Notif>>("/v1/professionals/me/notifications");
+        after!.Should().OnlyContain(n => n.IsRead);
+    }
+
+    private sealed record Notif(Guid Id, string Kind, string Text, bool IsRead, DateTimeOffset CreatedAt);
 
     private sealed record RoleScore(Guid Id, int Score);
 

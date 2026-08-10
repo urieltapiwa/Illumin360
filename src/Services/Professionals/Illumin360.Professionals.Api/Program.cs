@@ -232,6 +232,49 @@ v1.MapPost("/me/cv/apply-skills", async (
     .ProducesProblem(StatusCodes.Status403Forbidden)
     .ProducesProblem(StatusCodes.Status404NotFound);
 
+// --- In-app notification center for the current ("me") profile ---
+v1.MapGet("/me/notifications", async (
+        bool? unreadOnly,
+        IQueryHandler<GetNotificationsQuery, IReadOnlyList<NotificationDto>> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new GetNotificationsQuery(unreadOnly ?? false), ct);
+        return result.ToHttpResult();
+    })
+    .WithName("GetNotifications")
+    .WithSummary("List the current profile's in-app notifications.")
+    .Produces<IReadOnlyList<NotificationDto>>(StatusCodes.Status200OK);
+
+v1.MapPost("/me/notifications/{id:guid}/read", async (
+        Guid id,
+        ICommandHandler<MarkNotificationReadCommand, bool> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new MarkNotificationReadCommand(id), ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.ProfessionalPolicy)
+    .WithName("MarkNotificationRead")
+    .WithSummary("Mark a notification read. Requires a professional role.")
+    .Produces<bool>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden)
+    .ProducesProblem(StatusCodes.Status404NotFound);
+
+v1.MapPost("/me/notifications/read-all", async (
+        ICommandHandler<MarkAllNotificationsReadCommand, int> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new MarkAllNotificationsReadCommand(), ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.ProfessionalPolicy)
+    .WithName("MarkAllNotificationsRead")
+    .WithSummary("Mark all notifications read. Requires a professional role.")
+    .Produces<int>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden);
+
 app.Run();
 
 /// <summary>Exposed so integration tests can use <c>WebApplicationFactory</c> (charter Part 14).</summary>

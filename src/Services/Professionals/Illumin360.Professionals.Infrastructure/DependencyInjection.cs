@@ -45,6 +45,10 @@ public static class DependencyInjection
                 o.UseBusOutbox();
             });
 
+            // Consume recruitment events to raise in-app notifications for the professional.
+            x.AddConsumer<Messaging.ApplicationStatusNotificationConsumer>();
+            x.AddConsumer<Messaging.JobAlertNotificationConsumer>();
+
             x.SetKebabCaseEndpointNameFormatter();
 
             x.UsingRabbitMq((context, cfg) =>
