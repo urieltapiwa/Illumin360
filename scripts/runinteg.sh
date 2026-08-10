@@ -77,6 +77,7 @@ run() {
 
 run "Candidates.IntegrationTests"    "src/Services/Candidates/tests/Illumin360.Candidates.IntegrationTests/Illumin360.Candidates.IntegrationTests.csproj"
 run "Professionals.IntegrationTests" "src/Services/Professionals/tests/Illumin360.Professionals.IntegrationTests/Illumin360.Professionals.IntegrationTests.csproj"
+run "Students.IntegrationTests"      "src/Services/Students/tests/Illumin360.Students.IntegrationTests/Illumin360.Students.IntegrationTests.csproj"
 
 echo "RESULT integ=$RC"
 exit $RC
