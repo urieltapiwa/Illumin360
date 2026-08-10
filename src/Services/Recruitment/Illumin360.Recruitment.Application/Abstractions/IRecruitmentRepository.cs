@@ -75,6 +75,20 @@ public interface IRecruitmentRepository
     /// <param name="cancellationToken">Cancellation token.</param>
     Task<IReadOnlyList<SavedSearch>> ListAlertEnabledSavedSearchesAsync(CancellationToken cancellationToken);
 
+    /// <summary>Stages a new interview for insertion.</summary>
+    /// <param name="interview">The interview to add.</param>
+    void AddInterview(Interview interview);
+
+    /// <summary>Loads an interview for update, or null if not present.</summary>
+    /// <param name="id">The interview id.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<Interview?> GetInterviewAsync(InterviewId id, CancellationToken cancellationToken);
+
+    /// <summary>Lists an application's interviews, soonest first.</summary>
+    /// <param name="applicationId">The application id.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<IReadOnlyList<Interview>> ListInterviewsForApplicationAsync(Guid applicationId, CancellationToken cancellationToken);
+
     /// <summary>Lists a talent's applications, most recent first.</summary>
     /// <param name="talentId">The talent id.</param>
     /// <param name="skip">Number of records to skip.</param>

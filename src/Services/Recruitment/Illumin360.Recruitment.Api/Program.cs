@@ -235,6 +235,88 @@ v1.MapDelete("/saved-searches/{id:guid}", async (
     .ProducesProblem(StatusCodes.Status403Forbidden)
     .ProducesProblem(StatusCodes.Status404NotFound);
 
+// --- Interviews & scheduling ---
+v1.MapGet("/applications/{applicationId:guid}/interviews", async (
+        Guid applicationId,
+        IQueryHandler<GetInterviewsQuery, IReadOnlyList<InterviewDto>> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new GetInterviewsQuery(applicationId), ct);
+        return result.ToHttpResult();
+    })
+    .WithName("GetInterviews")
+    .WithSummary("List an application's interviews.")
+    .Produces<IReadOnlyList<InterviewDto>>(StatusCodes.Status200OK);
+
+v1.MapPost("/applications/{applicationId:guid}/interviews", async (
+        Guid applicationId,
+        ScheduleInterviewBody body,
+        ICommandHandler<ScheduleInterviewCommand, InterviewDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(
+            new ScheduleInterviewCommand(applicationId, body.ScheduledAt, body.DurationMinutes, body.Location), ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminWritePolicy)
+    .WithName("ScheduleInterview")
+    .WithSummary("Schedule an interview for an application. Requires an admin (write) role.")
+    .Produces<InterviewDto>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status400BadRequest)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden);
+
+v1.MapPost("/interviews/{id:guid}/feedback", async (
+        Guid id,
+        InterviewFeedbackBody body,
+        ICommandHandler<RecordInterviewFeedbackCommand, InterviewDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new RecordInterviewFeedbackCommand(id, body.Rating, body.Comment), ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminWritePolicy)
+    .WithName("RecordInterviewFeedback")
+    .WithSummary("Record a scorecard and complete an interview. Requires an admin (write) role.")
+    .Produces<InterviewDto>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status400BadRequest)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden)
+    .ProducesProblem(StatusCodes.Status404NotFound)
+    .ProducesProblem(StatusCodes.Status409Conflict);
+
+v1.MapPost("/interviews/{id:guid}/cancel", async (
+        Guid id,
+        ICommandHandler<CancelInterviewCommand, InterviewDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new CancelInterviewCommand(id), ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminWritePolicy)
+    .WithName("CancelInterview")
+    .WithSummary("Cancel a scheduled interview. Requires an admin (write) role.")
+    .Produces<InterviewDto>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden)
+    .ProducesProblem(StatusCodes.Status404NotFound)
+    .ProducesProblem(StatusCodes.Status409Conflict);
+
+v1.MapGet("/interviews/{id:guid}/ics", async (
+        Guid id,
+        IQueryHandler<GetInterviewIcsQuery, string> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new GetInterviewIcsQuery(id), ct);
+        return result.IsSuccess
+            ? Results.Text(result.Value!, "text/calendar")
+            : result.ToHttpResult();
+    })
+    .WithName("GetInterviewIcs")
+    .WithSummary("Download an interview's calendar (.ics) invite.")
+    .Produces(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status404NotFound);
+
 // --- Recruiter pipeline transitions on an application (admin/recruiter) ---
 v1.MapPost("/applications/{id:guid}/advance", async (
         Guid id,
@@ -288,6 +370,17 @@ internal sealed record CreateSavedSearchBody(Guid TalentId, string Label, string
 /// <summary>Request body for toggling job alerts.</summary>
 /// <param name="Enabled">Whether alerts should be enabled.</param>
 internal sealed record ToggleAlertsBody(bool Enabled);
+
+/// <summary>Request body for scheduling an interview.</summary>
+/// <param name="ScheduledAt">Start time (UTC).</param>
+/// <param name="DurationMinutes">Duration in minutes.</param>
+/// <param name="Location">Location or mode.</param>
+internal sealed record ScheduleInterviewBody(DateTimeOffset ScheduledAt, int DurationMinutes, string Location);
+
+/// <summary>Request body for recording interview feedback.</summary>
+/// <param name="Rating">Scorecard rating (1–5).</param>
+/// <param name="Comment">Optional comment.</param>
+internal sealed record InterviewFeedbackBody(int Rating, string? Comment);
 
 /// <summary>Exposed so integration tests can use <c>WebApplicationFactory</c> (charter Part 14).</summary>
 public partial class Program;

@@ -55,6 +55,21 @@ public static class DependencyInjection
             IQueryHandler<RunSavedSearchQuery, IReadOnlyList<RecruitmentRequestDto>>,
             RunSavedSearchQueryHandler>();
         services.AddScoped<JobAlertRunner>();
+        services.AddScoped<
+            ICommandHandler<ScheduleInterviewCommand, InterviewDto>,
+            ScheduleInterviewCommandHandler>();
+        services.AddScoped<
+            ICommandHandler<RecordInterviewFeedbackCommand, InterviewDto>,
+            RecordInterviewFeedbackCommandHandler>();
+        services.AddScoped<
+            ICommandHandler<CancelInterviewCommand, InterviewDto>,
+            CancelInterviewCommandHandler>();
+        services.AddScoped<
+            IQueryHandler<GetInterviewsQuery, IReadOnlyList<InterviewDto>>,
+            GetInterviewsQueryHandler>();
+        services.AddScoped<
+            IQueryHandler<GetInterviewIcsQuery, string>,
+            GetInterviewIcsQueryHandler>();
         return services;
     }
 }

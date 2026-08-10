@@ -81,13 +81,13 @@ flip the status to ✅ (add the commit/PR ref).
 ## E. Interviews & scheduling
 | Feature | Status | Notes |
 |---|---|---|
-| Interview scheduling | ⬜ | |
-| Calendar integration (ICS/Google) | ⬜ | |
-| Interview scorecards / feedback | ⬜ | |
-| Panel interviews | ⬜ | |
+| Interview scheduling | ✅ | Schedule/list/cancel interviews per application (`interviews` table + admin-gated endpoints) |
+| Calendar integration (ICS/Google) | 🟡 | `.ics` invite download (`/interviews/{id}/ics`, importable to Google/Outlook); no direct calendar-API sync |
+| Interview scorecards / feedback | ✅ | Rating (1–5) + comment completes an interview |
+| Panel interviews | ⬜ | Single interviewer only (no attendees list yet) |
 
-- [ ] Schedule interview (slot, attendees, ICS invite)
-- [ ] Interview scorecard + feedback capture
+- [x] Schedule interview (slot, location/mode, `.ics` invite) — schedule/list/cancel + `/interviews/{id}/ics`. Multi-attendee panels are a follow-up
+- [x] Interview scorecard + feedback capture — rating (1–5) + comment completes the interview
 
 ## F. Offers & onboarding
 | Feature | Status | Notes |
@@ -165,7 +165,7 @@ flip the status to ✅ (add the commit/PR ref).
 
 ### Progress
 - Total build items: 32
-- Done: 13
+- Done: 15
 - In progress: 0
 
 **Changelog of ticks**
@@ -186,5 +186,6 @@ flip the status to ✅ (add the commit/PR ref).
 - Saved searches (CRUD + run-results) + per-search job-alerts opt-in; professional-portal panel (2026-08-10).
 - Scheduled job-alert digest sender — JobAlertScheduler → JobAlertDigest event → worker emails matches (2026-08-10).
 - Recruiter kanban pipeline board in the Admin portal (stage columns + advance/reject) (2026-08-10).
+- Interviews & scheduling — schedule/feedback/cancel + .ics invite (`interviews` table) (2026-08-10).
 
 _Update this file as items are ticked; link the commit/PR that delivered each._
