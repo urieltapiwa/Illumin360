@@ -117,12 +117,12 @@ flip the status to ✅ (add the commit/PR ref).
 | Feature | Status | Notes |
 |---|---|---|
 | Employer self-registration (identity + role) | ✅ | via BFF `/register` |
-| Employer/company profile service | ⬜ | No employers service yet |
+| Employer/company profile service | ✅ | New `Illumin360.Employers` microservice — company profile get/register/update (`/v1/employers`), DB-per-service + migration + seed, gateway route |
 | Multi-user employer teams + roles | ⬜ | |
 | Recruiter CRM (clients/contacts) | ⬜ | OpenCATS has this |
 | Branded careers page | ⬜ | |
 
-- [ ] Employers service (company profile, members)
+- [x] Employers service — new `Illumin360.Employers` microservice (Domain/Application/Infrastructure/Api) with company profile get/register/update, DB-per-service (migrate + seed), gateway route `/api/employers/**`, unit + Testcontainers integration tests. Compose service entry + company **members/teams** are follow-ups
 - [ ] Employer team roles (owner/recruiter/viewer)
 
 ## I. Admin & governance
@@ -165,7 +165,7 @@ flip the status to ✅ (add the commit/PR ref).
 
 ### Progress
 - Total build items: 32
-- Done: 17
+- Done: 18
 - In progress: 0
 
 **Changelog of ticks**
@@ -189,5 +189,6 @@ flip the status to ✅ (add the commit/PR ref).
 - Interviews & scheduling — schedule/feedback/cancel + .ics invite (`interviews` table) (2026-08-10).
 - In-app notification center — Professionals consume recruitment events → notifications store + portal panel (2026-08-10).
 - Shortlists / talent pools — named recruiter pools with add/remove candidates (Candidates service) (2026-08-10).
+- New Illumin360.Employers microservice — company profile get/register/update + gateway route (2026-08-10).
 
 _Update this file as items are ticked; link the commit/PR that delivered each._

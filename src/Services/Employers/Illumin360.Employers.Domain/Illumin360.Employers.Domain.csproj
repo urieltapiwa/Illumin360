@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Illumin360.Employers.Domain</RootNamespace>
+  </PropertyGroup>
+  <!-- Domain has NO dependencies on frameworks/infrastructure (charter Part 5). -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\BuildingBlocks\SharedKernel\Illumin360.SharedKernel.csproj" />
+  </ItemGroup>
+</Project>
