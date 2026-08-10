@@ -18,7 +18,7 @@ flip the status to ✅ (add the commit/PR ref).
 | Availability status | ✅ | `SetAvailability` on students & professionals |
 | Skills & proficiency | 🟡 | Seeded skill rows; not user-editable |
 | Resume/CV upload & storage | ✅ | MinIO-backed upload/download for professionals & students (self-service `/me/cv`) and candidates (per-id, admin) via `Illumin360.Storage` |
-| Resume parsing (skills/experience extraction) | 🟡 | Shared `Illumin360.Resume` extracts CV text (PDF/DOCX/TXT) + detects skills; wired to Professionals (`/me/cv/parse` + "Scan CV" UI) returning suggestions. Auto-prefill write + students/candidates pending |
+| Resume parsing (skills/experience extraction) | 🟡 | Shared `Illumin360.Resume` extracts CV text (PDF/DOCX/TXT) + detects skills; Professionals `/me/cv/apply-skills` **auto-adds** new skills to the profile ("Scan CV & add skills" UI). Students/candidates + experience extraction pending |
 | Candidate search (boolean / faceted) | 🟡 | City ILIKE filter only |
 | Recruiter notes / private activity log | 🟡 | Read-only activity feed; no recruiter notes |
 | Tags / labels | ⬜ | |
@@ -27,7 +27,7 @@ flip the status to ✅ (add the commit/PR ref).
 
 - [x] Shared object-storage building block (`Illumin360.Storage`) + Professionals CV upload/download → MinIO (verified end-to-end with a Testcontainers MinIO roundtrip)
 - [x] Extend CV upload to students (self-service `/me/cv`, UI + MinIO integration test) & candidates (per-id `/{id}/cv`, admin-gated)
-- [x] Resume parsing — shared `Illumin360.Resume` (PdfPig + OpenXml text extraction, deterministic skill detection); `POST /me/cv/parse` + "Scan CV for skills" UI on Professionals, returns detected skills as suggestions (auto-writing them onto the profile + students/candidates = follow-up)
+- [x] Resume parsing — shared `Illumin360.Resume` (PdfPig + OpenXml text extraction, deterministic skill detection); `POST /me/cv/apply-skills` **auto-adds** newly detected skills to the Professionals profile (reflected live in the skills panel). Extending to students/candidates + parsing experience/education = follow-up
 - [ ] Editable skills with proficiency
 - [ ] Faceted candidate search (skills, city, availability)
 - [ ] Recruiter notes + tags on a candidate
@@ -175,5 +175,6 @@ flip the status to ✅ (add the commit/PR ref).
 - Matching engine extended to student dashboard matches (scored + ranked) (2026-08-10).
 - Employer "top candidates for a role" ranking endpoint (`GET /candidates/top`) (2026-08-10).
 - Resume parsing (`Illumin360.Resume`) — CV text extraction + skill detection, wired to Professionals `/me/cv/parse` + UI (2026-08-10).
+- Auto-apply detected CV skills to the professional profile (`/me/cv/apply-skills`), reflected live (2026-08-10).
 
 _Update this file as items are ticked; link the commit/PR that delivered each._

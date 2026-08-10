@@ -39,6 +39,9 @@ public static class DependencyInjection
         services.AddScoped<
             IQueryHandler<ParseCvSkillsQuery, CvSkillsDto>,
             ParseCvSkillsQueryHandler>();
+        services.AddScoped<
+            ICommandHandler<ApplyCvSkillsCommand, AppliedSkillsDto>,
+            ApplyCvSkillsCommandHandler>();
         return services;
     }
 }

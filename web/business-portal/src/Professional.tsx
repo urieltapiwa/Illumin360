@@ -92,6 +92,7 @@ export default function Professional(_props: { session: Session }) {
   const [cv, setCv] = useState<{ fileName: string; uploadedAt: string } | null>(null);
   const [cvBusy, setCvBusy] = useState<"idle" | "uploading" | "error">("idle");
   const [cvSkills, setCvSkills] = useState<string[] | null>(null);
+  const [cvAdded, setCvAdded] = useState<number | null>(null);
   const [scanning, setScanning] = useState(false);
   // Current CV metadata (if any). Reads are open; upload requires an authenticated professional.
   useEffect(() => {
@@ -155,12 +156,20 @@ export default function Professional(_props: { session: Session }) {
     const r = await fetch(`/api/professionals/me/availability`, { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: JSON.stringify({ availability: next }) });
     if (r.ok) { const v = await r.json().catch(() => next); setD((prev) => (prev ? { ...prev, persona: { ...prev.persona, availability: typeof v === "string" ? v : next } } : prev)); }
   };
-  // Extract skills from the uploaded CV (resume parsing via the Professionals service).
-  const parseCv = async () => {
+  // Parse the uploaded CV and add newly detected skills to the profile (resume parsing).
+  const applyCvSkills = async () => {
     setScanning(true);
     try {
-      const r = await fetch("/api/professionals/me/cv/parse", { method: "POST", credentials: "same-origin" });
-      if (r.ok) { const v = await r.json().catch(() => null); setCvSkills(Array.isArray(v?.skills) ? v.skills : []); }
+      const r = await fetch("/api/professionals/me/cv/apply-skills", { method: "POST", credentials: "same-origin" });
+      if (r.ok) {
+        const v = await r.json().catch(() => null);
+        const detected: string[] = Array.isArray(v?.detected) ? v.detected : [];
+        const added: string[] = Array.isArray(v?.added) ? v.added : [];
+        setCvSkills(detected);
+        setCvAdded(added.length);
+        // Reflect the newly-added skills in the live skills panel.
+        if (added.length) setD((prev) => (prev ? { ...prev, skills: [...prev.skills, ...added.map((name) => ({ name, level: 60, trend: "steady" }))] } : prev));
+      }
     } finally {
       setScanning(false);
     }
@@ -307,9 +316,12 @@ export default function Professional(_props: { session: Session }) {
             </div>
             {live && cv && (
               <div className="mt-3 border-t border-line/40 pt-3">
-                <button onClick={parseCv} disabled={scanning} className="rounded-lg bg-panel2/70 px-2.5 py-1 text-[11px] font-semibold text-ink-mid hover:text-ink-hi transition disabled:opacity-50">{scanning ? t("pro.cv.scanning", "Scanning…") : t("pro.cv.scan", "Scan CV for skills")}</button>
+                <button onClick={applyCvSkills} disabled={scanning} className="rounded-lg bg-panel2/70 px-2.5 py-1 text-[11px] font-semibold text-ink-mid hover:text-ink-hi transition disabled:opacity-50">{scanning ? t("pro.cv.scanning", "Scanning…") : t("pro.cv.scan", "Scan CV & add skills")}</button>
                 {cvSkills && (cvSkills.length > 0 ? (
-                  <div className="mt-2 flex flex-wrap gap-1.5">{cvSkills.map((s) => <span key={s} className="chip !text-[10px] !text-brand-bright !border-brand/30">{s}</span>)}</div>
+                  <div className="mt-2">
+                    <div className="flex flex-wrap gap-1.5">{cvSkills.map((s) => <span key={s} className="chip !text-[10px] !text-brand-bright !border-brand/30">{s}</span>)}</div>
+                    {cvAdded !== null && <div className="mt-1.5 text-[11px] text-ink-lo">{cvAdded > 0 ? t("pro.cv.added", "Added {{n}} new skill(s) to your profile.", { n: cvAdded }) : t("pro.cv.allKnown", "All detected skills are already on your profile.")}</div>}
+                  </div>
                 ) : (
                   <span className="ml-2 text-[11px] text-ink-lo">{t("pro.cv.noSkills", "No known skills detected.")}</span>
                 ))}

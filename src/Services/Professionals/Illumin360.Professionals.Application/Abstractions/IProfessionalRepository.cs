@@ -53,6 +53,16 @@ public interface IProfessionalRepository
     /// <returns>The tracked match, or null.</returns>
     Task<ProfessionalMatch?> GetMatchAsync(ProfessionalId professionalId, Guid matchId, CancellationToken cancellationToken);
 
+    /// <summary>Returns the professional's current skill names.</summary>
+    /// <param name="professionalId">Owning professional.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The skill names.</returns>
+    Task<IReadOnlyList<string>> GetSkillNamesAsync(ProfessionalId professionalId, CancellationToken cancellationToken);
+
+    /// <summary>Stages a new skill for insertion. Persisted on <see cref="SaveChangesAsync"/>.</summary>
+    /// <param name="skill">The skill to add.</param>
+    void AddSkill(ProfessionalSkill skill);
+
     /// <summary>Commits pending changes (and flushes the outbox in the same transaction).</summary>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The number of state entries written.</returns>
