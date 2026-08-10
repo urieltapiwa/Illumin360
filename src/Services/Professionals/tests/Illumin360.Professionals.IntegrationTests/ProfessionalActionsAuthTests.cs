@@ -39,18 +39,17 @@ public sealed class ProfessionalActionsAuthTests : IAsyncLifetime
     {
         await _postgres.StartAsync();
 
-        // Warm the mapped port before the host boots. Docker Desktop's port-forwarding can reset the first
-        // TCP connection after a container starts, which surfaces as an Npgsql "read past end of stream";
-        // retrying a plain connection here clears that race before the startup migration runs.
         await WaitForPostgresAsync();
+
+        // The Professionals host reads its connection string eagerly at DI-registration time (inside
+        // AddProfessionalsInfrastructure), which runs before WebApplicationFactory's ConfigureAppConfiguration
+        // overrides are applied. An environment variable is folded into configuration by CreateBuilder BEFORE
+        // that eager read and outranks appsettings.Development.json, so it is the only override that lands.
+        Environment.SetEnvironmentVariable("ConnectionStrings__professionals", _postgres.GetConnectionString() + ";SSL Mode=Disable");
 
         _factory = new WebApplicationFactory<Program>().WithWebHostBuilder(b =>
         {
             b.UseEnvironment("Development");
-            b.ConfigureAppConfiguration((_, cfg) => cfg.AddInMemoryCollection(new Dictionary<string, string?>
-            {
-                ["ConnectionStrings:professionals"] = _postgres.GetConnectionString() + ";SSL Mode=Disable",
-            }));
 
             // Trust the local HS256 test key instead of Keycloak's JWKS, so tokens can be minted offline.
             b.ConfigureTestServices(services =>
@@ -79,6 +78,7 @@ public sealed class ProfessionalActionsAuthTests : IAsyncLifetime
 
     public async Task DisposeAsync()
     {
+        Environment.SetEnvironmentVariable("ConnectionStrings__professionals", null);
         await _factory.DisposeAsync();
         await _postgres.DisposeAsync();
     }
