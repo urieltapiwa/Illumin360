@@ -140,6 +140,19 @@ v1.MapPost("/requests/{id:guid}/apply", async (
     .ProducesProblem(StatusCodes.Status404NotFound)
     .ProducesProblem(StatusCodes.Status409Conflict);
 
+v1.MapGet("/talents/{talentId:guid}/applications", async (
+        Guid talentId,
+        int? limit,
+        IQueryHandler<GetTalentApplicationsQuery, IReadOnlyList<TalentApplicationDto>> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new GetTalentApplicationsQuery(talentId, limit ?? 50), ct);
+        return result.ToHttpResult();
+    })
+    .WithName("GetTalentApplications")
+    .WithSummary("A talent's applications with role details and status, most recent first.")
+    .Produces<IReadOnlyList<TalentApplicationDto>>(StatusCodes.Status200OK);
+
 // --- Recruiter pipeline transitions on an application (admin/recruiter) ---
 v1.MapPost("/applications/{id:guid}/advance", async (
         Guid id,

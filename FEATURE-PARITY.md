@@ -56,11 +56,11 @@ flip the status to ✅ (add the commit/PR ref).
 | Advance / reject application (with reason) | 🟡 | Advance/reject endpoints (admin-gated); a free-text reason needs a new column on the externally-seeded `applications` table (pending) |
 | Kanban drag-drop pipeline UI | ⬜ | Horilla has this |
 | Bulk actions | ⬜ | |
-| Application status visible to applicant | 🟡 | Own match status shown |
+| Application status visible to applicant | ✅ | "My applications" live status timeline (`GET /recruitment/talents/{id}/applications`) on the professional portal |
 
 - [x] Application stage-transition endpoints — `POST /v1/recruitment/applications/{id}/advance|reject` (admin-gated), domain stage machine (applied→reviewed→shortlisted→hired) with terminal-conflict guards. Free-text reject reason pending (needs a column on the externally-seeded `applications` table)
 - [ ] Recruiter pipeline board (kanban) per requisition
-- [ ] Applicant-facing application status timeline
+- [x] Applicant-facing application status timeline — "My applications" panel on the professional portal, live status per applied role (`GET /recruitment/talents/{id}/applications`)
 
 ## D. Matching / sourcing
 | Feature | Status | Notes |
@@ -163,7 +163,7 @@ flip the status to ✅ (add the commit/PR ref).
 
 ### Progress
 - Total build items: 30
-- Done: 7
+- Done: 8
 - In progress: 0
 
 **Changelog of ticks**
@@ -178,5 +178,6 @@ flip the status to ✅ (add the commit/PR ref).
 - Auto-apply detected CV skills to the professional profile (`/me/cv/apply-skills`), reflected live (2026-08-10).
 - Extended CV parse/apply-skills to students (same `/me/cv/apply-skills` + "Scan CV" UI) (2026-08-10).
 - Application pipeline stage-transition endpoints (advance/reject) with a domain stage machine (2026-08-10).
+- Applicant status timeline — "My applications" panel + `GET /recruitment/talents/{id}/applications` (2026-08-10).
 
 _Update this file as items are ticked; link the commit/PR that delivered each._
