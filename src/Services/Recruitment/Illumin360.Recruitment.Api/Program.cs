@@ -353,6 +353,41 @@ v1.MapPost("/applications/{id:guid}/reject", async (
     .ProducesProblem(StatusCodes.Status404NotFound)
     .ProducesProblem(StatusCodes.Status409Conflict);
 
+// --- Public branded careers pages (SEO-friendly server-rendered HTML; no auth) ---
+// Served publicly at /careers via the gateway (which rewrites /careers/** → /v1/recruitment/careers/**).
+const string careersBrand = "Illumin360";
+const string careersBasePath = "/careers";
+
+v1.MapGet("/careers", async (
+        IQueryHandler<GetRecruitmentRequestsQuery, IReadOnlyList<RecruitmentRequestDto>> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new GetRecruitmentRequestsQuery(null, "open", 1, 100), ct);
+        var roles = result.IsSuccess ? result.Value! : [];
+        return Results.Content(CareersHtml.RenderIndex(roles, careersBrand, careersBasePath), "text/html; charset=utf-8");
+    })
+    .WithName("CareersIndex")
+    .WithSummary("Public branded careers landing page listing open roles (HTML).")
+    .Produces(StatusCodes.Status200OK, contentType: "text/html");
+
+v1.MapGet("/careers/{id:guid}", async (
+        Guid id,
+        IQueryHandler<GetRecruitmentRequestByIdQuery, RecruitmentRequestDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new GetRecruitmentRequestByIdQuery(id), ct);
+        if (result.IsFailure)
+        {
+            return Results.Content(
+                CareersHtml.RenderIndex([], careersBrand, careersBasePath), "text/html; charset=utf-8", statusCode: StatusCodes.Status404NotFound);
+        }
+
+        return Results.Content(CareersHtml.RenderJob(result.Value!, careersBrand, careersBasePath), "text/html; charset=utf-8");
+    })
+    .WithName("CareersJob")
+    .WithSummary("Public branded careers detail page for a single role (HTML + JobPosting JSON-LD).")
+    .Produces(StatusCodes.Status200OK, contentType: "text/html");
+
 // --- Recruiter CRM: client companies + contacts (internal recruiter tooling) ---
 v1.MapGet("/clients", async (
         string? status,
