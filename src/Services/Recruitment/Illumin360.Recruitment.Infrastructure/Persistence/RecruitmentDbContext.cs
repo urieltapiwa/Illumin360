@@ -49,6 +49,9 @@ public sealed class RecruitmentDbContext(DbContextOptions<RecruitmentDbContext> 
     /// <summary>Requisition approval-workflow set.</summary>
     public DbSet<RequisitionApproval> RequisitionApprovals => Set<RequisitionApproval>();
 
+    /// <summary>Reusable job-template set.</summary>
+    public DbSet<JobTemplate> JobTemplates => Set<JobTemplate>();
+
     /// <inheritdoc />
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -268,6 +271,27 @@ public sealed class RecruitmentDbContext(DbContextOptions<RecruitmentDbContext> 
             b.Property(a => a.DecidedAt).HasColumnName("decided_at");
             b.HasIndex(a => a.RequestId).IsUnique();
             b.Ignore(a => a.DomainEvents);
+        });
+
+        modelBuilder.Entity<JobTemplate>(b =>
+        {
+            b.ToTable("job_templates");
+            b.HasKey(t => t.Id);
+            b.Property(t => t.Id).HasColumnName("id");
+            b.Property(t => t.Name).HasColumnName("name").HasMaxLength(120);
+            b.Property(t => t.Title).HasColumnName("title").HasMaxLength(150);
+            b.Property(t => t.City).HasColumnName("city").HasMaxLength(100);
+            b.Property(t => t.Positions).HasColumnName("positions");
+            b.Property(t => t.SalaryMin).HasColumnName("salary_min");
+            b.Property(t => t.SalaryMax).HasColumnName("salary_max");
+            b.Property(t => t.Currency).HasColumnName("currency").HasMaxLength(3);
+            b.Property(t => t.EmploymentType).HasColumnName("employment_type").HasConversion(employmentConverter).HasMaxLength(20);
+            b.Property(t => t.Remote).HasColumnName("remote");
+            b.Property(t => t.TagsCsv).HasColumnName("tags").HasMaxLength(500);
+            b.Property(t => t.CreatedAt).HasColumnName("created_at");
+            b.Ignore(t => t.Tags);
+            b.HasIndex(t => t.Name).IsUnique();
+            b.Ignore(t => t.DomainEvents);
         });
 
         modelBuilder.Entity<RecruitmentApplication>(b =>

@@ -43,11 +43,12 @@ flip the status to ✅ (add the commit/PR ref).
 | Salary range / remote flag / category tags on a job | ✅ | Service-owned `requisition_details` (+ `requisition_tags`) side-tables + `GET/PUT /v1/recruitment/requests/{id}/details` and tag add/remove; admin pipeline role-details editor (salary range, employment type, remote, tags) |
 | Public careers site (SEO job pages) | ✅ | Server-rendered `/careers` listing + `/careers/{id}` detail with schema.org JobPosting JSON-LD (see branded careers page in H) |
 | Job approval workflow | ✅ | `requisition_approvals` side-table + `GET` / `POST …/approval/{submit\|approve\|reject}` — draft→submitted→approved/rejected state machine (409 guards, resubmit after reject); admin pipeline approval controls |
-| Job templates | ⬜ | |
+| Job templates | ✅ | `job_templates` table + `GET/POST/DELETE /v1/recruitment/templates` and `POST …/{id}/use` (creates a requisition + enrichment + tags from a template); admin job-templates panel |
 
 - [x] Extend requisition: salary range, employment type, remote flag, tags — service-owned `RequisitionDetail` (+ `RequisitionTag`) side-tables keyed 1:1 by the externally-seeded request id; `GET/PUT /v1/recruitment/requests/{id}/details` (upsert, salary-range + type validation) and `POST/DELETE …/tags/{label}` (idempotent); unit tests; admin pipeline role-details editor (salary min/max, employment type, remote toggle, tag chips)
 - [x] Public careers/job-listing pages (SSR/SEO) — server-rendered `/careers` (open-role listing) + `/careers/{id}` (role detail) from the Recruitment service, with descriptive title/meta/Open Graph/canonical tags and schema.org JSON-LD (`ItemList` on the index, `JobPosting` on detail), HTML-escaped; exposed publicly through the gateway (`/careers/**` → `/v1/recruitment/careers/**`). Pure `CareersHtml` renderer unit-tested
 - [x] Requisition approval workflow — `RequisitionApproval` aggregate + `requisition_approvals` side-table (unique per request); `GET /v1/recruitment/requests/{id}/approval` + `POST …/approval/submit|approve|reject` with a draft→submitted→approved/rejected state machine (409 guards, reason required on reject, resubmit after reject), writes admin-gated; unit tests; admin pipeline approval status + submit/approve/reject controls
+- [x] Job templates — `JobTemplate` aggregate + `job_templates` table (unique name, tags stored joined); `GET/POST/DELETE /v1/recruitment/templates` (name-conflict 409, salary/type validation) + `POST …/{id}/use` which posts a new requisition and carries the template's enrichment (salary/type/remote) + tags onto it; unit tests; admin job-templates panel (list/create/delete)
 
 ## C. Applications / pipeline (ATS core)
 | Feature | Status | Notes |
@@ -173,7 +174,7 @@ flip the status to ✅ (add the commit/PR ref).
 
 ### Progress
 - Total build items: 48
-- Done: 35
+- Done: 36
 - In progress: 0
 
 **Changelog of ticks**

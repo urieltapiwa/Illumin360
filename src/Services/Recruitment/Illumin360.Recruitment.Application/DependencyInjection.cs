@@ -128,6 +128,18 @@ public static class DependencyInjection
             ICommandHandler<TransitionApprovalCommand, ApprovalDto>,
             TransitionApprovalCommandHandler>();
         services.AddScoped<
+            IQueryHandler<GetJobTemplatesQuery, IReadOnlyList<JobTemplateDto>>,
+            GetJobTemplatesQueryHandler>();
+        services.AddScoped<
+            ICommandHandler<CreateJobTemplateCommand, JobTemplateDto>,
+            CreateJobTemplateCommandHandler>();
+        services.AddScoped<
+            ICommandHandler<DeleteJobTemplateCommand, bool>,
+            DeleteJobTemplateCommandHandler>();
+        services.AddScoped<
+            ICommandHandler<UseJobTemplateCommand, RecruitmentRequestDto>,
+            UseJobTemplateCommandHandler>();
+        services.AddScoped<
             ICommandHandler<ToggleOnboardingTaskCommand, OnboardingTaskDto>,
             ToggleOnboardingTaskCommandHandler>();
         services.AddScoped<
