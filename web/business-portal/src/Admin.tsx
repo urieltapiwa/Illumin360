@@ -122,6 +122,9 @@ export default function Admin({ session }: { session: Session }) {
   const [csTags, setCsTags] = useState<string[]>([]);
   const [csNoteDraft, setCsNoteDraft] = useState("");
   const [csTagDraft, setCsTagDraft] = useState("");
+  // Duplicate-candidate detection.
+  type DupGroup = { name: string; count: number; candidates: SearchCandidate[] };
+  const [dupes, setDupes] = useState<DupGroup[] | null>(null);
   useEffect(() => { fetch(import.meta.env.BASE_URL + "admin.json").then((r) => r.json()).then(setD); }, []);
   // Live platform signals from the microservices (via BFF → gateway). Talent count and talent-by-city are
   // real (Candidates service); finance/ops tiles (MRR, subscriptions, tickets, verifications) have no backing
@@ -197,6 +200,14 @@ export default function Admin({ session }: { session: Session }) {
     }, 250);
     return () => clearTimeout(id);
   }, [csQuery, csCity, csAvailability]);
+
+  // Suspected-duplicate candidates.
+  useEffect(() => {
+    fetch("/api/candidates/duplicates")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((v) => { if (Array.isArray(v)) setDupes(v); })
+      .catch(() => { /* offline */ });
+  }, []);
 
   // Notes + tags for the candidate expanded in search results.
   useEffect(() => {
@@ -631,6 +642,27 @@ export default function Admin({ session }: { session: Session }) {
                   </div>
                 </div>
               )}
+            </motion.section>
+          )}
+
+          {dupes && dupes.length > 0 && (
+            <motion.section variants={fade} className="card p-5">
+              <div className="flex items-center justify-between mb-3 gap-3 flex-wrap">
+                <div><h3 className="font-display text-[15px] font-bold text-ink-hi">{t("admin.dupes.title", "Possible duplicates")}</h3><p className="text-[11px] text-ink-lo mt-0.5">{t("admin.dupes.sub", "Candidate records sharing a name — review and merge.")}</p></div>
+                <span className="chip !text-[10px] !text-gold !border-gold/30">{t("admin.dupes.count", "{{n}} group(s)", { n: dupes.length })}</span>
+              </div>
+              <div className="space-y-2">
+                {dupes.map((g) => (
+                  <div key={g.name} className="rounded-xl border border-gold/30 bg-gold/[0.05] px-3.5 py-2.5">
+                    <div className="flex items-center justify-between mb-1.5"><span className="text-sm font-semibold text-ink-hi">{g.name}</span><span className="chip !text-[10px] !text-gold !border-gold/30">{g.count}×</span></div>
+                    <div className="space-y-1">
+                      {g.candidates.map((c) => (
+                        <div key={c.id} className="text-[11px] text-ink-mid">{c.publicHeadline || "—"} · {c.city} · <span className="capitalize text-ink-lo">{c.availability}</span></div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </motion.section>
           )}
 

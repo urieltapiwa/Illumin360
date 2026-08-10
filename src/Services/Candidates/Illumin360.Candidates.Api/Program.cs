@@ -81,6 +81,18 @@ v1.MapGet("/search", async (
     .Produces<CandidateSearchResultDto>(StatusCodes.Status200OK)
     .ProducesProblem(StatusCodes.Status400BadRequest);
 
+v1.MapGet("/duplicates", async (
+        bool? sameCityOnly,
+        IQueryHandler<FindDuplicateCandidatesQuery, IReadOnlyList<DuplicateGroupDto>> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new FindDuplicateCandidatesQuery(sameCityOnly ?? false), ct);
+        return result.ToHttpResult();
+    })
+    .WithName("FindDuplicateCandidates")
+    .WithSummary("Find suspected-duplicate candidates (shared name, optionally same city).")
+    .Produces<IReadOnlyList<DuplicateGroupDto>>(StatusCodes.Status200OK);
+
 v1.MapGet("/stats", async (
         IQueryHandler<GetCandidateStatsQuery, CandidateStatsDto> handler,
         CancellationToken ct) =>
