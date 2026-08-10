@@ -14,6 +14,12 @@ public static class DependencyInjection
     {
         services.AddScoped<IQueryHandler<GetCandidatesQuery, IReadOnlyList<CandidateDto>>, GetCandidatesQueryHandler>();
         services.AddScoped<IQueryHandler<SearchCandidatesQuery, CandidateSearchResultDto>, SearchCandidatesQueryHandler>();
+        services.AddScoped<IQueryHandler<GetCandidateNotesQuery, IReadOnlyList<CandidateNoteDto>>, GetCandidateNotesQueryHandler>();
+        services.AddScoped<ICommandHandler<AddCandidateNoteCommand, CandidateNoteDto>, AddCandidateNoteCommandHandler>();
+        services.AddScoped<ICommandHandler<RemoveCandidateNoteCommand, bool>, RemoveCandidateNoteCommandHandler>();
+        services.AddScoped<IQueryHandler<GetCandidateTagsQuery, IReadOnlyList<string>>, GetCandidateTagsQueryHandler>();
+        services.AddScoped<ICommandHandler<AddCandidateTagCommand, IReadOnlyList<string>>, AddCandidateTagCommandHandler>();
+        services.AddScoped<ICommandHandler<RemoveCandidateTagCommand, IReadOnlyList<string>>, RemoveCandidateTagCommandHandler>();
         services.AddScoped<IQueryHandler<GetCandidateByIdQuery, CandidateDto>, GetCandidateByIdQueryHandler>();
         services.AddScoped<IQueryHandler<GetCandidateStatsQuery, CandidateStatsDto>, GetCandidateStatsQueryHandler>();
         services.AddScoped<ICommandHandler<RegisterCandidateCommand, CandidateDto>, RegisterCandidateCommandHandler>();

@@ -135,6 +135,45 @@ public sealed class CandidateRepository(CandidatesDbContext db) : ICandidateRepo
         => await _db.TalentPoolMembers.AsNoTracking().Where(m => m.PoolId == poolId).OrderByDescending(m => m.AddedAt).ToListAsync(cancellationToken).ConfigureAwait(false);
 
     /// <inheritdoc />
+    public void AddNote(CandidateNote note) => _db.CandidateNotes.Add(note);
+
+    /// <inheritdoc />
+    public void RemoveNote(CandidateNote note) => _db.CandidateNotes.Remove(note);
+
+    /// <inheritdoc />
+    public async Task<CandidateNote?> GetNoteAsync(Guid id, CancellationToken cancellationToken)
+        => await _db.CandidateNotes.FirstOrDefaultAsync(n => n.Id == id, cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<CandidateNote>> ListNotesAsync(CandidateId candidateId, CancellationToken cancellationToken)
+        => await _db.CandidateNotes.AsNoTracking()
+            .Where(n => n.CandidateId == candidateId)
+            .OrderByDescending(n => n.CreatedAt)
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
+    public void AddTag(CandidateTag tag) => _db.CandidateTags.Add(tag);
+
+    /// <inheritdoc />
+    public void RemoveTag(CandidateTag tag) => _db.CandidateTags.Remove(tag);
+
+    /// <inheritdoc />
+    public async Task<bool> TagExistsAsync(CandidateId candidateId, string label, CancellationToken cancellationToken)
+        => await _db.CandidateTags.AsNoTracking()
+            .AnyAsync(t => t.CandidateId == candidateId && t.Label == label, cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
+    public async Task<CandidateTag?> GetTagAsync(CandidateId candidateId, string label, CancellationToken cancellationToken)
+        => await _db.CandidateTags.FirstOrDefaultAsync(t => t.CandidateId == candidateId && t.Label == label, cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<CandidateTag>> ListTagsAsync(CandidateId candidateId, CancellationToken cancellationToken)
+        => await _db.CandidateTags.AsNoTracking()
+            .Where(t => t.CandidateId == candidateId)
+            .OrderBy(t => t.Label)
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
     public void Add(Candidate candidate) => _db.Candidates.Add(candidate);
 
     /// <inheritdoc />

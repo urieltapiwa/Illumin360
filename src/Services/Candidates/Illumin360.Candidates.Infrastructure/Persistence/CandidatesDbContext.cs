@@ -19,6 +19,12 @@ public sealed class CandidatesDbContext(DbContextOptions<CandidatesDbContext> op
     /// <summary>Talent-pool memberships.</summary>
     public DbSet<TalentPoolMember> TalentPoolMembers => Set<TalentPoolMember>();
 
+    /// <summary>Recruiter notes on candidates.</summary>
+    public DbSet<CandidateNote> CandidateNotes => Set<CandidateNote>();
+
+    /// <summary>Tags / labels on candidates.</summary>
+    public DbSet<CandidateTag> CandidateTags => Set<CandidateTag>();
+
     /// <inheritdoc />
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -62,6 +68,31 @@ public sealed class CandidatesDbContext(DbContextOptions<CandidatesDbContext> op
             b.Property(p => p.Name).HasColumnName("name").HasMaxLength(120);
             b.Property(p => p.CreatedAt).HasColumnName("created_at");
             b.Ignore(p => p.DomainEvents);
+        });
+
+        modelBuilder.Entity<CandidateNote>(b =>
+        {
+            b.ToTable("candidate_notes");
+            b.HasKey(n => n.Id);
+            b.Property(n => n.Id).HasColumnName("id");
+            b.Property(n => n.CandidateId).HasColumnName("candidate_id").HasConversion(id => id.Value, value => new CandidateId(value));
+            b.Property(n => n.Author).HasColumnName("author").HasMaxLength(160);
+            b.Property(n => n.Body).HasColumnName("body").HasMaxLength(2000);
+            b.Property(n => n.CreatedAt).HasColumnName("created_at");
+            b.HasIndex(n => n.CandidateId);
+            b.Ignore(n => n.DomainEvents);
+        });
+
+        modelBuilder.Entity<CandidateTag>(b =>
+        {
+            b.ToTable("candidate_tags");
+            b.HasKey(t => t.Id);
+            b.Property(t => t.Id).HasColumnName("id");
+            b.Property(t => t.CandidateId).HasColumnName("candidate_id").HasConversion(id => id.Value, value => new CandidateId(value));
+            b.Property(t => t.Label).HasColumnName("label").HasMaxLength(40);
+            b.Property(t => t.CreatedAt).HasColumnName("created_at");
+            b.HasIndex(t => new { t.CandidateId, t.Label }).IsUnique();
+            b.Ignore(t => t.DomainEvents);
         });
 
         modelBuilder.Entity<TalentPoolMember>(b =>
