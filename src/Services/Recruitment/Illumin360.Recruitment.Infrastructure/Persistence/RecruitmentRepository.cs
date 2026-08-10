@@ -249,6 +249,27 @@ public sealed class RecruitmentRepository(RecruitmentDbContext db) : IRecruitmen
     public void AddApproval(RequisitionApproval approval) => _db.RequisitionApprovals.Add(approval);
 
     /// <inheritdoc />
+    public void AddJobTemplate(JobTemplate template) => _db.JobTemplates.Add(template);
+
+    /// <inheritdoc />
+    public void RemoveJobTemplate(JobTemplate template) => _db.JobTemplates.Remove(template);
+
+    /// <inheritdoc />
+    public async Task<JobTemplate?> GetJobTemplateAsync(Guid id, CancellationToken cancellationToken)
+        => await _db.JobTemplates.FirstOrDefaultAsync(t => t.Id == id, cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<JobTemplate>> ListJobTemplatesAsync(CancellationToken cancellationToken)
+        => await _db.JobTemplates.AsNoTracking()
+            .OrderByDescending(t => t.CreatedAt)
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
+    public async Task<bool> JobTemplateNameExistsAsync(string name, CancellationToken cancellationToken)
+        => await _db.JobTemplates.AsNoTracking()
+            .AnyAsync(t => EF.Functions.ILike(t.Name, name), cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
     public async Task SaveChangesAsync(CancellationToken cancellationToken)
         => await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 

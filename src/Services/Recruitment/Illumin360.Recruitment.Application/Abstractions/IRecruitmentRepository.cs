@@ -223,6 +223,28 @@ public interface IRecruitmentRepository
     /// <param name="approval">The approval to add.</param>
     void AddApproval(RequisitionApproval approval);
 
+    /// <summary>Stages a new job template for insertion.</summary>
+    /// <param name="template">The template to add.</param>
+    void AddJobTemplate(JobTemplate template);
+
+    /// <summary>Removes a job template.</summary>
+    /// <param name="template">The template to remove.</param>
+    void RemoveJobTemplate(JobTemplate template);
+
+    /// <summary>Loads a job template by id, or null if not present.</summary>
+    /// <param name="id">The template id.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<JobTemplate?> GetJobTemplateAsync(Guid id, CancellationToken cancellationToken);
+
+    /// <summary>Lists all job templates, newest first.</summary>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<IReadOnlyList<JobTemplate>> ListJobTemplatesAsync(CancellationToken cancellationToken);
+
+    /// <summary>Whether a template with the given name already exists (case-insensitive).</summary>
+    /// <param name="name">The template name.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<bool> JobTemplateNameExistsAsync(string name, CancellationToken cancellationToken);
+
     /// <summary>Commits staged changes to the data store.</summary>
     /// <param name="cancellationToken">Cancellation token.</param>
     Task SaveChangesAsync(CancellationToken cancellationToken);

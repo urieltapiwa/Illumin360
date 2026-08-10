@@ -487,6 +487,70 @@ v1.MapPost("/applications/{id:guid}/reject", async (
     .ProducesProblem(StatusCodes.Status404NotFound)
     .ProducesProblem(StatusCodes.Status409Conflict);
 
+// --- Job templates (reusable requisitions) ---
+v1.MapGet("/templates", async (
+        IQueryHandler<GetJobTemplatesQuery, IReadOnlyList<JobTemplateDto>> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new GetJobTemplatesQuery(), ct);
+        return result.ToHttpResult();
+    })
+    .WithName("GetJobTemplates")
+    .WithSummary("List reusable job templates.")
+    .Produces<IReadOnlyList<JobTemplateDto>>(StatusCodes.Status200OK);
+
+v1.MapPost("/templates", async (
+        JobTemplateBody body,
+        ICommandHandler<CreateJobTemplateCommand, JobTemplateDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(
+            new CreateJobTemplateCommand(body.Name, body.Title, body.City, body.Positions, body.SalaryMin, body.SalaryMax, body.Currency, body.EmploymentType, body.Remote, body.Tags), ct);
+        return result.ToCreatedResult(dto => $"/v1/recruitment/templates/{dto.Id}");
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminWritePolicy)
+    .WithName("CreateJobTemplate")
+    .WithSummary("Create a reusable job template. Requires an admin (write) role.")
+    .Produces<JobTemplateDto>(StatusCodes.Status201Created)
+    .ProducesProblem(StatusCodes.Status400BadRequest)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden)
+    .ProducesProblem(StatusCodes.Status409Conflict);
+
+v1.MapDelete("/templates/{id:guid}", async (
+        Guid id,
+        ICommandHandler<DeleteJobTemplateCommand, bool> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new DeleteJobTemplateCommand(id), ct);
+        return result.IsSuccess ? Results.NoContent() : result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminWritePolicy)
+    .WithName("DeleteJobTemplate")
+    .WithSummary("Delete a job template. Requires an admin (write) role.")
+    .Produces(StatusCodes.Status204NoContent)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden)
+    .ProducesProblem(StatusCodes.Status404NotFound);
+
+v1.MapPost("/templates/{id:guid}/use", async (
+        Guid id,
+        UseTemplateBody body,
+        ICommandHandler<UseJobTemplateCommand, RecruitmentRequestDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new UseJobTemplateCommand(id, body.CompanyId), ct);
+        return result.ToCreatedResult(dto => $"/v1/recruitment/requests/{dto.Id}");
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminWritePolicy)
+    .WithName("UseJobTemplate")
+    .WithSummary("Create a new requisition (with enrichment + tags) from a template. Requires an admin (write) role.")
+    .Produces<RecruitmentRequestDto>(StatusCodes.Status201Created)
+    .ProducesProblem(StatusCodes.Status400BadRequest)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden)
+    .ProducesProblem(StatusCodes.Status404NotFound);
+
 // --- Offers: employment offers on an application (draft → sent → accepted/declined) ---
 v1.MapGet("/applications/{applicationId:guid}/offers", async (
         Guid applicationId,
@@ -880,6 +944,23 @@ internal sealed record ApprovalDecisionBody(string Approver);
 /// <param name="Approver">The approver's name.</param>
 /// <param name="Reason">The rejection reason.</param>
 internal sealed record ApprovalRejectBody(string Approver, string Reason);
+
+/// <summary>Request body for creating a job template.</summary>
+/// <param name="Name">Template name.</param>
+/// <param name="Title">Default role title.</param>
+/// <param name="City">Default city.</param>
+/// <param name="Positions">Default positions.</param>
+/// <param name="SalaryMin">Default lower salary bound.</param>
+/// <param name="SalaryMax">Default upper salary bound.</param>
+/// <param name="Currency">Default currency.</param>
+/// <param name="EmploymentType">Default employment type.</param>
+/// <param name="Remote">Default remote flag.</param>
+/// <param name="Tags">Default tags.</param>
+internal sealed record JobTemplateBody(string Name, string Title, string? City, int Positions, int? SalaryMin, int? SalaryMax, string? Currency, string? EmploymentType, bool Remote, IReadOnlyList<string>? Tags);
+
+/// <summary>Request body for applying a template.</summary>
+/// <param name="CompanyId">Hiring company id.</param>
+internal sealed record UseTemplateBody(Guid CompanyId);
 
 /// <summary>Request body for starting an onboarding checklist.</summary>
 /// <param name="RoleTitle">The hired role title.</param>
