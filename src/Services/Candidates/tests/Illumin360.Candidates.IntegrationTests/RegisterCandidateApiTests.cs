@@ -59,6 +59,8 @@ public sealed class RegisterCandidateApiTests : IAsyncLifetime
         await _postgres.DisposeAsync();
     }
 
+    private sealed record RankedCandidate(Guid Id, string Name, string City, string? Headline, int Score);
+
     // A client carrying an admin (write) bearer token — required to POST a new candidate.
     private HttpClient AdminClient()
     {
@@ -112,6 +114,24 @@ public sealed class RegisterCandidateApiTests : IAsyncLifetime
             .ToListAsync()).Single();
 
         outboxCount.Should().BeGreaterThan(0);
+    }
+
+    [Fact]
+    public async Task Top_candidates_ranks_best_fit_first()
+    {
+        var admin = AdminClient();
+        var dev = new RegisterCandidateCommand("Dev", "One", "Windhoek", "Namibian", "OpenToOpportunities", "Software Developer");
+        var chef = new RegisterCandidateCommand("Chef", "Two", "Walvis Bay", "Namibian", "OpenToOpportunities", "Head Chef");
+        (await admin.PostAsJsonAsync("/v1/candidates", dev)).StatusCode.Should().Be(HttpStatusCode.Created);
+        (await admin.PostAsJsonAsync("/v1/candidates", chef)).StatusCode.Should().Be(HttpStatusCode.Created);
+
+        var client = _factory.CreateClient();
+        var response = await client.GetAsync("/v1/candidates/top?title=Software%20Developer&city=Windhoek&limit=5");
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var ranked = await response.Content.ReadFromJsonAsync<List<RankedCandidate>>();
+        ranked.Should().NotBeNullOrEmpty();
+        ranked![0].Name.Should().Be("Dev One");
     }
 
     [Fact]
