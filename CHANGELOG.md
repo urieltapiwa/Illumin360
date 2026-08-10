@@ -5,6 +5,26 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: [S
 
 ## [Unreleased]
 ### Added
+- **Student portal — real actions (RBAC-gated, persisted):** mirrors the professional Save/Dismiss/Apply
+  model into the Students service. `StudentMatch` gains a `Status` (new/saved/dismissed/applied) with
+  `Save()/Dismiss()/Apply()` (re-apply → 409), `Student` gains `Availability` + `SetAvailability()` +
+  `RecordApplication()`. New endpoints `POST /v1/students/me/matches/{id}/{save|dismiss|apply}` and
+  `/me/availability`, gated by a new `student` policy (`client.user` + admins), plus a
+  `StudentMatchStatusAndAvailability` EF migration and DTO `Id`/`Status`/`Availability` fields. `Student.tsx`
+  gains Apply/Save/Dismiss buttons, an availability toggle, and all/saved/applied filter tabs (live-only).
+- **Professional live matches are now actionable:** the marketplace "Open roles" panel can Apply — a real
+  `recruitment.applications` row is recorded via `RecruitmentApplication.Apply` through a new
+  `POST /v1/recruitment/requests/{id}/apply` (gated by the `professional` policy), with duplicate-apply and
+  closed-role guards (409). `Professional.tsx` marketplace cards render a live Apply button.
+- **Integration test infrastructure — auth smoke tests + shared `Illumin360.TestSupport`:** new Testcontainers
+  (PostgreSQL) integration smoke tests for Professionals and Students that exercise the RBAC ladder
+  (401 → 403 → 200 → 409) and availability toggle end-to-end. A shared `BuildingBlocks/TestSupport` library
+  (`TestJwt.ForRoles(...)` + `IWebHostBuilder.UseTestAuth()`) mints Keycloak-shaped HS256 tokens and rewires
+  JWT bearer to trust a local key, so auth-gated endpoints run offline; the Candidates integration tests were
+  fixed to use it (they now send an admin token and hit the test DB). Executable domain unit tests cover the
+  new student match actions and `RecruitmentApplication.Apply`. Tracked `scripts/runtests.sh` (unit + contract)
+  and `scripts/runinteg.sh` (integration, with a Docker/Postgres preflight) per-service runners are added.
+  Full suite green: 60 passed / 1 skipped.
 - **Self-registration hardening — email verification + transactional (compensating) profile creation:**
   new users are now created **unverified** (`emailVerified=false` + a `VERIFY_EMAIL` required action that
   gates the browser login), and Keycloak sends a real verification email via SMTP. A **Mailpit** dev
