@@ -49,6 +49,16 @@ public sealed class StudentRepository(StudentsDbContext db) : IStudentRepository
         _db.Matches.FirstOrDefaultAsync(m => m.Id == matchId && m.StudentId == studentId, cancellationToken);
 
     /// <inheritdoc />
+    public async Task<IReadOnlyList<string>> GetSkillNamesAsync(StudentId studentId, CancellationToken cancellationToken) =>
+        await _db.Skills.AsNoTracking()
+            .Where(s => s.StudentId == studentId)
+            .Select(s => s.Name)
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
+    public void AddSkill(StudentSkill skill) => _db.Skills.Add(skill);
+
+    /// <inheritdoc />
     public Task<int> SaveChangesAsync(CancellationToken cancellationToken) =>
         _db.SaveChangesAsync(cancellationToken);
 

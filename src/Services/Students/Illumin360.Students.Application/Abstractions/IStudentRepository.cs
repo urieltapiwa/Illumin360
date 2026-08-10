@@ -53,6 +53,16 @@ public interface IStudentRepository
     /// <returns>The tracked match, or null.</returns>
     Task<StudentMatch?> GetMatchAsync(StudentId studentId, Guid matchId, CancellationToken cancellationToken);
 
+    /// <summary>Returns the student's current skill names.</summary>
+    /// <param name="studentId">Owning student.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The skill names.</returns>
+    Task<IReadOnlyList<string>> GetSkillNamesAsync(StudentId studentId, CancellationToken cancellationToken);
+
+    /// <summary>Stages a new skill for insertion. Persisted on <see cref="SaveChangesAsync"/>.</summary>
+    /// <param name="skill">The skill to add.</param>
+    void AddSkill(StudentSkill skill);
+
     /// <summary>Commits pending changes (and flushes the outbox in the same transaction).</summary>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The number of state entries written.</returns>

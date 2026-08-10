@@ -46,6 +46,9 @@ export default function Student(_props: { session: Session }) {
   const [matchFilter, setMatchFilter] = useState<"all" | "saved" | "applied">("all");
   const [cv, setCv] = useState<{ fileName: string; uploadedAt: string } | null>(null);
   const [cvBusy, setCvBusy] = useState<"idle" | "uploading" | "error">("idle");
+  const [cvSkills, setCvSkills] = useState<string[] | null>(null);
+  const [cvAdded, setCvAdded] = useState<number | null>(null);
+  const [scanning, setScanning] = useState(false);
   const { t } = useTranslation();
   // Current CV metadata (if any). Reads are open; upload requires an authenticated student.
   useEffect(() => {
@@ -82,6 +85,22 @@ export default function Student(_props: { session: Session }) {
     if (r.ok) {
       const updated = await r.json().catch(() => null);
       setD((prev) => (prev ? { ...prev, matches: prev.matches.map((m) => (m.id === matchId ? { ...m, status: updated?.status ?? action + "d" } : m)) } : prev));
+    }
+  };
+  const applyCvSkills = async () => {
+    setScanning(true);
+    try {
+      const r = await fetch("/api/students/me/cv/apply-skills", { method: "POST", credentials: "same-origin" });
+      if (r.ok) {
+        const v = await r.json().catch(() => null);
+        const detected: string[] = Array.isArray(v?.detected) ? v.detected : [];
+        const added: string[] = Array.isArray(v?.added) ? v.added : [];
+        setCvSkills(detected);
+        setCvAdded(added.length);
+        if (added.length) setD((prev) => (prev ? { ...prev, skills: [...prev.skills, ...added.map((name) => ({ name, level: 60 }))] } : prev));
+      }
+    } finally {
+      setScanning(false);
     }
   };
   const uploadCv = async (files: FileList | null) => {
@@ -171,6 +190,19 @@ export default function Student(_props: { session: Session }) {
                 )}
               </div>
             </div>
+            {live && cv && (
+              <div className="mt-3 border-t border-line/40 pt-3">
+                <button onClick={applyCvSkills} disabled={scanning} className="rounded-lg bg-panel2/70 px-2.5 py-1 text-[11px] font-semibold text-ink-mid hover:text-ink-hi transition disabled:opacity-50">{scanning ? t("student.cv.scanning", "Scanning…") : t("student.cv.scan", "Scan CV & add skills")}</button>
+                {cvSkills && (cvSkills.length > 0 ? (
+                  <div className="mt-2">
+                    <div className="flex flex-wrap gap-1.5">{cvSkills.map((s) => <span key={s} className="chip !text-[10px] !text-brand-bright !border-brand/30">{s}</span>)}</div>
+                    {cvAdded !== null && <div className="mt-1.5 text-[11px] text-ink-lo">{cvAdded > 0 ? t("student.cv.added", "Added {{n}} new skill(s) to your profile.", { n: cvAdded }) : t("student.cv.allKnown", "All detected skills are already on your profile.")}</div>}
+                  </div>
+                ) : (
+                  <span className="ml-2 text-[11px] text-ink-lo">{t("student.cv.noSkills", "No known skills detected.")}</span>
+                ))}
+              </div>
+            )}
           </motion.section>
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
             <motion.section variants={fade} className="card p-5 xl:col-span-2">

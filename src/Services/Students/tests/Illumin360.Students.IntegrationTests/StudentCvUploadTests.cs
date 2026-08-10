@@ -91,6 +91,46 @@ public sealed class StudentCvUploadTests : IAsyncLifetime
         (await download.Content.ReadAsByteArrayAsync()).Should().NotBeEmpty();
     }
 
+    [Fact]
+    public async Task Apply_skills_adds_detected_skills_to_the_profile()
+    {
+        var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", TestJwt.ForRoles(["client.user"]));
+
+        using var content = DocxForm("Aspiring data engineer learning Python, SQL and Docker.");
+        (await client.PostAsync("/v1/students/me/cv", content)).StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var apply = await client.PostAsync("/v1/students/me/cv/apply-skills", content: null);
+        apply.StatusCode.Should().Be(HttpStatusCode.OK);
+        var dto = await apply.Content.ReadFromJsonAsync<AppliedSkills>();
+        dto!.Added.Should().Contain("Docker");
+
+        using var doc = System.Text.Json.JsonDocument.Parse(await (await client.GetAsync("/v1/students/me")).Content.ReadAsStringAsync());
+        var names = doc.RootElement.GetProperty("skills").EnumerateArray().Select(s => s.GetProperty("name").GetString()).ToList();
+        names.Should().Contain("Docker");
+    }
+
+    private sealed record AppliedSkills(List<string> Detected, List<string> Added);
+
+    private static MultipartFormDataContent DocxForm(string text)
+    {
+        using var ms = new MemoryStream();
+        using (var d = DocumentFormat.OpenXml.Packaging.WordprocessingDocument.Create(ms, DocumentFormat.OpenXml.WordprocessingDocumentType.Document))
+        {
+            var main = d.AddMainDocumentPart();
+            main.Document = new DocumentFormat.OpenXml.Wordprocessing.Document(
+                new DocumentFormat.OpenXml.Wordprocessing.Body(
+                    new DocumentFormat.OpenXml.Wordprocessing.Paragraph(
+                        new DocumentFormat.OpenXml.Wordprocessing.Run(
+                            new DocumentFormat.OpenXml.Wordprocessing.Text(text)))));
+            main.Document.Save();
+        }
+
+        var file = new ByteArrayContent(ms.ToArray());
+        file.Headers.ContentType = new MediaTypeHeaderValue("application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+        return new MultipartFormDataContent { { file, "file", "cv.docx" } };
+    }
+
     private static MultipartFormDataContent PdfForm()
     {
         var bytes = Encoding.ASCII.GetBytes("%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF");
