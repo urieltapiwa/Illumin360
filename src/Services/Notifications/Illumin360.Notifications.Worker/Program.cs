@@ -23,6 +23,8 @@ builder.Services.AddIllumin360Email(builder.Configuration);
 builder.Services.AddMassTransit(x =>
 {
     x.AddConsumer<CandidateRegisteredConsumer>();
+    x.AddConsumer<ApplicationSubmittedConsumer>();
+    x.AddConsumer<ApplicationStatusChangedConsumer>();
     x.SetKebabCaseEndpointNameFormatter();
     x.UsingRabbitMq((context, cfg) =>
     {

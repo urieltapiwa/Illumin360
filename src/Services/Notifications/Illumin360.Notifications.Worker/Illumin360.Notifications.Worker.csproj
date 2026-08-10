@@ -11,5 +11,6 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\BuildingBlocks\Email\Illumin360.Email.csproj" />
+    <ProjectReference Include="..\..\Recruitment\Illumin360.Recruitment.Contracts\Illumin360.Recruitment.Contracts.csproj" />
   </ItemGroup>
 </Project>

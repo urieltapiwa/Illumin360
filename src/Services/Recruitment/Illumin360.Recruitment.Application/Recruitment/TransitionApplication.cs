@@ -2,6 +2,7 @@ using Illumin360.Recruitment.Application.Abstractions;
 using Illumin360.Recruitment.Domain;
 using Illumin360.SharedKernel;
 using ApplicationId = Illumin360.Recruitment.Domain.ApplicationId;
+using IntegrationEvents = Illumin360.Recruitment.IntegrationEvents;
 
 namespace Illumin360.Recruitment.Application.Recruitment;
 
@@ -15,10 +16,12 @@ public sealed record RejectApplicationCommand(Guid ApplicationId) : ICommand<App
 
 /// <summary>Handles <see cref="AdvanceApplicationCommand"/>.</summary>
 /// <param name="repository">The recruitment repository.</param>
-public sealed class AdvanceApplicationCommandHandler(IRecruitmentRepository repository)
+/// <param name="eventPublisher">Integration-event publisher (transactional outbox).</param>
+public sealed class AdvanceApplicationCommandHandler(IRecruitmentRepository repository, IIntegrationEventPublisher eventPublisher)
     : ICommandHandler<AdvanceApplicationCommand, ApplicationDto>
 {
     private readonly IRecruitmentRepository _repository = repository;
+    private readonly IIntegrationEventPublisher _eventPublisher = eventPublisher;
 
     /// <inheritdoc />
     public async Task<Result<ApplicationDto>> HandleAsync(AdvanceApplicationCommand command, CancellationToken cancellationToken)
@@ -37,6 +40,10 @@ public sealed class AdvanceApplicationCommandHandler(IRecruitmentRepository repo
             return advanced.Error!;
         }
 
+        await _eventPublisher.PublishAsync(
+            new IntegrationEvents.ApplicationStatusChanged(
+                application.Id.Value, application.TalentId, application.TalentType, application.Status, DateTimeOffset.UtcNow),
+            cancellationToken).ConfigureAwait(false);
         await _repository.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         return ApplicationDto.FromDomain(application);
     }
@@ -44,10 +51,12 @@ public sealed class AdvanceApplicationCommandHandler(IRecruitmentRepository repo
 
 /// <summary>Handles <see cref="RejectApplicationCommand"/>.</summary>
 /// <param name="repository">The recruitment repository.</param>
-public sealed class RejectApplicationCommandHandler(IRecruitmentRepository repository)
+/// <param name="eventPublisher">Integration-event publisher (transactional outbox).</param>
+public sealed class RejectApplicationCommandHandler(IRecruitmentRepository repository, IIntegrationEventPublisher eventPublisher)
     : ICommandHandler<RejectApplicationCommand, ApplicationDto>
 {
     private readonly IRecruitmentRepository _repository = repository;
+    private readonly IIntegrationEventPublisher _eventPublisher = eventPublisher;
 
     /// <inheritdoc />
     public async Task<Result<ApplicationDto>> HandleAsync(RejectApplicationCommand command, CancellationToken cancellationToken)
@@ -66,6 +75,10 @@ public sealed class RejectApplicationCommandHandler(IRecruitmentRepository repos
             return rejected.Error!;
         }
 
+        await _eventPublisher.PublishAsync(
+            new IntegrationEvents.ApplicationStatusChanged(
+                application.Id.Value, application.TalentId, application.TalentType, application.Status, DateTimeOffset.UtcNow),
+            cancellationToken).ConfigureAwait(false);
         await _repository.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         return ApplicationDto.FromDomain(application);
     }

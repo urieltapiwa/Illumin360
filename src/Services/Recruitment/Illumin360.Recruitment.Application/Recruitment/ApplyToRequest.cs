@@ -1,6 +1,7 @@
 using Illumin360.Recruitment.Application.Abstractions;
 using Illumin360.Recruitment.Domain;
 using Illumin360.SharedKernel;
+using IntegrationEvents = Illumin360.Recruitment.IntegrationEvents;
 
 namespace Illumin360.Recruitment.Application.Recruitment;
 
@@ -15,10 +16,12 @@ public sealed record ApplyToRequestCommand(
 
 /// <summary>Handles <see cref="ApplyToRequestCommand"/> by recording a fresh application against the request.</summary>
 /// <param name="repository">The recruitment repository.</param>
-public sealed class ApplyToRequestCommandHandler(IRecruitmentRepository repository)
+/// <param name="eventPublisher">Integration-event publisher (transactional outbox).</param>
+public sealed class ApplyToRequestCommandHandler(IRecruitmentRepository repository, IIntegrationEventPublisher eventPublisher)
     : ICommandHandler<ApplyToRequestCommand, ApplicationDto>
 {
     private readonly IRecruitmentRepository _repository = repository;
+    private readonly IIntegrationEventPublisher _eventPublisher = eventPublisher;
 
     /// <inheritdoc />
     public async Task<Result<ApplicationDto>> HandleAsync(ApplyToRequestCommand command, CancellationToken cancellationToken)
@@ -50,6 +53,13 @@ public sealed class ApplyToRequestCommandHandler(IRecruitmentRepository reposito
         var talentType = string.IsNullOrWhiteSpace(command.TalentType) ? "professional" : command.TalentType.Trim();
         var application = RecruitmentApplication.Apply(requestId, command.TalentId, talentType, DateTimeOffset.UtcNow);
         _repository.AddApplication(application);
+
+        // Staged into the outbox in the same transaction as the application (transactional outbox).
+        await _eventPublisher.PublishAsync(
+            new IntegrationEvents.ApplicationSubmitted(
+                application.Id.Value, requestId.Value, command.TalentId, talentType, application.AppliedAt),
+            cancellationToken).ConfigureAwait(false);
+
         await _repository.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         return ApplicationDto.FromDomain(application);
