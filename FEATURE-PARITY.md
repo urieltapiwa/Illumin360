@@ -104,13 +104,13 @@ flip the status to ✅ (add the commit/PR ref).
 |---|---|---|
 | Event-driven notifications (outbox) | ✅ | MassTransit outbox + Notifications worker |
 | Transactional email (templated) | ✅ | Shared `Illumin360.Email` (MailKit/SMTP → Mailpit) + templates; Notifications worker emails on registration, application received, and application status change (recruitment events via the outbox) |
-| In-app notification center | ⬜ | |
+| In-app notification center | ✅ | Professional in-app notifications (list / mark-read / mark-all) fed by recruitment events (status change, job alerts); portal panel with unread count |
 | In-app messaging (candidate↔employer) | ⬜ | |
 | Bulk email / campaigns | ⬜ | |
 
 - [x] Email infrastructure — shared `Illumin360.Email` (MailKit SMTP → Mailpit) + templates; Notifications worker sends a **welcome email on registration** (verified end-to-end with a Testcontainers Mailpit)
 - [x] Templated emails on application received / status change — Recruitment publishes `ApplicationSubmitted` / `ApplicationStatusChanged` via the outbox; Notifications worker consumers send the emails
-- [ ] In-app notification center
+- [x] In-app notification center — Professionals consume recruitment events (status change, job alerts) into a `professional_notifications` store; `/me/notifications` list + mark-read/mark-all + portal panel with unread count
 - [ ] Direct messaging between employer and candidate
 
 ## H. Employer / recruiter tooling
@@ -165,7 +165,7 @@ flip the status to ✅ (add the commit/PR ref).
 
 ### Progress
 - Total build items: 32
-- Done: 15
+- Done: 16
 - In progress: 0
 
 **Changelog of ticks**
@@ -187,5 +187,6 @@ flip the status to ✅ (add the commit/PR ref).
 - Scheduled job-alert digest sender — JobAlertScheduler → JobAlertDigest event → worker emails matches (2026-08-10).
 - Recruiter kanban pipeline board in the Admin portal (stage columns + advance/reject) (2026-08-10).
 - Interviews & scheduling — schedule/feedback/cancel + .ics invite (`interviews` table) (2026-08-10).
+- In-app notification center — Professionals consume recruitment events → notifications store + portal panel (2026-08-10).
 
 _Update this file as items are ticked; link the commit/PR that delivered each._

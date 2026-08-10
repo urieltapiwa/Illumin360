@@ -89,6 +89,7 @@ export default function Professional(_props: { session: Session }) {
   const [matchFilter, setMatchFilter] = useState<"all" | "saved" | "applied">("all");
   const [myApps, setMyApps] = useState<{ id: string; roleTitle: string; city: string; status: string; appliedAt: string; decidedAt: string | null }[] | null>(null);
   const [savedSearches, setSavedSearches] = useState<{ id: string; label: string; city: string | null; keyword: string | null; alertsEnabled: boolean }[] | null>(null);
+  const [notifications, setNotifications] = useState<{ id: string; kind: string; text: string; isRead: boolean; createdAt: string }[] | null>(null);
   const [ssForm, setSsForm] = useState({ label: "", city: "", keyword: "" });
   // Open-roles the professional has applied to this session (marketplace panel is otherwise stateless).
   const [appliedRoles, setAppliedRoles] = useState<Record<string, "pending" | "done" | "error">>({});
@@ -153,6 +154,10 @@ export default function Professional(_props: { session: Session }) {
       .then((r) => (r.ok ? r.json() : null))
       .then((v) => { if (Array.isArray(v)) setSavedSearches(v); })
       .catch(() => { /* recruitment unavailable */ });
+    fetch("/api/professionals/me/notifications")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((v) => { if (Array.isArray(v)) setNotifications(v); })
+      .catch(() => { /* none */ });
   }, [d?.id]);
   const { t } = useTranslation();
   if (!d) return <div className="grid place-items-center h-screen text-ink-mid font-mono text-sm animate-pulse">{t("pro.loading")}</div>;
@@ -226,6 +231,10 @@ export default function Professional(_props: { session: Session }) {
     } catch {
       setAppliedRoles((prev) => ({ ...prev, [roleId]: "error" }));
     }
+  };
+  const markAllNotificationsRead = async () => {
+    const r = await fetch("/api/professionals/me/notifications/read-all", { method: "POST", credentials: "same-origin" });
+    if (r.ok) setNotifications((prev) => (prev ? prev.map((n) => ({ ...n, isRead: true })) : prev));
   };
   // Saved searches + job alerts (Recruitment service).
   const saveSearch = async () => {
@@ -477,6 +486,28 @@ export default function Professional(_props: { session: Session }) {
                 </div>
               </motion.section>
             </div>
+          )}
+
+          {/* in-app notifications */}
+          {notifications && notifications.length > 0 && (
+            <motion.section variants={fade} className="card p-5">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <h3 className="font-display text-[15px] font-bold text-ink-hi">{t("pro.notif.title", "Notifications")}</h3>
+                  {notifications.some((n) => !n.isRead) && <span className="chip !text-[10px] !text-brand-bright !border-brand/30">{notifications.filter((n) => !n.isRead).length} {t("pro.notif.new", "new")}</span>}
+                </div>
+                {live && notifications.some((n) => !n.isRead) && <button onClick={markAllNotificationsRead} className="text-[11px] text-ink-lo hover:text-ink-hi transition">{t("pro.notif.markAll", "Mark all read")}</button>}
+              </div>
+              <div className="space-y-1.5">
+                {notifications.slice(0, 8).map((n) => (
+                  <div key={n.id} className={`flex items-center gap-3 rounded-lg px-3 py-2 ${n.isRead ? "bg-panel2/30" : "bg-brand/[0.06] border border-brand/20"}`}>
+                    <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${n.isRead ? "bg-ink-lo" : "bg-brand-bright"}`} />
+                    <span className="text-[12px] text-ink-mid flex-1">{n.text}</span>
+                    <span className="text-[10px] text-ink-lo num whitespace-nowrap">{new Date(n.createdAt).toLocaleDateString()}</span>
+                  </div>
+                ))}
+              </div>
+            </motion.section>
           )}
 
           {/* my applications: live status timeline */}

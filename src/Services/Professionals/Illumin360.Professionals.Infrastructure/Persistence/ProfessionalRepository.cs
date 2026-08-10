@@ -59,6 +59,38 @@ public sealed class ProfessionalRepository(ProfessionalsDbContext db) : IProfess
     public void AddSkill(ProfessionalSkill skill) => _db.Skills.Add(skill);
 
     /// <inheritdoc />
+    public void AddNotification(ProfessionalNotification notification) => _db.Notifications.Add(notification);
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<ProfessionalNotification>> ListNotificationsAsync(ProfessionalId professionalId, bool unreadOnly, CancellationToken cancellationToken)
+    {
+        var query = _db.Notifications.AsNoTracking().Where(n => n.ProfessionalId == professionalId);
+        if (unreadOnly)
+        {
+            query = query.Where(n => !n.IsRead);
+        }
+
+        return await query.OrderByDescending(n => n.CreatedAt).Take(50).ToListAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public Task<ProfessionalNotification?> GetNotificationAsync(Guid id, CancellationToken cancellationToken) =>
+        _db.Notifications.FirstOrDefaultAsync(n => n.Id == id, cancellationToken);
+
+    /// <inheritdoc />
+    public async Task<int> MarkAllNotificationsReadAsync(ProfessionalId professionalId, CancellationToken cancellationToken)
+    {
+        var unread = await _db.Notifications.Where(n => n.ProfessionalId == professionalId && !n.IsRead).ToListAsync(cancellationToken).ConfigureAwait(false);
+        foreach (var n in unread)
+        {
+            n.MarkRead();
+        }
+
+        await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        return unread.Count;
+    }
+
+    /// <inheritdoc />
     public Task<int> SaveChangesAsync(CancellationToken cancellationToken) =>
         _db.SaveChangesAsync(cancellationToken);
 

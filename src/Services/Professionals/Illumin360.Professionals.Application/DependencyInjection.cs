@@ -42,6 +42,15 @@ public static class DependencyInjection
         services.AddScoped<
             ICommandHandler<ApplyCvSkillsCommand, AppliedSkillsDto>,
             ApplyCvSkillsCommandHandler>();
+        services.AddScoped<
+            IQueryHandler<GetNotificationsQuery, IReadOnlyList<NotificationDto>>,
+            GetNotificationsQueryHandler>();
+        services.AddScoped<
+            ICommandHandler<MarkNotificationReadCommand, bool>,
+            MarkNotificationReadCommandHandler>();
+        services.AddScoped<
+            ICommandHandler<MarkAllNotificationsReadCommand, int>,
+            MarkAllNotificationsReadCommandHandler>();
         return services;
     }
 }
