@@ -46,6 +46,9 @@ public sealed class RecruitmentDbContext(DbContextOptions<RecruitmentDbContext> 
     /// <summary>Requisition tags set.</summary>
     public DbSet<RequisitionTag> RequisitionTags => Set<RequisitionTag>();
 
+    /// <summary>Requisition approval-workflow set.</summary>
+    public DbSet<RequisitionApproval> RequisitionApprovals => Set<RequisitionApproval>();
+
     /// <inheritdoc />
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -246,6 +249,25 @@ public sealed class RecruitmentDbContext(DbContextOptions<RecruitmentDbContext> 
             b.Property(t => t.Label).HasColumnName("label").HasMaxLength(40);
             b.HasIndex(t => new { t.RequestId, t.Label }).IsUnique();
             b.Ignore(t => t.DomainEvents);
+        });
+
+        var approvalConverter = new ValueConverter<ApprovalStatus, string>(
+            v => v.ToString(),
+            v => Enum.Parse<ApprovalStatus>(v));
+
+        modelBuilder.Entity<RequisitionApproval>(b =>
+        {
+            b.ToTable("requisition_approvals");
+            b.HasKey(a => a.Id);
+            b.Property(a => a.Id).HasColumnName("id");
+            b.Property(a => a.RequestId).HasColumnName("request_id");
+            b.Property(a => a.Status).HasColumnName("status").HasConversion(approvalConverter).HasMaxLength(20);
+            b.Property(a => a.Approver).HasColumnName("approver").HasMaxLength(160);
+            b.Property(a => a.Reason).HasColumnName("reason").HasMaxLength(500);
+            b.Property(a => a.SubmittedAt).HasColumnName("submitted_at");
+            b.Property(a => a.DecidedAt).HasColumnName("decided_at");
+            b.HasIndex(a => a.RequestId).IsUnique();
+            b.Ignore(a => a.DomainEvents);
         });
 
         modelBuilder.Entity<RecruitmentApplication>(b =>

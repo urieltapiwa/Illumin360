@@ -177,6 +177,74 @@ v1.MapDelete("/requests/{id:guid}/tags/{label}", async (
     .ProducesProblem(StatusCodes.Status401Unauthorized)
     .ProducesProblem(StatusCodes.Status403Forbidden);
 
+// --- Requisition approval workflow (draft → submitted → approved/rejected) ---
+v1.MapGet("/requests/{id:guid}/approval", async (
+        Guid id,
+        IQueryHandler<GetApprovalQuery, ApprovalDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new GetApprovalQuery(id), ct);
+        return result.ToHttpResult();
+    })
+    .WithName("GetRequisitionApproval")
+    .WithSummary("Get a requisition's approval state.")
+    .Produces<ApprovalDto>(StatusCodes.Status200OK);
+
+v1.MapPost("/requests/{id:guid}/approval/submit", async (
+        Guid id,
+        ICommandHandler<TransitionApprovalCommand, ApprovalDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new TransitionApprovalCommand(id, ApprovalAction.Submit, null, null), ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminWritePolicy)
+    .WithName("SubmitRequisitionForApproval")
+    .WithSummary("Submit a draft/rejected requisition for approval. Requires an admin (write) role.")
+    .Produces<ApprovalDto>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden)
+    .ProducesProblem(StatusCodes.Status404NotFound)
+    .ProducesProblem(StatusCodes.Status409Conflict);
+
+v1.MapPost("/requests/{id:guid}/approval/approve", async (
+        Guid id,
+        ApprovalDecisionBody body,
+        ICommandHandler<TransitionApprovalCommand, ApprovalDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new TransitionApprovalCommand(id, ApprovalAction.Approve, body.Approver, null), ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminWritePolicy)
+    .WithName("ApproveRequisition")
+    .WithSummary("Approve a submitted requisition. Requires an admin (write) role.")
+    .Produces<ApprovalDto>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status400BadRequest)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden)
+    .ProducesProblem(StatusCodes.Status404NotFound)
+    .ProducesProblem(StatusCodes.Status409Conflict);
+
+v1.MapPost("/requests/{id:guid}/approval/reject", async (
+        Guid id,
+        ApprovalRejectBody body,
+        ICommandHandler<TransitionApprovalCommand, ApprovalDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new TransitionApprovalCommand(id, ApprovalAction.Reject, body.Approver, body.Reason), ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminWritePolicy)
+    .WithName("RejectRequisition")
+    .WithSummary("Reject a submitted requisition with a reason. Requires an admin (write) role.")
+    .Produces<ApprovalDto>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status400BadRequest)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden)
+    .ProducesProblem(StatusCodes.Status404NotFound)
+    .ProducesProblem(StatusCodes.Status409Conflict);
+
 v1.MapPost("/requests", async (
         PostRecruitmentRequestCommand command,
         ICommandHandler<PostRecruitmentRequestCommand, RecruitmentRequestDto> handler,
@@ -803,6 +871,15 @@ internal sealed record RequisitionDetailBody(int? SalaryMin, int? SalaryMax, str
 /// <summary>Request body for adding a requisition tag.</summary>
 /// <param name="Label">The tag label.</param>
 internal sealed record RequisitionTagBody(string Label);
+
+/// <summary>Request body for approving a requisition.</summary>
+/// <param name="Approver">The approver's name.</param>
+internal sealed record ApprovalDecisionBody(string Approver);
+
+/// <summary>Request body for rejecting a requisition.</summary>
+/// <param name="Approver">The approver's name.</param>
+/// <param name="Reason">The rejection reason.</param>
+internal sealed record ApprovalRejectBody(string Approver, string Reason);
 
 /// <summary>Request body for starting an onboarding checklist.</summary>
 /// <param name="RoleTitle">The hired role title.</param>

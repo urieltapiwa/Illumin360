@@ -42,12 +42,12 @@ flip the status to ✅ (add the commit/PR ref).
 | Job detail | ✅ | `GET /requests/{id}` |
 | Salary range / remote flag / category tags on a job | ✅ | Service-owned `requisition_details` (+ `requisition_tags`) side-tables + `GET/PUT /v1/recruitment/requests/{id}/details` and tag add/remove; admin pipeline role-details editor (salary range, employment type, remote, tags) |
 | Public careers site (SEO job pages) | ✅ | Server-rendered `/careers` listing + `/careers/{id}` detail with schema.org JobPosting JSON-LD (see branded careers page in H) |
-| Job approval workflow | ⬜ | |
+| Job approval workflow | ✅ | `requisition_approvals` side-table + `GET` / `POST …/approval/{submit\|approve\|reject}` — draft→submitted→approved/rejected state machine (409 guards, resubmit after reject); admin pipeline approval controls |
 | Job templates | ⬜ | |
 
 - [x] Extend requisition: salary range, employment type, remote flag, tags — service-owned `RequisitionDetail` (+ `RequisitionTag`) side-tables keyed 1:1 by the externally-seeded request id; `GET/PUT /v1/recruitment/requests/{id}/details` (upsert, salary-range + type validation) and `POST/DELETE …/tags/{label}` (idempotent); unit tests; admin pipeline role-details editor (salary min/max, employment type, remote toggle, tag chips)
 - [x] Public careers/job-listing pages (SSR/SEO) — server-rendered `/careers` (open-role listing) + `/careers/{id}` (role detail) from the Recruitment service, with descriptive title/meta/Open Graph/canonical tags and schema.org JSON-LD (`ItemList` on the index, `JobPosting` on detail), HTML-escaped; exposed publicly through the gateway (`/careers/**` → `/v1/recruitment/careers/**`). Pure `CareersHtml` renderer unit-tested
-- [ ] Requisition approval workflow
+- [x] Requisition approval workflow — `RequisitionApproval` aggregate + `requisition_approvals` side-table (unique per request); `GET /v1/recruitment/requests/{id}/approval` + `POST …/approval/submit|approve|reject` with a draft→submitted→approved/rejected state machine (409 guards, reason required on reject, resubmit after reject), writes admin-gated; unit tests; admin pipeline approval status + submit/approve/reject controls
 
 ## C. Applications / pipeline (ATS core)
 | Feature | Status | Notes |
@@ -173,7 +173,7 @@ flip the status to ✅ (add the commit/PR ref).
 
 ### Progress
 - Total build items: 48
-- Done: 34
+- Done: 35
 - In progress: 0
 
 **Changelog of ticks**
