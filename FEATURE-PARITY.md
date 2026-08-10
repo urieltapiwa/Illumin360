@@ -70,13 +70,13 @@ flip the status to ✅ (add the commit/PR ref).
 | Personalized recommendations | ✅ | Professional matches and marketplace open roles both ranked by engine score (`/me/role-scores`) |
 | Saved searches | ✅ | Talent saved searches (create/list/delete + run-results) — Recruitment `saved_searches` table + professional-portal panel |
 | Job alerts / email digests | ✅ | Per-search alerts opt-in + a scheduled `JobAlertScheduler` that runs alert-enabled searches → `JobAlertDigest` event → Notifications worker emails the matches |
-| Talent pools / shortlists | ⬜ | |
+| Talent pools / shortlists | ✅ | Named recruiter pools (`/v1/candidates/pools`) — create + add/remove candidates (dedup) + enriched members list |
 
 - [x] Matching engine (weighted city + role + skills) producing real scores — shared `Illumin360.Matching`, applied to **professional & student** matches (ranked by score) and the professional marketplace panel
 - [x] "Recommended roles for you" — marketplace open roles ranked per professional (`POST /me/role-scores`, match % shown/sorted) — and the employer flip side, "top candidates for a role" (`GET /v1/candidates/top?title=&city=`)
 - [x] Saved searches — talent CRUD + run-results (`/v1/recruitment/saved-searches`), professional-portal panel, plus a per-search **job-alerts opt-in** toggle
 - [x] Scheduled alert-digest sender — `JobAlertScheduler` background service runs alert-enabled searches on an interval, publishes `JobAlertDigest` (outbox) → Notifications worker emails the matching roles
-- [ ] Shortlists / talent pools
+- [x] Shortlists / talent pools — named recruiter pools with create + add/remove candidates (dedup guard) + members listing (`/v1/candidates/pools`), admin-gated writes. Recruiter UI is a follow-up
 
 ## E. Interviews & scheduling
 | Feature | Status | Notes |
@@ -165,7 +165,7 @@ flip the status to ✅ (add the commit/PR ref).
 
 ### Progress
 - Total build items: 32
-- Done: 16
+- Done: 17
 - In progress: 0
 
 **Changelog of ticks**
@@ -188,5 +188,6 @@ flip the status to ✅ (add the commit/PR ref).
 - Recruiter kanban pipeline board in the Admin portal (stage columns + advance/reject) (2026-08-10).
 - Interviews & scheduling — schedule/feedback/cancel + .ics invite (`interviews` table) (2026-08-10).
 - In-app notification center — Professionals consume recruitment events → notifications store + portal panel (2026-08-10).
+- Shortlists / talent pools — named recruiter pools with add/remove candidates (Candidates service) (2026-08-10).
 
 _Update this file as items are ticked; link the commit/PR that delivered each._

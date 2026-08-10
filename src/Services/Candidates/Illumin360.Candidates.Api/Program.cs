@@ -173,7 +173,87 @@ v1.MapGet("/{id:guid}/cv/download", async (
     .Produces(StatusCodes.Status200OK)
     .ProducesProblem(StatusCodes.Status404NotFound);
 
+// --- Talent pools / shortlists (recruiter) ---
+v1.MapGet("/pools", async (
+        IQueryHandler<GetPoolsQuery, IReadOnlyList<TalentPoolDto>> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new GetPoolsQuery(), ct);
+        return result.ToHttpResult();
+    })
+    .WithName("GetTalentPools")
+    .WithSummary("List recruiter talent pools (shortlists).")
+    .Produces<IReadOnlyList<TalentPoolDto>>(StatusCodes.Status200OK);
+
+v1.MapGet("/pools/{id:guid}/members", async (
+        Guid id,
+        IQueryHandler<GetPoolMembersQuery, IReadOnlyList<PoolMemberDto>> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new GetPoolMembersQuery(id), ct);
+        return result.ToHttpResult();
+    })
+    .WithName("GetPoolMembers")
+    .WithSummary("List a pool's candidates.")
+    .Produces<IReadOnlyList<PoolMemberDto>>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status404NotFound);
+
+v1.MapPost("/pools", async (
+        CreatePoolBody body,
+        ICommandHandler<CreateTalentPoolCommand, TalentPoolDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new CreateTalentPoolCommand(body.Name), ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminWritePolicy)
+    .WithName("CreateTalentPool")
+    .WithSummary("Create a talent pool. Requires an admin (write) role.")
+    .Produces<TalentPoolDto>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status400BadRequest)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden);
+
+v1.MapPost("/pools/{id:guid}/members/{candidateId:guid}", async (
+        Guid id,
+        Guid candidateId,
+        ICommandHandler<AddToPoolCommand, bool> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new AddToPoolCommand(id, candidateId), ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminWritePolicy)
+    .WithName("AddToPool")
+    .WithSummary("Add a candidate to a pool. Requires an admin (write) role.")
+    .Produces<bool>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden)
+    .ProducesProblem(StatusCodes.Status404NotFound)
+    .ProducesProblem(StatusCodes.Status409Conflict);
+
+v1.MapDelete("/pools/{id:guid}/members/{candidateId:guid}", async (
+        Guid id,
+        Guid candidateId,
+        ICommandHandler<RemoveFromPoolCommand, bool> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new RemoveFromPoolCommand(id, candidateId), ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminWritePolicy)
+    .WithName("RemoveFromPool")
+    .WithSummary("Remove a candidate from a pool. Requires an admin (write) role.")
+    .Produces<bool>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden)
+    .ProducesProblem(StatusCodes.Status404NotFound);
+
 app.Run();
+
+/// <summary>Request body for creating a talent pool.</summary>
+/// <param name="Name">Pool name.</param>
+internal sealed record CreatePoolBody(string Name);
 
 /// <summary>Exposed so integration tests can use <c>WebApplicationFactory</c> (charter Part 14).</summary>
 public partial class Program;

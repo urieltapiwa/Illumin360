@@ -59,6 +59,31 @@ public sealed class RegisterCandidateApiTests : IAsyncLifetime
         await _postgres.DisposeAsync();
     }
 
+    [Fact]
+    public async Task Talent_pool_add_then_list_members()
+    {
+        var admin = AdminClient();
+        var reg = await admin.PostAsJsonAsync("/v1/candidates", new RegisterCandidateCommand("Pool", "Member", "Windhoek", "Namibian"));
+        var candidate = await reg.Content.ReadFromJsonAsync<CandidateDto>();
+
+        var poolResp = await admin.PostAsJsonAsync("/v1/candidates/pools", new { name = "Shortlist A" });
+        poolResp.StatusCode.Should().Be(HttpStatusCode.OK);
+        var pool = await poolResp.Content.ReadFromJsonAsync<Pool>();
+
+        var add = await admin.PostAsync($"/v1/candidates/pools/{pool!.Id}/members/{candidate!.Id}", content: null);
+        add.StatusCode.Should().Be(HttpStatusCode.OK);
+        // Re-adding conflicts.
+        (await admin.PostAsync($"/v1/candidates/pools/{pool.Id}/members/{candidate.Id}", content: null)).StatusCode.Should().Be(HttpStatusCode.Conflict);
+
+        var client = _factory.CreateClient();
+        var members = await client.GetFromJsonAsync<List<PoolMember>>($"/v1/candidates/pools/{pool.Id}/members");
+        members.Should().ContainSingle(m => m.CandidateId == candidate.Id && m.Name == "Pool Member");
+    }
+
+    private sealed record Pool(Guid Id, string Name, int MemberCount);
+
+    private sealed record PoolMember(Guid CandidateId, string Name, string City);
+
     private sealed record RankedCandidate(Guid Id, string Name, string City, string? Headline, int Score);
 
     // A client carrying an admin (write) bearer token — required to POST a new candidate.

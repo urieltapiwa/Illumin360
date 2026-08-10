@@ -13,6 +13,12 @@ public sealed class CandidatesDbContext(DbContextOptions<CandidatesDbContext> op
     /// <summary>The candidate aggregate set.</summary>
     public DbSet<Candidate> Candidates => Set<Candidate>();
 
+    /// <summary>Recruiter talent pools (shortlists).</summary>
+    public DbSet<TalentPool> TalentPools => Set<TalentPool>();
+
+    /// <summary>Talent-pool memberships.</summary>
+    public DbSet<TalentPoolMember> TalentPoolMembers => Set<TalentPoolMember>();
+
     /// <inheritdoc />
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -46,6 +52,29 @@ public sealed class CandidatesDbContext(DbContextOptions<CandidatesDbContext> op
             b.Ignore(c => c.HasCv);
             b.Ignore(c => c.DomainEvents);
             b.HasIndex(c => c.City);
+        });
+
+        modelBuilder.Entity<TalentPool>(b =>
+        {
+            b.ToTable("talent_pools");
+            b.HasKey(p => p.Id);
+            b.Property(p => p.Id).HasColumnName("id").HasConversion(id => id.Value, value => new TalentPoolId(value));
+            b.Property(p => p.Name).HasColumnName("name").HasMaxLength(120);
+            b.Property(p => p.CreatedAt).HasColumnName("created_at");
+            b.Ignore(p => p.DomainEvents);
+        });
+
+        modelBuilder.Entity<TalentPoolMember>(b =>
+        {
+            b.ToTable("talent_pool_members");
+            b.HasKey(m => m.Id);
+            b.Property(m => m.Id).HasColumnName("id");
+            b.Property(m => m.PoolId).HasColumnName("pool_id").HasConversion(id => id.Value, value => new TalentPoolId(value));
+            b.Property(m => m.CandidateId).HasColumnName("candidate_id").HasConversion(id => id.Value, value => new CandidateId(value));
+            b.Property(m => m.AddedAt).HasColumnName("added_at");
+            b.HasIndex(m => m.PoolId);
+            b.HasIndex(m => new { m.PoolId, m.CandidateId }).IsUnique();
+            b.Ignore(m => m.DomainEvents);
         });
     }
 }

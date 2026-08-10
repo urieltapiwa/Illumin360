@@ -34,4 +34,36 @@ public interface ICandidateRepository
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Aggregate candidate statistics.</returns>
     Task<CandidateStatsDto> GetStatsAsync(CancellationToken cancellationToken);
+
+    /// <summary>Stages a new talent pool for insertion.</summary>
+    /// <param name="pool">The pool to add.</param>
+    void AddPool(TalentPool pool);
+
+    /// <summary>Lists all talent pools, newest first.</summary>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<IReadOnlyList<TalentPool>> ListPoolsAsync(CancellationToken cancellationToken);
+
+    /// <summary>Loads a talent pool by id, or null if not present.</summary>
+    /// <param name="id">The pool id.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<TalentPool?> GetPoolAsync(TalentPoolId id, CancellationToken cancellationToken);
+
+    /// <summary>Stages a new pool membership for insertion.</summary>
+    /// <param name="member">The membership to add.</param>
+    void AddPoolMember(TalentPoolMember member);
+
+    /// <summary>Removes a pool membership.</summary>
+    /// <param name="member">The membership to remove.</param>
+    void RemovePoolMember(TalentPoolMember member);
+
+    /// <summary>Finds a candidate's membership in a pool, or null.</summary>
+    /// <param name="poolId">The pool id.</param>
+    /// <param name="candidateId">The candidate id.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<TalentPoolMember?> GetPoolMemberAsync(TalentPoolId poolId, CandidateId candidateId, CancellationToken cancellationToken);
+
+    /// <summary>Lists a pool's memberships.</summary>
+    /// <param name="poolId">The pool id.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<IReadOnlyList<TalentPoolMember>> ListPoolMembersAsync(TalentPoolId poolId, CancellationToken cancellationToken);
 }

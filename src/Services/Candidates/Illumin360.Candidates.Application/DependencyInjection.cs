@@ -20,6 +20,11 @@ public static class DependencyInjection
         services.AddScoped<IQueryHandler<GetCandidateCvMetadataQuery, CvDto>, GetCandidateCvMetadataQueryHandler>();
         services.AddScoped<IQueryHandler<DownloadCandidateCvQuery, CvContent>, DownloadCandidateCvQueryHandler>();
         services.AddScoped<IQueryHandler<GetTopCandidatesQuery, IReadOnlyList<RankedCandidateDto>>, GetTopCandidatesQueryHandler>();
+        services.AddScoped<ICommandHandler<CreateTalentPoolCommand, TalentPoolDto>, CreateTalentPoolCommandHandler>();
+        services.AddScoped<ICommandHandler<AddToPoolCommand, bool>, AddToPoolCommandHandler>();
+        services.AddScoped<ICommandHandler<RemoveFromPoolCommand, bool>, RemoveFromPoolCommandHandler>();
+        services.AddScoped<IQueryHandler<GetPoolsQuery, IReadOnlyList<TalentPoolDto>>, GetPoolsQueryHandler>();
+        services.AddScoped<IQueryHandler<GetPoolMembersQuery, IReadOnlyList<PoolMemberDto>>, GetPoolMembersQueryHandler>();
         return services;
     }
 }
