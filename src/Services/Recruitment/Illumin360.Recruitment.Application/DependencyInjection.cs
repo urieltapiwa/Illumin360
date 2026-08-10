@@ -88,6 +88,15 @@ public static class DependencyInjection
         services.AddScoped<
             ICommandHandler<RemoveClientContactCommand, bool>,
             RemoveClientContactCommandHandler>();
+        services.AddScoped<
+            ICommandHandler<CreateOfferCommand, OfferDto>,
+            CreateOfferCommandHandler>();
+        services.AddScoped<
+            ICommandHandler<TransitionOfferCommand, OfferDto>,
+            TransitionOfferCommandHandler>();
+        services.AddScoped<
+            IQueryHandler<GetOffersQuery, IReadOnlyList<OfferDto>>,
+            GetOffersQueryHandler>();
         return services;
     }
 }
