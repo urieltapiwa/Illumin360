@@ -126,6 +126,13 @@ export default function Admin({ session }: { session: Session }) {
     const r = await fetch(`/api/admin/verifications/${id}/${action}`, { method: "POST", credentials: "same-origin" });
     if (r.ok) setLiveVers((prev) => (prev ? prev.filter((v) => v.id !== id) : prev));
   };
+  const assignTicket = async (id: string) => {
+    const r = await fetch(`/api/admin/tickets/${id}/assign`, { method: "POST", credentials: "same-origin" });
+    if (r.ok) {
+      const updated = await r.json().catch(() => null);
+      setLiveTickets((prev) => (prev ? prev.map((tk) => (tk.id === id ? { ...tk, status: updated?.status ?? "assigned", assignee: updated?.assignee ?? tk.assignee } : tk)) : prev));
+    }
+  };
   const resolveTicket = async (id: string) => {
     const r = await fetch(`/api/admin/tickets/${id}/resolve`, { method: "POST", credentials: "same-origin" });
     if (r.ok) setLiveTickets((prev) => (prev ? prev.filter((tk) => tk.id !== id) : prev));
@@ -302,8 +309,11 @@ export default function Admin({ session }: { session: Session }) {
                   {liveTickets.map((tk) => (
                     <div key={tk.id} className="flex items-center gap-2 rounded-xl border border-line/60 bg-panel2/40 px-3 py-2">
                       <span className={`chip !text-[9px] ${tk.priority === "P1" ? "!text-pink !border-pink/30" : tk.priority === "P2" ? "!text-gold !border-gold/30" : "!text-brand-bright !border-brand/30"}`}>{tk.priority}</span>
-                      <div className="min-w-0 flex-1"><div className="text-[12px] text-ink-hi truncate">{tk.subject}</div><div className="text-[10px] text-ink-lo truncate">{tk.requester}</div></div>
-                      <button onClick={() => resolveTicket(tk.id)} className="shrink-0 rounded-lg bg-brand/15 px-2.5 py-1 text-[11px] font-semibold text-brand-bright hover:bg-brand/25 transition">{t("admin.tickets.resolve", "Resolve")}</button>
+                      <div className="min-w-0 flex-1"><div className="text-[12px] text-ink-hi truncate">{tk.subject}</div><div className="text-[10px] text-ink-lo truncate">{tk.requester}{tk.assignee ? ` · ${t("admin.tickets.assignedTo", "assigned to")} ${tk.assignee}` : ""}</div></div>
+                      <div className="shrink-0 inline-flex gap-1.5">
+                        {tk.status !== "assigned" && <button onClick={() => assignTicket(tk.id)} className="rounded-lg bg-panel2/70 px-2.5 py-1 text-[11px] font-semibold text-ink-mid hover:text-ink-hi transition">{t("admin.tickets.assign", "Assign to me")}</button>}
+                        <button onClick={() => resolveTicket(tk.id)} className="rounded-lg bg-brand/15 px-2.5 py-1 text-[11px] font-semibold text-brand-bright hover:bg-brand/25 transition">{t("admin.tickets.resolve", "Resolve")}</button>
+                      </div>
                     </div>
                   ))}
                 </div>
