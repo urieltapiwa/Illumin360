@@ -34,6 +34,31 @@ public sealed class CandidateRepository(CandidatesDbContext db) : ICandidateRepo
         => await _db.Candidates.FirstOrDefaultAsync(c => c.Id == id, cancellationToken).ConfigureAwait(false);
 
     /// <inheritdoc />
+    public void AddPool(TalentPool pool) => _db.TalentPools.Add(pool);
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<TalentPool>> ListPoolsAsync(CancellationToken cancellationToken)
+        => await _db.TalentPools.AsNoTracking().OrderByDescending(p => p.CreatedAt).ToListAsync(cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
+    public async Task<TalentPool?> GetPoolAsync(TalentPoolId id, CancellationToken cancellationToken)
+        => await _db.TalentPools.FirstOrDefaultAsync(p => p.Id == id, cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
+    public void AddPoolMember(TalentPoolMember member) => _db.TalentPoolMembers.Add(member);
+
+    /// <inheritdoc />
+    public void RemovePoolMember(TalentPoolMember member) => _db.TalentPoolMembers.Remove(member);
+
+    /// <inheritdoc />
+    public async Task<TalentPoolMember?> GetPoolMemberAsync(TalentPoolId poolId, CandidateId candidateId, CancellationToken cancellationToken)
+        => await _db.TalentPoolMembers.FirstOrDefaultAsync(m => m.PoolId == poolId && m.CandidateId == candidateId, cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<TalentPoolMember>> ListPoolMembersAsync(TalentPoolId poolId, CancellationToken cancellationToken)
+        => await _db.TalentPoolMembers.AsNoTracking().Where(m => m.PoolId == poolId).OrderByDescending(m => m.AddedAt).ToListAsync(cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
     public void Add(Candidate candidate) => _db.Candidates.Add(candidate);
 
     /// <inheritdoc />
