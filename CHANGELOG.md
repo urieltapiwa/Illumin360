@@ -4,6 +4,8 @@ All notable changes to this repository are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: [SemVer](https://semver.org/).
 
 ## [Unreleased]
+
+## [0.1.0] - 2026-08-10
 ### Added
 - **Student portal — real actions (RBAC-gated, persisted):** mirrors the professional Save/Dismiss/Apply
   model into the Students service. `StudentMatch` gains a `Status` (new/saved/dismissed/applied) with
