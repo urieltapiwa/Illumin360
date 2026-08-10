@@ -180,6 +180,40 @@ public interface IRecruitmentRepository
     /// <param name="cancellationToken">Cancellation token.</param>
     Task<IReadOnlyList<OnboardingTask>> ListTasksForChecklistAsync(OnboardingChecklistId checklistId, CancellationToken cancellationToken);
 
+    /// <summary>Loads a requisition's enrichment detail (change-tracked), or null if none.</summary>
+    /// <param name="requestId">The requisition id.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<RequisitionDetail?> GetRequisitionDetailAsync(Guid requestId, CancellationToken cancellationToken);
+
+    /// <summary>Stages a new requisition detail for insertion.</summary>
+    /// <param name="detail">The detail to add.</param>
+    void AddRequisitionDetail(RequisitionDetail detail);
+
+    /// <summary>Lists a requisition's tags, alphabetically.</summary>
+    /// <param name="requestId">The requisition id.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<IReadOnlyList<RequisitionTag>> ListRequisitionTagsAsync(Guid requestId, CancellationToken cancellationToken);
+
+    /// <summary>Whether the requisition already has the given (normalised) tag.</summary>
+    /// <param name="requestId">The requisition id.</param>
+    /// <param name="label">The normalised label.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<bool> RequisitionTagExistsAsync(Guid requestId, string label, CancellationToken cancellationToken);
+
+    /// <summary>Loads a requisition tag by normalised label, or null if not present.</summary>
+    /// <param name="requestId">The requisition id.</param>
+    /// <param name="label">The normalised label.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<RequisitionTag?> GetRequisitionTagAsync(Guid requestId, string label, CancellationToken cancellationToken);
+
+    /// <summary>Stages a new requisition tag for insertion.</summary>
+    /// <param name="tag">The tag to add.</param>
+    void AddRequisitionTag(RequisitionTag tag);
+
+    /// <summary>Removes a requisition tag.</summary>
+    /// <param name="tag">The tag to remove.</param>
+    void RemoveRequisitionTag(RequisitionTag tag);
+
     /// <summary>Commits staged changes to the data store.</summary>
     /// <param name="cancellationToken">Cancellation token.</param>
     Task SaveChangesAsync(CancellationToken cancellationToken);
