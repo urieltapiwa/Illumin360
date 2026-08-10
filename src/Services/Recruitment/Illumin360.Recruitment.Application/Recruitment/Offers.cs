@@ -15,7 +15,9 @@ namespace Illumin360.Recruitment.Application.Recruitment;
 /// <param name="Notes">Notes, if any.</param>
 /// <param name="CreatedAt">When created (UTC).</param>
 /// <param name="DecidedAt">When decided (UTC), if applicable.</param>
-public sealed record OfferDto(Guid Id, Guid ApplicationId, string Title, decimal SalaryAmount, string Currency, string StartDate, string Status, string? Notes, DateTimeOffset CreatedAt, DateTimeOffset? DecidedAt)
+/// <param name="SignedByName">E-signature name, if signed.</param>
+/// <param name="SignedAt">E-signature timestamp (UTC), if signed.</param>
+public sealed record OfferDto(Guid Id, Guid ApplicationId, string Title, decimal SalaryAmount, string Currency, string StartDate, string Status, string? Notes, DateTimeOffset CreatedAt, DateTimeOffset? DecidedAt, string? SignedByName, DateTimeOffset? SignedAt)
 {
     /// <summary>Projects a domain <see cref="Offer"/> into the transport DTO.</summary>
     /// <param name="o">The offer.</param>
@@ -33,7 +35,9 @@ public sealed record OfferDto(Guid Id, Guid ApplicationId, string Title, decimal
             o.Status.ToString().ToLowerInvariant(),
             o.Notes,
             o.CreatedAt,
-            o.DecidedAt);
+            o.DecidedAt,
+            o.SignedByName,
+            o.SignedAt);
     }
 }
 
@@ -64,6 +68,15 @@ public enum OfferAction
 /// <summary>Lists an application's offers, newest first.</summary>
 /// <param name="ApplicationId">The application id.</param>
 public sealed record GetOffersQuery(Guid ApplicationId) : IQuery<IReadOnlyList<OfferDto>>;
+
+/// <summary>Gets a single offer by id.</summary>
+/// <param name="Id">The offer id.</param>
+public sealed record GetOfferQuery(Guid Id) : IQuery<OfferDto>;
+
+/// <summary>Records the candidate e-signing (and thereby accepting) an offer.</summary>
+/// <param name="Id">The offer id.</param>
+/// <param name="SignerName">The typed signature name.</param>
+public sealed record SignOfferCommand(Guid Id, string SignerName) : ICommand<OfferDto>;
 
 /// <summary>Handles <see cref="CreateOfferCommand"/>.</summary>
 /// <param name="repository">The recruitment repository.</param>
@@ -140,5 +153,52 @@ public sealed class GetOffersQueryHandler(IRecruitmentRepository repository)
         ArgumentNullException.ThrowIfNull(query);
         var offers = await _repository.ListOffersForApplicationAsync(query.ApplicationId, cancellationToken).ConfigureAwait(false);
         return offers.Select(OfferDto.FromDomain).ToList();
+    }
+}
+
+/// <summary>Handles <see cref="GetOfferQuery"/>.</summary>
+/// <param name="repository">The recruitment repository.</param>
+public sealed class GetOfferQueryHandler(IRecruitmentRepository repository)
+    : IQueryHandler<GetOfferQuery, OfferDto>
+{
+    private readonly IRecruitmentRepository _repository = repository;
+
+    /// <inheritdoc />
+    public async Task<Result<OfferDto>> HandleAsync(GetOfferQuery query, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(query);
+        var offer = await _repository.GetOfferAsync(new OfferId(query.Id), cancellationToken).ConfigureAwait(false);
+        return offer is null
+            ? Error.NotFound("offer.not_found", "No matching offer was found.")
+            : OfferDto.FromDomain(offer);
+    }
+}
+
+/// <summary>Handles <see cref="SignOfferCommand"/>.</summary>
+/// <param name="repository">The recruitment repository.</param>
+public sealed class SignOfferCommandHandler(IRecruitmentRepository repository)
+    : ICommandHandler<SignOfferCommand, OfferDto>
+{
+    private readonly IRecruitmentRepository _repository = repository;
+
+    /// <inheritdoc />
+    public async Task<Result<OfferDto>> HandleAsync(SignOfferCommand command, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+
+        var offer = await _repository.GetOfferAsync(new OfferId(command.Id), cancellationToken).ConfigureAwait(false);
+        if (offer is null)
+        {
+            return Error.NotFound("offer.not_found", "No matching offer was found.");
+        }
+
+        var signed = offer.Sign(command.SignerName, DateTimeOffset.UtcNow);
+        if (signed.IsFailure)
+        {
+            return signed.Error!;
+        }
+
+        await _repository.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        return OfferDto.FromDomain(offer);
     }
 }

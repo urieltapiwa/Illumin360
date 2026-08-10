@@ -126,4 +126,72 @@ public class OffersTests
         result.Error!.Type.Should().Be(ErrorType.Conflict);
         await repo.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }
+
+    [Fact]
+    public void Sign_accepts_and_records_signature()
+    {
+        var o = DraftOffer();
+        o.Send();
+        var result = o.Sign("Jane Candidate", DateTimeOffset.UnixEpoch);
+        result.IsSuccess.Should().BeTrue();
+        o.Status.Should().Be(OfferStatus.Accepted);
+        o.SignedByName.Should().Be("Jane Candidate");
+        o.SignedAt.Should().NotBeNull();
+    }
+
+    [Fact]
+    public void Sign_requires_a_name_and_a_sent_offer()
+    {
+        var o = DraftOffer();
+        o.Send();
+        o.Sign("  ", DateTimeOffset.UnixEpoch).IsFailure.Should().BeTrue();
+
+        var draft = DraftOffer(); // not sent
+        var r = draft.Sign("Jane", DateTimeOffset.UnixEpoch);
+        r.IsFailure.Should().BeTrue();
+        r.Error!.Code.Should().Be("offer.not_sent");
+    }
+
+    [Fact]
+    public async Task Sign_handler_persists_signature()
+    {
+        var offer = DraftOffer();
+        offer.Send();
+        var repo = Substitute.For<IRecruitmentRepository>();
+        repo.GetOfferAsync(Arg.Any<OfferId>(), Arg.Any<CancellationToken>()).Returns(offer);
+        var handler = new SignOfferCommandHandler(repo);
+
+        var result = await handler.HandleAsync(new SignOfferCommand(offer.Id.Value, "Jane Candidate"), CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value!.Status.Should().Be("accepted");
+        result.Value!.SignedByName.Should().Be("Jane Candidate");
+        await repo.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public void Letter_renders_terms_and_signature_state()
+    {
+        var offer = OfferDto.FromDomain(DraftOffer());
+        var unsigned = OfferLetterHtml.Render(offer, "Illumin360");
+        unsigned.Should().Contain("Offer of employment");
+        unsigned.Should().Contain("Software Developer");
+        unsigned.Should().Contain("Awaiting the candidate's electronic signature.");
+
+        var signedOffer = DraftOffer();
+        signedOffer.Send();
+        signedOffer.Sign("Jane Candidate", DateTimeOffset.UnixEpoch);
+        var signed = OfferLetterHtml.Render(OfferDto.FromDomain(signedOffer), "Illumin360");
+        signed.Should().Contain("Jane Candidate");
+        signed.Should().Contain("Signed electronically on");
+    }
+
+    [Fact]
+    public void Letter_escapes_html()
+    {
+        var raw = Offer.Draft(Guid.NewGuid(), "<b>Dev</b>", 1m, "NAD", Start, null, DateTimeOffset.UnixEpoch).Value!;
+        var html = OfferLetterHtml.Render(OfferDto.FromDomain(raw), "Illumin360");
+        html.Should().NotContain("<b>Dev</b>");
+        html.Should().Contain("&lt;b&gt;Dev&lt;/b&gt;");
+    }
 }

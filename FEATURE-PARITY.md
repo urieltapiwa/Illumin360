@@ -93,11 +93,12 @@ flip the status to ✅ (add the commit/PR ref).
 | Feature | Status | Notes |
 |---|---|---|
 | Offer management | ✅ | `offers` table in Recruitment; `/v1/recruitment/applications/{id}/offers` + `/offers/{id}/send\|accept\|decline\|withdraw` with a draft→sent→accepted/declined state machine (409 guards); admin pipeline offer drawer (draft & send, withdraw) |
-| Offer letter / e-sign | ⬜ | |
+| Offer letter / e-sign | ✅ | Rendered HTML offer letter (`GET /offers/{id}/letter`) with terms + signature block; candidate e-sign (`POST /offers/{id}/sign`, talent) records typed name + timestamp and accepts; admin "Letter" link |
 | Onboarding checklist | ✅ | `onboarding_checklists` + `onboarding_tasks` in Recruitment; start-on-hire with default tasks, toggle/add/remove tasks + progress; `/v1/recruitment/applications/{id}/onboarding` + task endpoints; admin pipeline checklist in the offer drawer |
 
 - [x] Offer create/accept/decline workflow — `Offer` aggregate + `offers` table, `/v1/recruitment` endpoints: create (admin), send/withdraw (admin), accept/decline (talent), list per application; draft→sent→accepted/declined/withdrawn state machine with 409 conflict guards; unit tests; admin pipeline "Offer" drawer (draft & send, status, withdraw). Candidate accept/decline UI on the professional portal is a follow-up
 - [x] Onboarding checklist on hire — `OnboardingChecklist`/`OnboardingTask` aggregates + `onboarding_checklists`/`onboarding_tasks` tables (one checklist per application), start-with-default-tasks, toggle done, add/remove custom tasks, progress count; `/v1/recruitment/applications/{id}/onboarding` (get/start) + `/onboarding/tasks/{id}/toggle`, `/onboarding/{id}/tasks`, delete (writes admin-gated); unit tests; admin pipeline checklist in the offer drawer
+- [x] Offer letter + e-sign — `Offer.Sign` (sent → accepted, capturing typed name + timestamp), `POST /offers/{id}/sign` (talent), `GET /offers/{id}/letter` rendering a formal HTML letter (terms + signature block) via a pure `OfferLetterHtml` renderer (HTML-escaped), `signed_by_name`/`signed_at` columns; unit tests; admin "Letter" link on offers
 
 ## G. Communication & notifications
 | Feature | Status | Notes |
@@ -170,7 +171,7 @@ flip the status to ✅ (add the commit/PR ref).
 
 ### Progress
 - Total build items: 32
-- Done: 26
+- Done: 27
 - In progress: 0
 
 **Changelog of ticks**

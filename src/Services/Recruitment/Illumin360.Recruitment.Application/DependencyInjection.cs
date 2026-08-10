@@ -98,6 +98,12 @@ public static class DependencyInjection
             IQueryHandler<GetOffersQuery, IReadOnlyList<OfferDto>>,
             GetOffersQueryHandler>();
         services.AddScoped<
+            IQueryHandler<GetOfferQuery, OfferDto>,
+            GetOfferQueryHandler>();
+        services.AddScoped<
+            ICommandHandler<SignOfferCommand, OfferDto>,
+            SignOfferCommandHandler>();
+        services.AddScoped<
             ICommandHandler<StartOnboardingCommand, OnboardingChecklistDto>,
             StartOnboardingCommandHandler>();
         services.AddScoped<

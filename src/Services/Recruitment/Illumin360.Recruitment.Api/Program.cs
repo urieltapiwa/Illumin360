@@ -452,6 +452,40 @@ v1.MapPost("/offers/{id:guid}/decline", async (
     .ProducesProblem(StatusCodes.Status404NotFound)
     .ProducesProblem(StatusCodes.Status409Conflict);
 
+v1.MapPost("/offers/{id:guid}/sign", async (
+        Guid id,
+        SignOfferBody body,
+        ICommandHandler<SignOfferCommand, OfferDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new SignOfferCommand(id, body.SignerName), ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.ProfessionalPolicy)
+    .WithName("SignOffer")
+    .WithSummary("Candidate e-signs (and accepts) a sent offer. Requires a signed-in talent.")
+    .Produces<OfferDto>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status400BadRequest)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden)
+    .ProducesProblem(StatusCodes.Status404NotFound)
+    .ProducesProblem(StatusCodes.Status409Conflict);
+
+v1.MapGet("/offers/{id:guid}/letter", async (
+        Guid id,
+        IQueryHandler<GetOfferQuery, OfferDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new GetOfferQuery(id), ct);
+        return result.IsSuccess
+            ? Results.Content(OfferLetterHtml.Render(result.Value!, "Illumin360"), "text/html; charset=utf-8")
+            : result.ToHttpResult();
+    })
+    .WithName("GetOfferLetter")
+    .WithSummary("Render the offer letter (HTML) for a single offer, with its e-signature block.")
+    .Produces(StatusCodes.Status200OK, contentType: "text/html")
+    .ProducesProblem(StatusCodes.Status404NotFound);
+
 // --- Onboarding checklist on hire ---
 v1.MapGet("/applications/{applicationId:guid}/onboarding", async (
         Guid applicationId,
@@ -703,6 +737,10 @@ internal sealed record ToggleTaskBody(bool Done);
 /// <summary>Request body for adding a custom onboarding task.</summary>
 /// <param name="Label">The task label.</param>
 internal sealed record AddTaskBody(string Label);
+
+/// <summary>Request body for e-signing an offer.</summary>
+/// <param name="SignerName">The name the candidate types as their signature.</param>
+internal sealed record SignOfferBody(string SignerName);
 
 /// <summary>Request body for drafting an employment offer.</summary>
 /// <param name="Title">Role title.</param>

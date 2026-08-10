@@ -173,6 +173,8 @@ public sealed class RecruitmentDbContext(DbContextOptions<RecruitmentDbContext> 
             b.Property(o => o.Notes).HasColumnName("notes").HasMaxLength(2000);
             b.Property(o => o.CreatedAt).HasColumnName("created_at");
             b.Property(o => o.DecidedAt).HasColumnName("decided_at");
+            b.Property(o => o.SignedByName).HasColumnName("signed_by_name").HasMaxLength(160);
+            b.Property(o => o.SignedAt).HasColumnName("signed_at");
             b.HasIndex(o => o.ApplicationId);
             b.Ignore(o => o.DomainEvents);
         });
