@@ -452,6 +452,89 @@ v1.MapPost("/offers/{id:guid}/decline", async (
     .ProducesProblem(StatusCodes.Status404NotFound)
     .ProducesProblem(StatusCodes.Status409Conflict);
 
+// --- Onboarding checklist on hire ---
+v1.MapGet("/applications/{applicationId:guid}/onboarding", async (
+        Guid applicationId,
+        IQueryHandler<GetOnboardingQuery, OnboardingChecklistDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new GetOnboardingQuery(applicationId), ct);
+        return result.ToHttpResult();
+    })
+    .WithName("GetOnboarding")
+    .WithSummary("Get the onboarding checklist for an application.")
+    .Produces<OnboardingChecklistDto>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status404NotFound);
+
+v1.MapPost("/applications/{applicationId:guid}/onboarding", async (
+        Guid applicationId,
+        StartOnboardingBody body,
+        ICommandHandler<StartOnboardingCommand, OnboardingChecklistDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new StartOnboardingCommand(applicationId, body.RoleTitle), ct);
+        return result.ToCreatedResult(dto => $"/v1/recruitment/applications/{applicationId}/onboarding");
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminWritePolicy)
+    .WithName("StartOnboarding")
+    .WithSummary("Start an onboarding checklist (with default tasks) for a hired application. Requires an admin (write) role.")
+    .Produces<OnboardingChecklistDto>(StatusCodes.Status201Created)
+    .ProducesProblem(StatusCodes.Status400BadRequest)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden)
+    .ProducesProblem(StatusCodes.Status409Conflict);
+
+v1.MapPost("/onboarding/tasks/{taskId:guid}/toggle", async (
+        Guid taskId,
+        ToggleTaskBody body,
+        ICommandHandler<ToggleOnboardingTaskCommand, OnboardingTaskDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new ToggleOnboardingTaskCommand(taskId, body.Done), ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminWritePolicy)
+    .WithName("ToggleOnboardingTask")
+    .WithSummary("Mark an onboarding task done/undone. Requires an admin (write) role.")
+    .Produces<OnboardingTaskDto>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden)
+    .ProducesProblem(StatusCodes.Status404NotFound);
+
+v1.MapPost("/onboarding/{checklistId:guid}/tasks", async (
+        Guid checklistId,
+        AddTaskBody body,
+        ICommandHandler<AddOnboardingTaskCommand, OnboardingTaskDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new AddOnboardingTaskCommand(checklistId, body.Label), ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminWritePolicy)
+    .WithName("AddOnboardingTask")
+    .WithSummary("Add a custom task to an onboarding checklist. Requires an admin (write) role.")
+    .Produces<OnboardingTaskDto>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status400BadRequest)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden)
+    .ProducesProblem(StatusCodes.Status404NotFound);
+
+v1.MapDelete("/onboarding/tasks/{taskId:guid}", async (
+        Guid taskId,
+        ICommandHandler<RemoveOnboardingTaskCommand, bool> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new RemoveOnboardingTaskCommand(taskId), ct);
+        return result.IsSuccess ? Results.NoContent() : result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminWritePolicy)
+    .WithName("RemoveOnboardingTask")
+    .WithSummary("Remove a task from an onboarding checklist. Requires an admin (write) role.")
+    .Produces(StatusCodes.Status204NoContent)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden)
+    .ProducesProblem(StatusCodes.Status404NotFound);
+
 // --- Public branded careers pages (SEO-friendly server-rendered HTML; no auth) ---
 // Served publicly at /careers via the gateway (which rewrites /careers/** → /v1/recruitment/careers/**).
 const string careersBrand = "Illumin360";
@@ -608,6 +691,18 @@ internal sealed record AddContactBody(string Name, string? Title, string? Email,
 /// <param name="TalentId">The applying talent's id.</param>
 /// <param name="TalentType">Talent type (<c>student</c>/<c>professional</c>); defaults to professional.</param>
 internal sealed record ApplyToRequestBody(Guid TalentId, string? TalentType);
+
+/// <summary>Request body for starting an onboarding checklist.</summary>
+/// <param name="RoleTitle">The hired role title.</param>
+internal sealed record StartOnboardingBody(string RoleTitle);
+
+/// <summary>Request body for toggling an onboarding task.</summary>
+/// <param name="Done">Whether the task is complete.</param>
+internal sealed record ToggleTaskBody(bool Done);
+
+/// <summary>Request body for adding a custom onboarding task.</summary>
+/// <param name="Label">The task label.</param>
+internal sealed record AddTaskBody(string Label);
 
 /// <summary>Request body for drafting an employment offer.</summary>
 /// <param name="Title">Role title.</param>

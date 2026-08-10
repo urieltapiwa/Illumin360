@@ -94,10 +94,10 @@ flip the status to ✅ (add the commit/PR ref).
 |---|---|---|
 | Offer management | ✅ | `offers` table in Recruitment; `/v1/recruitment/applications/{id}/offers` + `/offers/{id}/send\|accept\|decline\|withdraw` with a draft→sent→accepted/declined state machine (409 guards); admin pipeline offer drawer (draft & send, withdraw) |
 | Offer letter / e-sign | ⬜ | |
-| Onboarding checklist | ⬜ | Horilla/Frappe HR have this |
+| Onboarding checklist | ✅ | `onboarding_checklists` + `onboarding_tasks` in Recruitment; start-on-hire with default tasks, toggle/add/remove tasks + progress; `/v1/recruitment/applications/{id}/onboarding` + task endpoints; admin pipeline checklist in the offer drawer |
 
 - [x] Offer create/accept/decline workflow — `Offer` aggregate + `offers` table, `/v1/recruitment` endpoints: create (admin), send/withdraw (admin), accept/decline (talent), list per application; draft→sent→accepted/declined/withdrawn state machine with 409 conflict guards; unit tests; admin pipeline "Offer" drawer (draft & send, status, withdraw). Candidate accept/decline UI on the professional portal is a follow-up
-- [ ] Onboarding checklist on hire
+- [x] Onboarding checklist on hire — `OnboardingChecklist`/`OnboardingTask` aggregates + `onboarding_checklists`/`onboarding_tasks` tables (one checklist per application), start-with-default-tasks, toggle done, add/remove custom tasks, progress count; `/v1/recruitment/applications/{id}/onboarding` (get/start) + `/onboarding/tasks/{id}/toggle`, `/onboarding/{id}/tasks`, delete (writes admin-gated); unit tests; admin pipeline checklist in the offer drawer
 
 ## G. Communication & notifications
 | Feature | Status | Notes |
@@ -170,7 +170,7 @@ flip the status to ✅ (add the commit/PR ref).
 
 ### Progress
 - Total build items: 32
-- Done: 25
+- Done: 26
 - In progress: 0
 
 **Changelog of ticks**
@@ -201,5 +201,6 @@ flip the status to ✅ (add the commit/PR ref).
 - Recruiter CRM — `clients`/`client_contacts` in Recruitment + `/v1/recruitment/clients` CRUD, status lifecycle, seeded demo clients, admin-portal Client CRM panel (2026-08-10).
 - Branded careers page — public SSR `/careers` + `/careers/{id}` with SEO meta + schema.org JSON-LD, gateway-exposed (2026-08-10).
 - Offer management — `offers` in Recruitment + create/send/accept/decline/withdraw state machine, admin pipeline offer drawer (2026-08-10).
+- Onboarding checklist — `onboarding_checklists`/`onboarding_tasks` in Recruitment, start-on-hire with default tasks + toggle/add/remove, admin pipeline checklist (2026-08-10).
 
 _Update this file as items are ticked; link the commit/PR that delivered each._

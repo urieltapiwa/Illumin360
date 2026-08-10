@@ -184,6 +184,35 @@ public sealed class RecruitmentRepository(RecruitmentDbContext db) : IRecruitmen
             .ConfigureAwait(false);
 
     /// <inheritdoc />
+    public void AddOnboardingChecklist(OnboardingChecklist checklist) => _db.OnboardingChecklists.Add(checklist);
+
+    /// <inheritdoc />
+    public async Task<OnboardingChecklist?> GetChecklistByApplicationAsync(Guid applicationId, CancellationToken cancellationToken)
+        => await _db.OnboardingChecklists.FirstOrDefaultAsync(c => c.ApplicationId == applicationId, cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
+    public async Task<OnboardingChecklist?> GetChecklistAsync(OnboardingChecklistId id, CancellationToken cancellationToken)
+        => await _db.OnboardingChecklists.FirstOrDefaultAsync(c => c.Id == id, cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
+    public void AddOnboardingTask(OnboardingTask task) => _db.OnboardingTasks.Add(task);
+
+    /// <inheritdoc />
+    public void RemoveOnboardingTask(OnboardingTask task) => _db.OnboardingTasks.Remove(task);
+
+    /// <inheritdoc />
+    public async Task<OnboardingTask?> GetOnboardingTaskAsync(OnboardingTaskId id, CancellationToken cancellationToken)
+        => await _db.OnboardingTasks.FirstOrDefaultAsync(t => t.Id == id, cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<OnboardingTask>> ListTasksForChecklistAsync(OnboardingChecklistId checklistId, CancellationToken cancellationToken)
+        => await _db.OnboardingTasks.AsNoTracking()
+            .Where(t => t.ChecklistId == checklistId)
+            .OrderBy(t => t.SortOrder)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+    /// <inheritdoc />
     public async Task SaveChangesAsync(CancellationToken cancellationToken)
         => await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 

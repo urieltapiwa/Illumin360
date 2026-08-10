@@ -103,6 +103,10 @@ export default function Admin({ session }: { session: Session }) {
   const [offerAppId, setOfferAppId] = useState<string | null>(null);
   const [offers, setOffers] = useState<Offer[] | null>(null);
   const [newOffer, setNewOffer] = useState({ title: "", salaryAmount: "", startDate: "" });
+  // Onboarding checklist (per selected pipeline application).
+  type OnbTask = { id: string; label: string; isDone: boolean; sortOrder: number };
+  type Onboarding = { id: string; applicationId: string; roleTitle: string; completed: number; total: number; tasks: OnbTask[] };
+  const [onboarding, setOnboarding] = useState<Onboarding | "none" | null>(null);
   useEffect(() => { fetch(import.meta.env.BASE_URL + "admin.json").then((r) => r.json()).then(setD); }, []);
   // Live platform signals from the microservices (via BFF → gateway). Talent count and talent-by-city are
   // real (Candidates service); finance/ops tiles (MRR, subscriptions, tickets, verifications) have no backing
@@ -163,13 +167,17 @@ export default function Admin({ session }: { session: Session }) {
       .then((v) => { if (v?.contacts) setContacts(v.contacts); })
       .catch(() => { /* keep empty */ });
   }, [selClient]);
-  // Offers for the application selected on a pipeline card.
+  // Offers + onboarding for the application selected on a pipeline card.
   useEffect(() => {
-    if (!offerAppId) { setOffers(null); return; }
+    if (!offerAppId) { setOffers(null); setOnboarding(null); return; }
     fetch(`/api/recruitment/applications/${offerAppId}/offers`)
       .then((r) => (r.ok ? r.json() : null))
       .then((v) => { if (Array.isArray(v)) setOffers(v); })
       .catch(() => { /* keep empty */ });
+    fetch(`/api/recruitment/applications/${offerAppId}/onboarding`)
+      .then((r) => (r.ok ? r.json() : r.status === 404 ? "none" : null))
+      .then((v) => { if (v === "none") setOnboarding("none"); else if (v?.id) setOnboarding(v); })
+      .catch(() => { /* keep null */ });
   }, [offerAppId]);
   if (!d) return <div className="grid place-items-center h-screen text-ink-mid font-mono text-sm animate-pulse">{t("admin.loading")}</div>;
 
@@ -252,6 +260,17 @@ export default function Admin({ session }: { session: Session }) {
   const withdrawOffer = async (id: string) => {
     const r = await fetch(`/api/recruitment/offers/${id}/withdraw`, { method: "POST", credentials: "same-origin" });
     if (r.ok) { const u = await r.json().catch(() => null); setOffers((os) => os?.map((o) => (o.id === id ? { ...o, status: u?.status ?? "withdrawn" } : o)) ?? os); }
+  };
+  const startOnboarding = async (roleTitle: string) => {
+    if (!offerAppId) return;
+    const r = await fetch(`/api/recruitment/applications/${offerAppId}/onboarding`, { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: JSON.stringify({ roleTitle: roleTitle || "New hire" }) });
+    if (r.ok) setOnboarding(await r.json());
+  };
+  const toggleTask = async (taskId: string, done: boolean) => {
+    const r = await fetch(`/api/recruitment/onboarding/tasks/${taskId}/toggle`, { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: JSON.stringify({ done }) });
+    if (r.ok) {
+      setOnboarding((ob) => (ob && ob !== "none" ? { ...ob, tasks: ob.tasks.map((t) => (t.id === taskId ? { ...t, isDone: done } : t)), completed: ob.tasks.reduce((n, t) => n + (t.id === taskId ? (done ? 1 : 0) : t.isDone ? 1 : 0), 0) } : ob));
+    }
   };
   const pipelineStages = ["applied", "reviewed", "shortlisted", "hired", "rejected"];
   const degraded = d.services.filter((s) => s.status !== "operational").length;
@@ -529,6 +548,29 @@ export default function Admin({ session }: { session: Session }) {
                     <input type="number" className="rounded-lg border border-line/70 bg-panel2/50 px-2.5 py-1.5 text-[12px] text-ink-hi placeholder:text-ink-lo focus:border-brand/50 focus:outline-none" value={newOffer.salaryAmount} onChange={(e) => setNewOffer((f) => ({ ...f, salaryAmount: e.target.value }))} placeholder={t("admin.offer.salary", "Salary (N$)")} />
                     <input type="date" className="rounded-lg border border-line/70 bg-panel2/50 px-2.5 py-1.5 text-[12px] text-ink-hi focus:border-brand/50 focus:outline-none" value={newOffer.startDate} onChange={(e) => setNewOffer((f) => ({ ...f, startDate: e.target.value }))} />
                     <button onClick={createAndSendOffer} disabled={!newOffer.title.trim() || !newOffer.salaryAmount || !newOffer.startDate} className="rounded-lg bg-brand/15 px-3 py-1.5 text-[11px] font-semibold text-brand-bright hover:bg-brand/25 transition disabled:opacity-50">{t("admin.offer.send", "Draft & send")}</button>
+                  </div>
+                  <div className="mt-4 border-t border-line/40 pt-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="eyebrow">{t("admin.onboarding.title", "Onboarding checklist")}</span>
+                      {onboarding && onboarding !== "none" && <span className="num text-[11px] text-ink-lo">{onboarding.completed}/{onboarding.total} {t("admin.onboarding.done", "done")}</span>}
+                    </div>
+                    {onboarding === "none" ? (
+                      <button onClick={() => startOnboarding(offers?.[0]?.title ?? "New hire")} className="rounded-lg bg-brand/15 px-3 py-1.5 text-[11px] font-semibold text-brand-bright hover:bg-brand/25 transition">{t("admin.onboarding.start", "Start onboarding")}</button>
+                    ) : onboarding ? (
+                      <>
+                        <div className="h-2 rounded-full bg-panel2/70 overflow-hidden mb-3"><div className="h-full rounded-full bg-gradient-to-r from-brand-deep to-brand-bright" style={{ width: (onboarding.total ? (onboarding.completed / onboarding.total) * 100 : 0) + "%" }} /></div>
+                        <div className="space-y-1.5">
+                          {onboarding.tasks.map((tk) => (
+                            <label key={tk.id} className="flex items-center gap-2.5 text-[13px] text-ink-mid cursor-pointer">
+                              <input type="checkbox" checked={tk.isDone} onChange={(e) => toggleTask(tk.id, e.target.checked)} />
+                              <span className={tk.isDone ? "line-through text-ink-lo" : ""}>{tk.label}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </>
+                    ) : (
+                      <div className="text-[12px] text-ink-lo">{t("admin.onboarding.loading", "…")}</div>
+                    )}
                   </div>
                 </div>
               )}

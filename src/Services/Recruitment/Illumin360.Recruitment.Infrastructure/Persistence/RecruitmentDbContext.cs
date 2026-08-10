@@ -34,6 +34,12 @@ public sealed class RecruitmentDbContext(DbContextOptions<RecruitmentDbContext> 
     /// <summary>Employment offers set (owned + migration-managed by this service).</summary>
     public DbSet<Offer> Offers => Set<Offer>();
 
+    /// <summary>Onboarding checklists set (owned + migration-managed by this service).</summary>
+    public DbSet<OnboardingChecklist> OnboardingChecklists => Set<OnboardingChecklist>();
+
+    /// <summary>Onboarding tasks set (owned + migration-managed by this service).</summary>
+    public DbSet<OnboardingTask> OnboardingTasks => Set<OnboardingTask>();
+
     /// <inheritdoc />
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -169,6 +175,38 @@ public sealed class RecruitmentDbContext(DbContextOptions<RecruitmentDbContext> 
             b.Property(o => o.DecidedAt).HasColumnName("decided_at");
             b.HasIndex(o => o.ApplicationId);
             b.Ignore(o => o.DomainEvents);
+        });
+
+        modelBuilder.Entity<OnboardingChecklist>(b =>
+        {
+            b.ToTable("onboarding_checklists");
+            b.HasKey(c => c.Id);
+            b.Property(c => c.Id)
+                .HasColumnName("id")
+                .HasConversion(id => id.Value, value => new OnboardingChecklistId(value));
+            b.Property(c => c.ApplicationId).HasColumnName("application_id");
+            b.Property(c => c.RoleTitle).HasColumnName("role_title").HasMaxLength(150);
+            b.Property(c => c.CreatedAt).HasColumnName("created_at");
+            b.HasIndex(c => c.ApplicationId).IsUnique();
+            b.Ignore(c => c.DomainEvents);
+        });
+
+        modelBuilder.Entity<OnboardingTask>(b =>
+        {
+            b.ToTable("onboarding_tasks");
+            b.HasKey(t => t.Id);
+            b.Property(t => t.Id)
+                .HasColumnName("id")
+                .HasConversion(id => id.Value, value => new OnboardingTaskId(value));
+            b.Property(t => t.ChecklistId)
+                .HasColumnName("checklist_id")
+                .HasConversion(id => id.Value, value => new OnboardingChecklistId(value));
+            b.Property(t => t.Label).HasColumnName("label").HasMaxLength(200);
+            b.Property(t => t.SortOrder).HasColumnName("sort_order");
+            b.Property(t => t.IsDone).HasColumnName("is_done");
+            b.Property(t => t.CompletedAt).HasColumnName("completed_at");
+            b.HasIndex(t => t.ChecklistId);
+            b.Ignore(t => t.DomainEvents);
         });
 
         modelBuilder.Entity<RecruitmentApplication>(b =>
