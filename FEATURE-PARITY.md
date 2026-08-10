@@ -118,12 +118,14 @@ flip the status to ✅ (add the commit/PR ref).
 |---|---|---|
 | Employer self-registration (identity + role) | ✅ | via BFF `/register` |
 | Employer/company profile service | ✅ | New `Illumin360.Employers` microservice — company profile get/register/update (`/v1/employers`), DB-per-service + migration + seed, gateway route |
+| Employer portal UI | ✅ | `?portal=employer` page — company profile view + inline edit (industry/city/website/about) against `/api/employers/me`, plus a "top candidates for a role" panel wired to `/api/candidates/top` |
 | Multi-user employer teams + roles | ⬜ | |
 | Recruiter CRM (clients/contacts) | ⬜ | OpenCATS has this |
 | Branded careers page | ⬜ | |
 
 - [x] Employers service — new `Illumin360.Employers` microservice (Domain/Application/Infrastructure/Api) with company profile get/register/update, DB-per-service (migrate + seed), gateway route `/api/employers/**`, unit + Testcontainers integration tests
-- [x] Employers deploy — chiseled non-root Dockerfile + `employers-api` service in `docker-compose.apps.yml` (port 5206, gateway dependency; `illumin360_employers` DB already provisioned by the init script). Company **members/teams** + portal UI are follow-ups
+- [x] Employers deploy — chiseled non-root Dockerfile + `employers-api` service in `docker-compose.apps.yml` (port 5206, gateway dependency; `illumin360_employers` DB already provisioned by the init script)
+- [x] Employer portal UI — `?portal=employer` company-profile page: live profile view + inline edit (industry/city/website/about; company name fixed) via `PUT /api/employers/me`, and a "top candidates for a role" ranking panel (`GET /api/candidates/top`). Read-only snapshot fallback when the API is offline. Company **members/teams** are the follow-up
 - [ ] Employer team roles (owner/recruiter/viewer)
 
 ## I. Admin & governance
@@ -166,7 +168,7 @@ flip the status to ✅ (add the commit/PR ref).
 
 ### Progress
 - Total build items: 32
-- Done: 19
+- Done: 20
 - In progress: 0
 
 **Changelog of ticks**
@@ -192,5 +194,6 @@ flip the status to ✅ (add the commit/PR ref).
 - Shortlists / talent pools — named recruiter pools with add/remove candidates (Candidates service) (2026-08-10).
 - New Illumin360.Employers microservice — company profile get/register/update + gateway route (2026-08-10).
 - Employers service wired into docker-compose (Dockerfile + `employers-api` on 5206, gateway dependency) (2026-08-10).
+- Employer portal UI — `?portal=employer` company-profile view + inline edit + top-candidates panel (2026-08-10).
 
 _Update this file as items are ticked; link the commit/PR that delivered each._
