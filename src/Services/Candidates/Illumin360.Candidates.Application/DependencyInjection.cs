@@ -19,6 +19,7 @@ public static class DependencyInjection
         services.AddScoped<ICommandHandler<UploadCandidateCvCommand, CvDto>, UploadCandidateCvCommandHandler>();
         services.AddScoped<IQueryHandler<GetCandidateCvMetadataQuery, CvDto>, GetCandidateCvMetadataQueryHandler>();
         services.AddScoped<IQueryHandler<DownloadCandidateCvQuery, CvContent>, DownloadCandidateCvQueryHandler>();
+        services.AddScoped<IQueryHandler<GetTopCandidatesQuery, IReadOnlyList<RankedCandidateDto>>, GetTopCandidatesQueryHandler>();
         return services;
     }
 }

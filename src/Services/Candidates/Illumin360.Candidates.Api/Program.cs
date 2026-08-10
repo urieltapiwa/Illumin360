@@ -74,6 +74,21 @@ v1.MapGet("/stats", async (
     .WithSummary("Aggregate candidate statistics (total + city/availability breakdowns).")
     .Produces<CandidateStatsDto>(StatusCodes.Status200OK);
 
+v1.MapGet("/top", async (
+        string? title,
+        string? city,
+        int? limit,
+        IQueryHandler<GetTopCandidatesQuery, IReadOnlyList<RankedCandidateDto>> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new GetTopCandidatesQuery(title ?? string.Empty, city, limit ?? 10), ct);
+        return result.ToHttpResult();
+    })
+    .WithName("GetTopCandidates")
+    .WithSummary("Rank candidates against a role (employer 'top candidates for this role').")
+    .Produces<IReadOnlyList<RankedCandidateDto>>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status400BadRequest);
+
 v1.MapGet("/{id:guid}", async (
         Guid id,
         IQueryHandler<GetCandidateByIdQuery, CandidateDto> handler,
