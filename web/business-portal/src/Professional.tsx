@@ -8,6 +8,7 @@ import { LanguageSwitcher, ThemeSwitcher } from "@illumin360/ui";
 
 interface Match { role: string; company: string; city: string; industry: string; match: number; salaryLo: number; salaryHi: number; posted: string; type: string; id?: string; status?: string; }
 interface Prof {
+  id?: string;
   persona: { name: string; role: string; city: string; nationality: string; availability: string; headline: string; profileStrength: number; percentile: number; memberSince: string };
   kpis: { profileViews: number; viewsDelta: number; matchOpportunities: number; matchDelta: number; activeApplications: number; responseRate: number; avgMatch: number; interviews: number };
   viewsTrend: number[];
@@ -85,6 +86,8 @@ export default function Professional(_props: { session: Session }) {
   const [live, setLive] = useState(false);
   const [openRoles, setOpenRoles] = useState<OpenRole[] | null>(null);
   const [matchFilter, setMatchFilter] = useState<"all" | "saved" | "applied">("all");
+  // Open-roles the professional has applied to this session (marketplace panel is otherwise stateless).
+  const [appliedRoles, setAppliedRoles] = useState<Record<string, "pending" | "done" | "error">>({});
   // P2: live open roles from the Recruitment marketplace (real recruitment_requests).
   useEffect(() => {
     fetch("/api/recruitment/requests?status=open&pageSize=6")
@@ -127,6 +130,23 @@ export default function Professional(_props: { session: Session }) {
     const next = /open/i.test(p.availability) ? "Not looking" : "Open to opportunities";
     const r = await fetch(`/api/professionals/me/availability`, { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: JSON.stringify({ availability: next }) });
     if (r.ok) { const v = await r.json().catch(() => next); setD((prev) => (prev ? { ...prev, persona: { ...prev.persona, availability: typeof v === "string" ? v : next } } : prev)); }
+  };
+  // Apply to a live marketplace open role — records a real application in the Recruitment service.
+  const applyToRole = async (roleId: string) => {
+    if (!d.id || appliedRoles[roleId]) return;
+    setAppliedRoles((prev) => ({ ...prev, [roleId]: "pending" }));
+    try {
+      const r = await fetch(`/api/recruitment/requests/${roleId}/apply`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({ talentId: d.id, talentType: "professional" }),
+      });
+      // 409 (already applied) is a benign "already done" from our point of view.
+      setAppliedRoles((prev) => ({ ...prev, [roleId]: r.ok || r.status === 409 ? "done" : "error" }));
+    } catch {
+      setAppliedRoles((prev) => ({ ...prev, [roleId]: "error" }));
+    }
   };
   const navItems: [React.ReactNode, string, string][] = [[ICN.user, "pro.nav.profile", "pro-top"], [ICN.spark2, "pro.nav.matches", "pro-matches"], [ICN.brief, "pro.nav.applications", "pro-applications"], [ICN.chart, "pro.nav.insights", "pro-insights"], [ICN.gear, "pro.nav.settings", "pro-top"]];
   const goto = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -296,13 +316,25 @@ export default function Professional(_props: { session: Session }) {
                   <span className="chip !text-[10px] !text-brand-bright !border-brand/30"><span className="h-1.5 w-1.5 rounded-full bg-brand-bright animate-pulse" /> LIVE · {openRoles.length}</span>
                 </div>
                 <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {openRoles.map((r) => (
-                    <div key={r.id} className="rounded-xl border border-line/60 bg-panel2/40 p-3.5 hover:border-brand/40 transition">
+                  {openRoles.map((r) => {
+                    const state = appliedRoles[r.id];
+                    return (
+                    <div key={r.id} className={`rounded-xl border p-3.5 transition ${state === "done" ? "border-brand/50 bg-brand/[0.06]" : "border-line/60 bg-panel2/40 hover:border-brand/40"}`}>
                       <div className="text-sm font-semibold text-ink-hi truncate">{r.title}</div>
                       <div className="text-[11px] text-ink-mid truncate">{r.city}</div>
                       <div className="mt-2 flex items-center justify-between text-[10px] text-ink-lo"><span>{r.positions} position{r.positions === 1 ? "" : "s"}</span><span className="text-brand-bright">Open</span></div>
+                      {live && (
+                        <div className="mt-2.5 border-t border-line/40 pt-2.5">
+                          {state === "done" ? (
+                            <span className="chip !text-[10px] !text-brand-bright !border-brand/30">✓ Applied</span>
+                          ) : (
+                            <button onClick={() => applyToRole(r.id)} disabled={state === "pending"} className="rounded-lg bg-brand/15 px-2.5 py-1 text-[11px] font-semibold text-brand-bright hover:bg-brand/25 transition disabled:opacity-50">{state === "pending" ? "Applying…" : state === "error" ? "Retry" : "Apply"}</button>
+                          )}
+                        </div>
+                      )}
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </motion.section>
             </div>

@@ -63,6 +63,9 @@ public sealed class Student : Entity<StudentId>
     /// <summary>Home city.</summary>
     public string City { get; private set; } = string.Empty;
 
+    /// <summary>Availability label shown to employers (e.g. "Open to internships").</summary>
+    public string Availability { get; private set; } = "Open to internships";
+
     /// <summary>Career-readiness score (0–100).</summary>
     public int Readiness { get; private set; }
 
@@ -86,6 +89,14 @@ public sealed class Student : Entity<StudentId>
 
     /// <summary>The student's full display name.</summary>
     public string FullName => $"{FirstName} {LastName}".Trim();
+
+    /// <summary>Updates the student's availability label.</summary>
+    /// <param name="availability">New availability label.</param>
+    public void SetAvailability(string availability) =>
+        Availability = string.IsNullOrWhiteSpace(availability) ? Availability : availability.Trim();
+
+    /// <summary>Records that the student submitted an application (bumps the counter).</summary>
+    public void RecordApplication() => ApplicationsCount++;
 
     /// <summary>
     /// Registers a new student. Engagement counters and readiness start at zero — they accrue

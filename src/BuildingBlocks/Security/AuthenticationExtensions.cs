@@ -24,12 +24,17 @@ public static class AuthenticationExtensions
     /// <summary>Policy for a signed-in professional acting on their own data (role <c>client.user</c>; admins allowed).</summary>
     public const string ProfessionalPolicy = "professional";
 
+    /// <summary>Policy for a signed-in student acting on their own data (role <c>client.user</c>; admins allowed).</summary>
+    public const string StudentPolicy = "student";
+
     private const string DefaultAuthority = "http://keycloak:8080/realms/illumin360";
     private const string DefaultFrontChannel = "http://localhost:8080/realms/illumin360";
 
     private static readonly string[] AdminRoles = ["admin.read", "admin.write", "admin.superuser"];
     private static readonly string[] AdminWriteRoles = ["admin.write", "admin.superuser"];
-    private static readonly string[] ProfessionalRoles = ["client.user", "admin.write", "admin.superuser"];
+
+    // Signed-in end users acting on their own data (professional / student portals). Admins are allowed through.
+    private static readonly string[] ClientUserRoles = ["client.user", "admin.write", "admin.superuser"];
 
     /// <summary>
     /// Adds JWT bearer authentication (against Keycloak) and the admin authorization policies.
@@ -90,7 +95,8 @@ public static class AuthenticationExtensions
         {
             options.AddPolicy(AdminPolicy, policy => policy.RequireRole(AdminRoles));
             options.AddPolicy(AdminWritePolicy, policy => policy.RequireRole(AdminWriteRoles));
-            options.AddPolicy(ProfessionalPolicy, policy => policy.RequireRole(ProfessionalRoles));
+            options.AddPolicy(ProfessionalPolicy, policy => policy.RequireRole(ClientUserRoles));
+            options.AddPolicy(StudentPolicy, policy => policy.RequireRole(ClientUserRoles));
         });
 
         return services;

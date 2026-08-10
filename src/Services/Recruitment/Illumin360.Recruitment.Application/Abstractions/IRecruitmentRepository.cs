@@ -36,6 +36,16 @@ public interface IRecruitmentRepository
     /// <param name="request">The request to add.</param>
     void Add(RecruitmentRequest request);
 
+    /// <summary>Whether the given talent already has an application against the request.</summary>
+    /// <param name="requestId">The request id.</param>
+    /// <param name="talentId">The talent id.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<bool> HasApplicationAsync(RequestId requestId, Guid talentId, CancellationToken cancellationToken);
+
+    /// <summary>Stages a new application for insertion. Persisted on <see cref="SaveChangesAsync"/>.</summary>
+    /// <param name="application">The application to add.</param>
+    void AddApplication(RecruitmentApplication application);
+
     /// <summary>Commits staged changes to the data store.</summary>
     /// <param name="cancellationToken">Cancellation token.</param>
     Task SaveChangesAsync(CancellationToken cancellationToken);

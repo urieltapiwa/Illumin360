@@ -2,6 +2,22 @@ using Illumin360.SharedKernel;
 
 namespace Illumin360.Students.Domain;
 
+/// <summary>The student's disposition toward a surfaced internship/graduate match.</summary>
+public enum MatchStatus
+{
+    /// <summary>Newly surfaced, no action taken.</summary>
+    New,
+
+    /// <summary>Saved for later.</summary>
+    Saved,
+
+    /// <summary>Dismissed / not interested.</summary>
+    Dismissed,
+
+    /// <summary>Applied to.</summary>
+    Applied,
+}
+
 /// <summary>A self-assessed or verified skill and its proficiency level for a student.</summary>
 public sealed class StudentSkill : Entity<Guid>
 {
@@ -154,6 +170,28 @@ public sealed class StudentMatch : Entity<Guid>
 
     /// <summary>Display order.</summary>
     public int Sort { get; private set; }
+
+    /// <summary>The student's disposition toward this match.</summary>
+    public MatchStatus Status { get; private set; }
+
+    /// <summary>Marks the match as saved.</summary>
+    public void Save() => Status = MatchStatus.Saved;
+
+    /// <summary>Marks the match as dismissed.</summary>
+    public void Dismiss() => Status = MatchStatus.Dismissed;
+
+    /// <summary>Marks the match as applied to.</summary>
+    /// <returns>Success, or a conflict if it was already applied.</returns>
+    public Result<StudentMatch> Apply()
+    {
+        if (Status == MatchStatus.Applied)
+        {
+            return Error.Conflict("match.already_applied", "You have already applied to this match.");
+        }
+
+        Status = MatchStatus.Applied;
+        return this;
+    }
 }
 
 /// <summary>A stage in the student's application pipeline with the count at that stage.</summary>

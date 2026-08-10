@@ -18,6 +18,12 @@ public static class DependencyInjection
         services.AddScoped<
             ICommandHandler<RegisterStudentCommand, StudentSummaryDto>,
             RegisterStudentCommandHandler>();
+        services.AddScoped<
+            ICommandHandler<UpdateMatchStatusCommand, MatchDto>,
+            UpdateMatchStatusCommandHandler>();
+        services.AddScoped<
+            ICommandHandler<SetAvailabilityCommand, string>,
+            SetAvailabilityCommandHandler>();
         return services;
     }
 }

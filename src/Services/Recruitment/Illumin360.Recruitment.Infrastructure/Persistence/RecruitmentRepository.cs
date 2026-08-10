@@ -58,6 +58,15 @@ public sealed class RecruitmentRepository(RecruitmentDbContext db) : IRecruitmen
     public void Add(RecruitmentRequest request) => _db.Requests.Add(request);
 
     /// <inheritdoc />
+    public async Task<bool> HasApplicationAsync(RequestId requestId, Guid talentId, CancellationToken cancellationToken)
+        => await _db.Applications.AsNoTracking()
+            .AnyAsync(a => a.RequestId == requestId && a.TalentId == talentId, cancellationToken)
+            .ConfigureAwait(false);
+
+    /// <inheritdoc />
+    public void AddApplication(RecruitmentApplication application) => _db.Applications.Add(application);
+
+    /// <inheritdoc />
     public async Task SaveChangesAsync(CancellationToken cancellationToken)
         => await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
