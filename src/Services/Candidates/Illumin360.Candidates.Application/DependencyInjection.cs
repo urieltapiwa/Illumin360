@@ -13,6 +13,7 @@ public static class DependencyInjection
     public static IServiceCollection AddCandidatesApplication(this IServiceCollection services)
     {
         services.AddScoped<IQueryHandler<GetCandidatesQuery, IReadOnlyList<CandidateDto>>, GetCandidatesQueryHandler>();
+        services.AddScoped<IQueryHandler<SearchCandidatesQuery, CandidateSearchResultDto>, SearchCandidatesQueryHandler>();
         services.AddScoped<IQueryHandler<GetCandidateByIdQuery, CandidateDto>, GetCandidateByIdQueryHandler>();
         services.AddScoped<IQueryHandler<GetCandidateStatsQuery, CandidateStatsDto>, GetCandidateStatsQueryHandler>();
         services.AddScoped<ICommandHandler<RegisterCandidateCommand, CandidateDto>, RegisterCandidateCommandHandler>();

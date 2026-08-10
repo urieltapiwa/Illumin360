@@ -19,7 +19,7 @@ flip the status to ✅ (add the commit/PR ref).
 | Skills & proficiency | 🟡 | Seeded skill rows; not user-editable |
 | Resume/CV upload & storage | ✅ | MinIO-backed upload/download for professionals & students (self-service `/me/cv`) and candidates (per-id, admin) via `Illumin360.Storage` |
 | Resume parsing (skills/experience extraction) | 🟡 | Shared `Illumin360.Resume` extracts CV text (PDF/DOCX/TXT) + detects skills; **professionals & students** `/me/cv/apply-skills` auto-add new skills to the profile ("Scan CV & add skills" UI). Candidates + experience/education extraction pending |
-| Candidate search (boolean / faceted) | 🟡 | City ILIKE filter only |
+| Candidate search (boolean / faceted) | ✅ | `GET /v1/candidates/search` — city + availability + keyword (name/headline) + has-CV filters, paged, with facet counts (each facet excludes its own filter); admin-portal candidate-search panel |
 | Recruiter notes / private activity log | 🟡 | Read-only activity feed; no recruiter notes |
 | Tags / labels | ⬜ | |
 | Skill endorsements / references | ⬜ | |
@@ -29,7 +29,7 @@ flip the status to ✅ (add the commit/PR ref).
 - [x] Extend CV upload to students (self-service `/me/cv`, UI + MinIO integration test) & candidates (per-id `/{id}/cv`, admin-gated)
 - [x] Resume parsing — shared `Illumin360.Resume` (PdfPig + OpenXml text extraction, deterministic skill detection); `POST /me/cv/apply-skills` **auto-adds** newly detected skills to the Professionals profile (reflected live in the skills panel). Extending to students/candidates + parsing experience/education = follow-up
 - [ ] Editable skills with proficiency
-- [ ] Faceted candidate search (skills, city, availability)
+- [x] Faceted candidate search — `GET /v1/candidates/search` filtering on city, availability, keyword (name/headline ILIKE) and CV presence, paged with a total, returning facet counts for cities + availability (each facet excludes its own active filter); handler unit test + Testcontainers integration test; admin-portal search panel with clickable city facets. (Skill facets await structured candidate skills)
 - [ ] Recruiter notes + tags on a candidate
 
 ## B. Jobs / recruitment requisitions
@@ -171,7 +171,7 @@ flip the status to ✅ (add the commit/PR ref).
 
 ### Progress
 - Total build items: 32
-- Done: 27
+- Done: 28
 - In progress: 0
 
 **Changelog of ticks**

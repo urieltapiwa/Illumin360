@@ -17,6 +17,20 @@ public interface ICandidateRepository
     /// <returns>The matching candidates.</returns>
     Task<IReadOnlyList<Candidate>> ListAsync(string? city, int skip, int take, CancellationToken cancellationToken);
 
+    /// <summary>Faceted search: a page of candidates matching the criteria, plus the total match count.</summary>
+    /// <param name="criteria">The active filter set.</param>
+    /// <param name="skip">Number of records to skip.</param>
+    /// <param name="take">Page size.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The page of matches and the total count.</returns>
+    Task<(IReadOnlyList<Candidate> Items, int Total)> SearchAsync(CandidateSearchCriteria criteria, int skip, int take, CancellationToken cancellationToken);
+
+    /// <summary>Facet counts for a search — each facet excludes its own active filter.</summary>
+    /// <param name="criteria">The active filter set.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>City and availability facet counts.</returns>
+    Task<CandidateFacetsDto> GetCandidateFacetsAsync(CandidateSearchCriteria criteria, CancellationToken cancellationToken);
+
     /// <summary>Finds a candidate by id, or null if not present.</summary>
     /// <param name="id">The candidate id.</param>
     /// <param name="cancellationToken">Cancellation token.</param>

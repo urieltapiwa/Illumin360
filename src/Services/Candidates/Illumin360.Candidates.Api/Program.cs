@@ -63,6 +63,24 @@ v1.MapGet("/", async (
     .WithSummary("List candidates with optional city filter and paging.")
     .Produces<IReadOnlyList<CandidateDto>>(StatusCodes.Status200OK);
 
+v1.MapGet("/search", async (
+        string? city,
+        string? availability,
+        string? q,
+        bool? hasCv,
+        int? page,
+        int? pageSize,
+        IQueryHandler<SearchCandidatesQuery, CandidateSearchResultDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new SearchCandidatesQuery(city, availability, q, hasCv, page ?? 1, pageSize ?? 20), ct);
+        return result.ToHttpResult();
+    })
+    .WithName("SearchCandidates")
+    .WithSummary("Faceted candidate search over city, availability, keyword and CV presence — returns matches, total and facet counts.")
+    .Produces<CandidateSearchResultDto>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status400BadRequest);
+
 v1.MapGet("/stats", async (
         IQueryHandler<GetCandidateStatsQuery, CandidateStatsDto> handler,
         CancellationToken ct) =>
