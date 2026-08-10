@@ -30,6 +30,15 @@ public static class EmployersSeeder
             about: "One of Namibia's largest food producers, hiring across operations, engineering and finance.",
             createdAt: new DateTimeOffset(2023, 1, 15, 0, 0, 0, TimeSpan.Zero)));
 
+        // Seed a founding owner so the demo employer always satisfies the "at least one owner" invariant.
+        db.TeamMembers.Add(TeamMember.Seed(
+            new Guid("e3b0c000-0000-4000-8000-0000000000a1"),
+            DemoEmployerId,
+            email: "owner@namibmills.com.na",
+            displayName: "Demo Manager",
+            role: EmployerRole.Owner,
+            invitedAt: new DateTimeOffset(2023, 1, 15, 0, 0, 0, TimeSpan.Zero)));
+
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 }

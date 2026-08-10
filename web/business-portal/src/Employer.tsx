@@ -15,6 +15,9 @@ interface Employer {
 }
 // Ranked candidate from the Candidates service (GET /api/candidates/top → RankedCandidateDto[]).
 interface RankedCandidate { id: string; name: string; city: string; headline?: string | null; score: number; }
+// Team member (GET /api/employers/me/team → TeamMemberDto[]).
+interface TeamMember { id: string; email: string; displayName: string; role: string; invitedAt: string; }
+const ROLES = ["owner", "recruiter", "viewer"] as const;
 
 const Ic = ({ d, s = 18, w = 1.7 }: { d: React.ReactNode; s?: number; w?: number }) => (
   <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={w} strokeLinecap="round" strokeLinejoin="round">{d}</svg>
@@ -52,6 +55,11 @@ export default function Employer(_props: { session: Session }) {
   const [title, setTitle] = useState("");
   const [cands, setCands] = useState<RankedCandidate[] | null>(null);
   const [searching, setSearching] = useState(false);
+  // Team panel state.
+  const [team, setTeam] = useState<TeamMember[] | null>(null);
+  const [invite, setInvite] = useState({ email: "", displayName: "", role: "recruiter" });
+  const [inviting, setInviting] = useState<"idle" | "busy" | "error">("idle");
+  const [teamErr, setTeamErr] = useState<string | null>(null);
 
   // Live-first: read the company profile from the Employers service (via BFF/gateway); fall back to the
   // bundled snapshot (read-only) if the API is unavailable. Mirrors the other portals' live-data pattern.
@@ -70,6 +78,56 @@ export default function Employer(_props: { session: Session }) {
     })();
     return () => { cancelled = true; };
   }, []);
+
+  // Team members (best-effort; the panel simply hides its list if the call fails).
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const r = await fetch("/api/employers/me/team");
+        if (r.ok && !cancelled) setTeam(await r.json().catch(() => []));
+      } catch { /* offline */ }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const inviteMember = async () => {
+    setInviting("busy");
+    setTeamErr(null);
+    try {
+      const r = await fetch("/api/employers/me/team", { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: JSON.stringify(invite) });
+      if (r.ok) {
+        const m: TeamMember = await r.json();
+        setTeam((ts) => [...(ts ?? []), m]);
+        setInvite({ email: "", displayName: "", role: "recruiter" });
+        setInviting("idle");
+      } else {
+        setTeamErr(r.status === 409 ? t("employer.team.dupe", "That email is already on the team.") : t("employer.team.inviteFail", "Could not invite — check the details and your permissions."));
+        setInviting("error");
+      }
+    } catch {
+      setInviting("error");
+    }
+  };
+  const changeRole = async (id: string, role: string) => {
+    setTeamErr(null);
+    const prev = team;
+    setTeam((ts) => ts?.map((m) => (m.id === id ? { ...m, role } : m)) ?? ts);
+    const r = await fetch(`/api/employers/me/team/${id}/role`, { method: "PUT", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: JSON.stringify({ role }) });
+    if (!r.ok) {
+      setTeam(prev ?? null); // revert
+      setTeamErr(r.status === 409 ? t("employer.team.lastOwner", "An employer must keep at least one owner.") : t("employer.team.roleFail", "Could not change role."));
+    }
+  };
+  const removeMember = async (id: string) => {
+    setTeamErr(null);
+    const r = await fetch(`/api/employers/me/team/${id}`, { method: "DELETE", credentials: "same-origin" });
+    if (r.ok) {
+      setTeam((ts) => ts?.filter((m) => m.id !== id) ?? ts);
+    } else {
+      setTeamErr(r.status === 409 ? t("employer.team.lastOwner", "An employer must keep at least one owner.") : t("employer.team.removeFail", "Could not remove member."));
+    }
+  };
 
   if (!emp) return <div className="grid place-items-center h-screen text-ink-mid font-mono text-sm animate-pulse">{t("employer.loading", "Loading company…")}</div>;
 
@@ -205,6 +263,47 @@ export default function Employer(_props: { session: Session }) {
                     <div className="mt-2.5 h-2 rounded-full bg-panel2/70 overflow-hidden"><div className="h-full rounded-full bg-gradient-to-r from-brand-deep to-brand-bright" style={{ width: Math.max(0, Math.min(100, c.score)) + "%" }} /></div>
                   </div>
                 ))}
+              </div>
+            )}
+          </motion.section>
+
+          <motion.section variants={fade} className="card p-5">
+            <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
+              <div><h3 className="font-display text-[15px] font-bold text-ink-hi">{t("employer.team.title", "Team & roles")}</h3><p className="text-[11px] text-ink-lo mt-0.5">{t("employer.team.sub", "Owners manage the team, recruiters manage hiring, viewers read only.")}</p></div>
+              {team && <span className="chip !text-[10px]">{t("employer.team.count", "{{n}} member(s)", { n: team.length })}</span>}
+            </div>
+            {teamErr && <div className="mb-3 rounded-lg border border-pink/40 bg-pink/[0.06] px-3 py-2 text-[11px] text-pink">{teamErr}</div>}
+            {team === null ? (
+              <div className="py-6 text-center text-[12px] text-ink-lo">{t("employer.team.none", "No team data.")}</div>
+            ) : (
+              <div className="space-y-2">
+                {team.map((m) => (
+                  <div key={m.id} className="flex items-center gap-3 rounded-xl border border-line/60 bg-panel2/40 px-3.5 py-2.5">
+                    <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-brand/15 text-[11px] font-bold text-brand-bright">{m.displayName.split(" ").map((x) => x[0]).slice(0, 2).join("").toUpperCase()}</div>
+                    <div className="min-w-0 flex-1"><div className="text-sm font-semibold text-ink-hi truncate">{m.displayName}</div><div className="text-[11px] text-ink-lo truncate">{m.email}</div></div>
+                    {live ? (
+                      <>
+                        <select value={m.role} onChange={(e) => changeRole(m.id, e.target.value)} className="rounded-lg border border-line/70 bg-panel2/50 px-2 py-1 text-[11px] font-semibold text-ink-hi capitalize focus:border-brand/50 focus:outline-none">
+                          {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
+                        </select>
+                        <button onClick={() => removeMember(m.id)} title={t("employer.team.remove", "Remove")} className="rounded-lg px-2 py-1 text-[11px] font-semibold text-ink-lo hover:text-pink transition">✕</button>
+                      </>
+                    ) : (
+                      <span className="chip !text-[10px] !text-gold !border-gold/30 capitalize">{m.role}</span>
+                    )}
+                  </div>
+                ))}
+                {team.length === 0 && <div className="py-4 text-center text-[12px] text-ink-lo">{t("employer.team.empty", "No members yet.")}</div>}
+              </div>
+            )}
+            {live && (
+              <div className="mt-4 border-t border-line/40 pt-4 grid gap-2 sm:grid-cols-[1fr_1fr_auto_auto] items-center">
+                <input className={inputCls + " !py-1.5"} value={invite.displayName} onChange={(e) => setInvite((f) => ({ ...f, displayName: e.target.value }))} placeholder={t("employer.team.namePlaceholder", "Name")} />
+                <input className={inputCls + " !py-1.5"} value={invite.email} onChange={(e) => setInvite((f) => ({ ...f, email: e.target.value }))} placeholder={t("employer.team.emailPlaceholder", "email@company.na")} />
+                <select value={invite.role} onChange={(e) => setInvite((f) => ({ ...f, role: e.target.value }))} className="rounded-lg border border-line/70 bg-panel2/50 px-2 py-1.5 text-[11px] font-semibold text-ink-hi capitalize focus:border-brand/50 focus:outline-none">
+                  {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
+                </select>
+                <button onClick={inviteMember} disabled={inviting === "busy" || !invite.email.trim() || !invite.displayName.trim()} className="rounded-lg bg-brand/15 px-3 py-1.5 text-[11px] font-semibold text-brand-bright hover:bg-brand/25 transition disabled:opacity-50">{inviting === "busy" ? t("employer.team.inviting", "Inviting…") : t("employer.team.invite", "Invite")}</button>
               </div>
             )}
           </motion.section>

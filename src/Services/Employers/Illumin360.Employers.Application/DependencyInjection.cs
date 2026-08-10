@@ -15,6 +15,10 @@ public static class DependencyInjection
         services.AddScoped<IQueryHandler<GetEmployerQuery, EmployerDto>, GetEmployerQueryHandler>();
         services.AddScoped<ICommandHandler<RegisterEmployerCommand, EmployerDto>, RegisterEmployerCommandHandler>();
         services.AddScoped<ICommandHandler<UpdateEmployerProfileCommand, EmployerDto>, UpdateEmployerProfileCommandHandler>();
+        services.AddScoped<IQueryHandler<ListTeamMembersQuery, IReadOnlyList<TeamMemberDto>>, ListTeamMembersQueryHandler>();
+        services.AddScoped<ICommandHandler<InviteTeamMemberCommand, TeamMemberDto>, InviteTeamMemberCommandHandler>();
+        services.AddScoped<ICommandHandler<ChangeTeamMemberRoleCommand, TeamMemberDto>, ChangeTeamMemberRoleCommandHandler>();
+        services.AddScoped<ICommandHandler<RemoveTeamMemberCommand, bool>, RemoveTeamMemberCommandHandler>();
         return services;
     }
 }
