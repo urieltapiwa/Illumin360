@@ -1,12 +1,13 @@
 using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using FluentAssertions;
 using Illumin360.Candidates.Application.Candidates;
 using Illumin360.Candidates.Infrastructure.Persistence;
+using Illumin360.TestSupport;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Testcontainers.PostgreSql;
@@ -33,13 +34,17 @@ public sealed class RegisterCandidateApiTests : IAsyncLifetime
     {
         await _postgres.StartAsync();
 
+        // The host reads its connection string eagerly at DI-registration time, before
+        // WebApplicationFactory's ConfigureAppConfiguration overrides apply; an environment variable is
+        // folded in by CreateBuilder before that read and outranks appsettings.Development.json.
+        Environment.SetEnvironmentVariable("ConnectionStrings__candidates", _postgres.GetConnectionString() + ";SSL Mode=Disable");
+
         _factory = new WebApplicationFactory<Program>().WithWebHostBuilder(b =>
         {
             b.UseEnvironment("Development");
-            b.ConfigureAppConfiguration((_, cfg) => cfg.AddInMemoryCollection(new Dictionary<string, string?>
-            {
-                ["ConnectionStrings:candidates"] = _postgres.GetConnectionString(),
-            }));
+
+            // Registering a candidate requires an admin (write) role; trust the local HS256 test key.
+            b.UseTestAuth();
         });
 
         using var scope = _factory.Services.CreateScope();
@@ -49,14 +54,24 @@ public sealed class RegisterCandidateApiTests : IAsyncLifetime
 
     public async Task DisposeAsync()
     {
+        Environment.SetEnvironmentVariable("ConnectionStrings__candidates", null);
         await _factory.DisposeAsync();
         await _postgres.DisposeAsync();
+    }
+
+    // A client carrying an admin (write) bearer token — required to POST a new candidate.
+    private HttpClient AdminClient()
+    {
+        var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", TestJwt.ForRoles(["admin.write"]));
+        return client;
     }
 
     [Fact]
     public async Task Register_then_get_round_trips_the_candidate()
     {
-        var client = _factory.CreateClient();
+        var client = AdminClient();
 
         var register = await client.PostAsJsonAsync(
             "/v1/candidates",
@@ -81,7 +96,7 @@ public sealed class RegisterCandidateApiTests : IAsyncLifetime
     [Fact]
     public async Task Register_writes_a_message_to_the_transactional_outbox()
     {
-        var client = _factory.CreateClient();
+        var client = AdminClient();
 
         var register = await client.PostAsJsonAsync(
             "/v1/candidates",
@@ -112,7 +127,7 @@ public sealed class RegisterCandidateApiTests : IAsyncLifetime
     [Fact]
     public async Task Register_with_invalid_availability_returns_400()
     {
-        var client = _factory.CreateClient();
+        var client = AdminClient();
 
         var response = await client.PostAsJsonAsync(
             "/v1/candidates",

@@ -24,18 +24,23 @@ public sealed class CandidatesApiTests : IAsyncLifetime
 
     public Task InitializeAsync() => _postgres.StartAsync();
 
-    public Task DisposeAsync() => _postgres.DisposeAsync().AsTask();
+    public async Task DisposeAsync()
+    {
+        Environment.SetEnvironmentVariable("ConnectionStrings__candidates", null);
+        await _postgres.DisposeAsync();
+    }
 
     [Fact]
     public async Task Live_probe_returns_200()
     {
+        // The host reads its connection string eagerly at DI-registration time, before
+        // WebApplicationFactory's ConfigureAppConfiguration overrides apply; an environment variable is
+        // folded in by CreateBuilder before that read and outranks appsettings.Development.json.
+        Environment.SetEnvironmentVariable("ConnectionStrings__candidates", _postgres.GetConnectionString() + ";SSL Mode=Disable");
+
         await using var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(b =>
         {
             b.UseEnvironment("Development");
-            b.ConfigureAppConfiguration((_, cfg) => cfg.AddInMemoryCollection(new Dictionary<string, string?>
-            {
-                ["ConnectionStrings:candidates"] = _postgres.GetConnectionString(),
-            }));
         });
 
         var client = factory.CreateClient();
