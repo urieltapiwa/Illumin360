@@ -71,6 +71,10 @@ public interface IRecruitmentRepository
     /// <param name="cancellationToken">Cancellation token.</param>
     Task<SavedSearch?> GetSavedSearchAsync(SavedSearchId id, CancellationToken cancellationToken);
 
+    /// <summary>Lists all saved searches with job alerts enabled (across talents).</summary>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<IReadOnlyList<SavedSearch>> ListAlertEnabledSavedSearchesAsync(CancellationToken cancellationToken);
+
     /// <summary>Lists a talent's applications, most recent first.</summary>
     /// <param name="talentId">The talent id.</param>
     /// <param name="skip">Number of records to skip.</param>

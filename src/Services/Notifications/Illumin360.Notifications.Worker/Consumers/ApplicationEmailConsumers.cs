@@ -58,3 +58,27 @@ public sealed partial class ApplicationStatusChangedConsumer(IEmailSender emailS
     [LoggerMessage(Level = LogLevel.Information, Message = "Application-status email sent for {ApplicationId} (now {Status}).")]
     private partial void LogStatus(Guid applicationId, string status);
 }
+
+/// <summary>Emails a talent a job-alert digest when their saved search has matching roles.</summary>
+/// <param name="emailSender">The SMTP email sender.</param>
+/// <param name="logger">Logger.</param>
+public sealed partial class JobAlertDigestConsumer(IEmailSender emailSender, ILogger<JobAlertDigestConsumer> logger)
+    : IConsumer<JobAlertDigest>
+{
+    private readonly IEmailSender _emailSender = emailSender;
+    private readonly ILogger<JobAlertDigestConsumer> _logger = logger;
+
+    /// <inheritdoc />
+    public async Task Consume(ConsumeContext<JobAlertDigest> context)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+
+        var msg = context.Message;
+        var email = NotificationTemplates.JobAlertDigest(msg.SearchLabel, msg.MatchCount, msg.SampleTitles);
+        await _emailSender.SendAsync($"talent+{msg.TalentId}@illumin360.test", email.Subject, email.HtmlBody, context.CancellationToken).ConfigureAwait(false);
+        LogDigest(msg.TalentId, msg.MatchCount);
+    }
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Job-alert digest email sent to talent {TalentId} ({MatchCount} matches).")]
+    private partial void LogDigest(Guid talentId, int matchCount);
+}

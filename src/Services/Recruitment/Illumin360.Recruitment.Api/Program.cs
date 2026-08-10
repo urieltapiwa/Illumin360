@@ -21,6 +21,12 @@ builder.Services.AddHealthChecks()
 builder.Services.AddRecruitmentApplication();
 builder.Services.AddRecruitmentInfrastructure(builder.Configuration);
 
+// --- Scheduled job-alert digests (enabled by default; interval via JobAlerts:IntervalSeconds) ---
+if (builder.Configuration.GetValue<bool?>("JobAlerts:Enabled") ?? true)
+{
+    builder.Services.AddHostedService<Illumin360.Recruitment.Api.JobAlertScheduler>();
+}
+
 // --- AuthN/AuthZ: validate Keycloak JWTs relayed by the BFF; expose admin role policies (charter Part 7) ---
 builder.Services.AddIllumin360Auth(builder.Configuration);
 

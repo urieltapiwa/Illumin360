@@ -90,6 +90,13 @@ public sealed class RecruitmentRepository(RecruitmentDbContext db) : IRecruitmen
         => await _db.SavedSearches.FirstOrDefaultAsync(s => s.Id == id, cancellationToken).ConfigureAwait(false);
 
     /// <inheritdoc />
+    public async Task<IReadOnlyList<SavedSearch>> ListAlertEnabledSavedSearchesAsync(CancellationToken cancellationToken)
+        => await _db.SavedSearches.AsNoTracking()
+            .Where(s => s.AlertsEnabled)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+    /// <inheritdoc />
     public async Task<IReadOnlyList<RecruitmentApplication>> ListApplicationsForTalentAsync(Guid talentId, int skip, int take, CancellationToken cancellationToken)
         => await _db.Applications.AsNoTracking()
             .Where(a => a.TalentId == talentId)

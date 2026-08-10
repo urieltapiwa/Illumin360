@@ -54,6 +54,7 @@ public static class DependencyInjection
         services.AddScoped<
             IQueryHandler<RunSavedSearchQuery, IReadOnlyList<RecruitmentRequestDto>>,
             RunSavedSearchQueryHandler>();
+        services.AddScoped<JobAlertRunner>();
         return services;
     }
 }
