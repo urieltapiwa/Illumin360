@@ -42,6 +42,12 @@ public sealed class Offer : Entity<OfferId>
     /// <summary>When the offer reached a terminal decision (UTC), if applicable.</summary>
     public DateTimeOffset? DecidedAt { get; private set; }
 
+    /// <summary>The name the candidate typed as their e-signature, if signed.</summary>
+    public string? SignedByName { get; private set; }
+
+    /// <summary>When the offer was e-signed (UTC), if signed.</summary>
+    public DateTimeOffset? SignedAt { get; private set; }
+
     /// <summary>Drafts a new offer for an application.</summary>
     /// <param name="applicationId">The application (required).</param>
     /// <param name="title">Role title (required).</param>
@@ -114,6 +120,32 @@ public sealed class Offer : Entity<OfferId>
     /// <returns>Success, or a conflict if not awaiting a decision.</returns>
     public Result<Offer> Decline(DateTimeOffset decidedAt) => Decide(OfferStatus.Declined, decidedAt);
 
+    /// <summary>
+    /// Records the candidate e-signing the offer, which accepts it (sent → accepted). Captures the typed
+    /// signature name and timestamp.
+    /// </summary>
+    /// <param name="signerName">The name the candidate typed as their signature (required).</param>
+    /// <param name="at">Signature timestamp (UTC).</param>
+    /// <returns>Success, or a validation/conflict error.</returns>
+    public Result<Offer> Sign(string signerName, DateTimeOffset at)
+    {
+        if (string.IsNullOrWhiteSpace(signerName))
+        {
+            return Error.Validation("offer.signer_required", "A signature name is required.");
+        }
+
+        if (Status != OfferStatus.Sent)
+        {
+            return Error.Conflict("offer.not_sent", "Only a sent offer can be signed.");
+        }
+
+        Status = OfferStatus.Accepted;
+        DecidedAt = at;
+        SignedByName = signerName.Trim();
+        SignedAt = at;
+        return this;
+    }
+
     /// <summary>Withdraws the offer before a decision (draft/sent → withdrawn).</summary>
     /// <param name="decidedAt">Withdrawal timestamp (UTC).</param>
     /// <returns>Success, or a conflict if already decided or withdrawn.</returns>
@@ -140,8 +172,10 @@ public sealed class Offer : Entity<OfferId>
     /// <param name="notes">Notes.</param>
     /// <param name="createdAt">Creation timestamp (UTC).</param>
     /// <param name="decidedAt">Decision timestamp (UTC), if any.</param>
+    /// <param name="signedByName">E-signature name, if signed.</param>
+    /// <param name="signedAt">E-signature timestamp (UTC), if signed.</param>
     /// <returns>The hydrated offer.</returns>
-    public static Offer Seed(Guid id, Guid applicationId, string title, decimal salaryAmount, string currency, DateOnly startDate, OfferStatus status, string? notes, DateTimeOffset createdAt, DateTimeOffset? decidedAt)
+    public static Offer Seed(Guid id, Guid applicationId, string title, decimal salaryAmount, string currency, DateOnly startDate, OfferStatus status, string? notes, DateTimeOffset createdAt, DateTimeOffset? decidedAt, string? signedByName = null, DateTimeOffset? signedAt = null)
         => new(new OfferId(id))
         {
             ApplicationId = applicationId,
@@ -153,6 +187,8 @@ public sealed class Offer : Entity<OfferId>
             Notes = notes,
             CreatedAt = createdAt,
             DecidedAt = decidedAt,
+            SignedByName = signedByName,
+            SignedAt = signedAt,
         };
 
     private Result<Offer> Decide(OfferStatus decision, DateTimeOffset decidedAt)

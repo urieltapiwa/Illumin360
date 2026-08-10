@@ -538,6 +538,7 @@ export default function Admin({ session }: { session: Session }) {
                       <div key={o.id} className="flex items-center gap-3 rounded-lg border border-line/50 bg-panel2/40 px-3 py-2">
                         <div className="min-w-0 flex-1"><div className="text-[13px] font-semibold text-ink-hi truncate">{o.title}</div><div className="text-[11px] text-ink-lo">{o.currency} {o.salaryAmount.toLocaleString()} · starts {o.startDate}</div></div>
                         <span className={`chip !text-[10px] capitalize ${o.status === "accepted" ? "!text-brand-bright !border-brand/30" : o.status === "declined" || o.status === "withdrawn" ? "!text-pink !border-pink/30" : "!text-gold !border-gold/30"}`}>{o.status}</span>
+                        <a href={`/api/recruitment/offers/${o.id}/letter`} target="_blank" rel="noreferrer" className="rounded px-2 py-1 text-[10px] font-semibold text-ink-lo hover:text-brand-bright transition">{t("admin.offer.letter", "Letter")}</a>
                         {(o.status === "draft" || o.status === "sent") && <button onClick={() => withdrawOffer(o.id)} className="rounded px-2 py-1 text-[10px] font-semibold text-ink-lo hover:text-pink transition">{t("admin.offer.withdraw", "Withdraw")}</button>}
                       </div>
                     ))}
