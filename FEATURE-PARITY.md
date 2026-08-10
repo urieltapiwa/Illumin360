@@ -39,12 +39,12 @@ flip the status to ✅ (add the commit/PR ref).
 | List with filters + paging | ✅ | city/status/page |
 | Job detail | ✅ | `GET /requests/{id}` |
 | Salary range / remote flag / category tags on a job | 🟡 | positions/city/status only |
-| Public careers site (SEO job pages) | ⬜ | Marketplace panel is in-app only |
+| Public careers site (SEO job pages) | ✅ | Server-rendered `/careers` listing + `/careers/{id}` detail with schema.org JobPosting JSON-LD (see branded careers page in H) |
 | Job approval workflow | ⬜ | |
 | Job templates | ⬜ | |
 
 - [ ] Extend requisition: salary range, employment type, remote flag, tags
-- [ ] Public careers/job-listing pages (SSR/SEO)
+- [x] Public careers/job-listing pages (SSR/SEO) — server-rendered `/careers` (open-role listing) + `/careers/{id}` (role detail) from the Recruitment service, with descriptive title/meta/Open Graph/canonical tags and schema.org JSON-LD (`ItemList` on the index, `JobPosting` on detail), HTML-escaped; exposed publicly through the gateway (`/careers/**` → `/v1/recruitment/careers/**`). Pure `CareersHtml` renderer unit-tested
 - [ ] Requisition approval workflow
 
 ## C. Applications / pipeline (ATS core)
@@ -121,13 +121,14 @@ flip the status to ✅ (add the commit/PR ref).
 | Employer portal UI | ✅ | `?portal=employer` page — company profile view + inline edit (industry/city/website/about) against `/api/employers/me`, plus a "top candidates for a role" panel wired to `/api/candidates/top` |
 | Multi-user employer teams + roles | ✅ | `employer_team_members` table + `/v1/employers/me/team` list/invite/change-role/remove (owner/recruiter/viewer), "at least one owner" invariant, unique email per employer; team panel in the employer portal |
 | Recruiter CRM (clients/contacts) | ✅ | `clients` + `client_contacts` tables in Recruitment; `/v1/recruitment/clients` list/create/status + contacts add/remove (prospect/active/inactive), seeded demo clients, Client CRM panel in the admin portal |
-| Branded careers page | ⬜ | |
+| Branded careers page | ✅ | Public server-rendered `/careers` (+ `/careers/{id}`) with SEO meta/Open Graph/canonical + schema.org ItemList & JobPosting JSON-LD, served via the gateway (no auth) |
 
 - [x] Employers service — new `Illumin360.Employers` microservice (Domain/Application/Infrastructure/Api) with company profile get/register/update, DB-per-service (migrate + seed), gateway route `/api/employers/**`, unit + Testcontainers integration tests
 - [x] Employers deploy — chiseled non-root Dockerfile + `employers-api` service in `docker-compose.apps.yml` (port 5206, gateway dependency; `illumin360_employers` DB already provisioned by the init script)
 - [x] Employer portal UI — `?portal=employer` company-profile page: live profile view + inline edit (industry/city/website/about; company name fixed) via `PUT /api/employers/me`, and a "top candidates for a role" ranking panel (`GET /api/candidates/top`). Read-only snapshot fallback when the API is offline. Company **members/teams** are the follow-up
 - [x] Employer team roles (owner/recruiter/viewer) — `TeamMember` aggregate + `employer_team_members` table (unique email per employer), `/v1/employers/me/team` list/invite/change-role/remove (writes admin-gated), "at least one owner" invariant guarding demotion & removal (409), seeded founding owner, unit + Testcontainers integration tests, and a team-management panel in the employer portal
 - [x] Recruiter CRM (clients + contacts) — `Client`/`ClientContact` aggregates + `clients`/`client_contacts` tables (owned by Recruitment), `/v1/recruitment/clients` list (status filter) / create / change-status / add-contact / remove-contact (writes admin-gated), status lifecycle prospect→active→inactive, seeded demo clients, unit tests, and a Client CRM panel in the admin portal
+- [x] Branded careers page / public SEO job pages — server-rendered `/careers` + `/careers/{id}` (Recruitment) with meta/Open Graph/canonical + schema.org `ItemList`/`JobPosting` JSON-LD, HTML-escaped, public via the gateway; `CareersHtml` renderer unit-tested
 
 ## I. Admin & governance
 | Feature | Status | Notes |
@@ -169,7 +170,7 @@ flip the status to ✅ (add the commit/PR ref).
 
 ### Progress
 - Total build items: 32
-- Done: 22
+- Done: 24
 - In progress: 0
 
 **Changelog of ticks**
@@ -198,5 +199,6 @@ flip the status to ✅ (add the commit/PR ref).
 - Employer portal UI — `?portal=employer` company-profile view + inline edit + top-candidates panel (2026-08-10).
 - Employer team roles — `employer_team_members` + `/v1/employers/me/team` CRUD (owner/recruiter/viewer), last-owner invariant, portal team panel (2026-08-10).
 - Recruiter CRM — `clients`/`client_contacts` in Recruitment + `/v1/recruitment/clients` CRUD, status lifecycle, seeded demo clients, admin-portal Client CRM panel (2026-08-10).
+- Branded careers page — public SSR `/careers` + `/careers/{id}` with SEO meta + schema.org JSON-LD, gateway-exposed (2026-08-10).
 
 _Update this file as items are ticked; link the commit/PR that delivered each._
