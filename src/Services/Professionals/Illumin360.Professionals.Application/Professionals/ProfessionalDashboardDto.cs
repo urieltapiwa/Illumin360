@@ -1,3 +1,4 @@
+using Illumin360.Matching;
 using Illumin360.Professionals.Application.Abstractions;
 using Illumin360.Professionals.Domain;
 
@@ -129,6 +130,15 @@ public sealed record ProfessionalDashboardDto(
         ArgumentNullException.ThrowIfNull(d);
         var p = d.Professional;
 
+        // Real match scoring: rank the surfaced matches for this professional by the shared engine
+        // (city + role-title affinity + skill overlap) instead of the static seeded score.
+        var talent = new TalentProfile(p.City, p.Role, [.. d.Skills.Select(s => s.Name)]);
+        var scoredMatches = d.Matches
+            .Select(m => (Match: m, Score: MatchScorer.Score(talent, new RoleListing(m.Role, m.City, m.Industry))))
+            .OrderByDescending(x => x.Score)
+            .ToList();
+        var avgMatch = scoredMatches.Count == 0 ? p.AvgMatch : (int)Math.Round(scoredMatches.Average(x => x.Score));
+
         return new ProfessionalDashboardDto(
             p.Id.Value,
             new PersonaDto(
@@ -148,10 +158,10 @@ public sealed record ProfessionalDashboardDto(
                 p.MatchDelta,
                 p.ActiveApplications,
                 p.ResponseRate,
-                p.AvgMatch,
+                avgMatch,
                 p.Interviews),
             p.ViewsTrend,
-            [.. d.Matches.Select(m => new MatchDto(m.Role, m.Company, m.City, m.Industry, m.MatchScore, m.SalaryLo, m.SalaryHi, m.Type, m.PostedLabel, m.Id, m.Status switch { MatchStatus.Saved => "saved", MatchStatus.Dismissed => "dismissed", MatchStatus.Applied => "applied", _ => "new" }))],
+            [.. scoredMatches.Select(x => new MatchDto(x.Match.Role, x.Match.Company, x.Match.City, x.Match.Industry, x.Score, x.Match.SalaryLo, x.Match.SalaryHi, x.Match.Type, x.Match.PostedLabel, x.Match.Id, x.Match.Status switch { MatchStatus.Saved => "saved", MatchStatus.Dismissed => "dismissed", MatchStatus.Applied => "applied", _ => "new" }))],
             [.. d.Pipeline.Select(s => new PipelineDto(s.Stage, s.Value))],
             [.. d.SkillDemand.Select(s => new SkillDemandDto(s.Role, s.Value))],
             [.. d.Skills.Select(s => new SkillDto(s.Name, s.Level, s.Trend))],

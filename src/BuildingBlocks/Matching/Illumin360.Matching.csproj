@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Illumin360.Matching</RootNamespace>
+  </PropertyGroup>
+  <!-- Pure, dependency-free talent↔role match scoring. Shared so every service scores the same way. -->
+  <ItemGroup>
+    <!-- The unit test project lives under tests/; keep its sources out of this library. -->
+    <Compile Remove="tests/**/*.cs" />
+  </ItemGroup>
+</Project>
