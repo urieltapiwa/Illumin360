@@ -52,6 +52,12 @@ public static class DependencyInjection
             ICommandHandler<RemoveSkillCommand, bool>,
             RemoveSkillCommandHandler>();
         services.AddScoped<
+            ICommandHandler<EndorseSkillCommand, SkillEndorsementDto>,
+            EndorseSkillCommandHandler>();
+        services.AddScoped<
+            IQueryHandler<GetSkillEndorsementsQuery, IReadOnlyList<SkillEndorsementDto>>,
+            GetSkillEndorsementsQueryHandler>();
+        services.AddScoped<
             IQueryHandler<GetNotificationsQuery, IReadOnlyList<NotificationDto>>,
             GetNotificationsQueryHandler>();
         services.AddScoped<

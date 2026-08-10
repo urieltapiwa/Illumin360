@@ -28,6 +28,9 @@ public sealed class ProfessionalsDbContext(DbContextOptions<ProfessionalsDbConte
     /// <summary>Skills set.</summary>
     public DbSet<ProfessionalSkill> Skills => Set<ProfessionalSkill>();
 
+    /// <summary>Skill endorsements / references.</summary>
+    public DbSet<SkillEndorsement> SkillEndorsements => Set<SkillEndorsement>();
+
     /// <summary>Activity-feed set.</summary>
     public DbSet<ProfessionalActivity> Activity => Set<ProfessionalActivity>();
 
@@ -166,8 +169,22 @@ public sealed class ProfessionalsDbContext(DbContextOptions<ProfessionalsDbConte
             b.Property(x => x.Level).HasColumnName("level");
             b.Property(x => x.Trend).HasColumnName("trend").HasMaxLength(20);
             b.Property(x => x.Sort).HasColumnName("sort");
+            b.Property(x => x.Endorsements).HasColumnName("endorsements");
             b.HasIndex(x => x.ProfessionalId);
             b.Ignore(x => x.DomainEvents);
+        });
+
+        modelBuilder.Entity<SkillEndorsement>(b =>
+        {
+            b.ToTable("skill_endorsements");
+            b.HasKey(e => e.Id);
+            b.Property(e => e.Id).HasColumnName("id");
+            b.Property(e => e.SkillId).HasColumnName("skill_id");
+            b.Property(e => e.Endorser).HasColumnName("endorser").HasMaxLength(160);
+            b.Property(e => e.Note).HasColumnName("note").HasMaxLength(500);
+            b.Property(e => e.CreatedAt).HasColumnName("created_at");
+            b.HasIndex(e => e.SkillId);
+            b.Ignore(e => e.DomainEvents);
         });
 
         modelBuilder.Entity<ProfessionalNotification>(b =>

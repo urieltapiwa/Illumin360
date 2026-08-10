@@ -84,7 +84,8 @@ public sealed record SkillDemandDto(string Role, int Value);
 /// <param name="Name">Skill name.</param>
 /// <param name="Level">Proficiency (0–100).</param>
 /// <param name="Trend">Market trend tag.</param>
-public sealed record SkillDto(Guid Id, string Name, int Level, string Trend);
+/// <param name="Endorsements">Number of endorsements received.</param>
+public sealed record SkillDto(Guid Id, string Name, int Level, string Trend, int Endorsements);
 
 /// <summary>Salary benchmark for the professional's role.</summary>
 /// <param name="Role">Benchmark role.</param>
@@ -165,7 +166,7 @@ public sealed record ProfessionalDashboardDto(
             [.. scoredMatches.Select(x => new MatchDto(x.Match.Role, x.Match.Company, x.Match.City, x.Match.Industry, x.Score, x.Match.SalaryLo, x.Match.SalaryHi, x.Match.Type, x.Match.PostedLabel, x.Match.Id, x.Match.Status switch { MatchStatus.Saved => "saved", MatchStatus.Dismissed => "dismissed", MatchStatus.Applied => "applied", _ => "new" }))],
             [.. d.Pipeline.Select(s => new PipelineDto(s.Stage, s.Value))],
             [.. d.SkillDemand.Select(s => new SkillDemandDto(s.Role, s.Value))],
-            [.. d.Skills.Select(s => new SkillDto(s.Id, s.Name, s.Level, s.Trend))],
+            [.. d.Skills.Select(s => new SkillDto(s.Id, s.Name, s.Level, s.Trend, s.Endorsements))],
             new SalaryDto(p.SalaryRole, p.SalaryP25, p.SalaryMedian, p.SalaryP75, p.SalaryYou),
             [.. d.Activity.Select(a => new ActivityDto(a.Icon, a.Text, a.WhenLabel))]);
     }

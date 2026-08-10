@@ -78,6 +78,26 @@ public interface IProfessionalRepository
     /// <param name="skill">The skill to remove.</param>
     void RemoveSkill(ProfessionalSkill skill);
 
+    /// <summary>Loads any skill by id (across professionals) for update, or null if not found.</summary>
+    /// <param name="skillId">The skill id.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<ProfessionalSkill?> GetSkillByIdAsync(Guid skillId, CancellationToken cancellationToken);
+
+    /// <summary>Stages a new skill endorsement for insertion.</summary>
+    /// <param name="endorsement">The endorsement to add.</param>
+    void AddEndorsement(SkillEndorsement endorsement);
+
+    /// <summary>Whether the given endorser has already endorsed the skill (case-insensitive).</summary>
+    /// <param name="skillId">The skill id.</param>
+    /// <param name="endorser">The endorser name.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<bool> EndorsementExistsAsync(Guid skillId, string endorser, CancellationToken cancellationToken);
+
+    /// <summary>Lists a skill's endorsements, newest first.</summary>
+    /// <param name="skillId">The skill id.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<IReadOnlyList<SkillEndorsement>> ListEndorsementsAsync(Guid skillId, CancellationToken cancellationToken);
+
     /// <summary>Stages a new in-app notification for insertion.</summary>
     /// <param name="notification">The notification to add.</param>
     void AddNotification(ProfessionalNotification notification);

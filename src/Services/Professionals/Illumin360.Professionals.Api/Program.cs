@@ -284,6 +284,38 @@ v1.MapDelete("/me/skills/{id:guid}", async (
     .ProducesProblem(StatusCodes.Status403Forbidden)
     .ProducesProblem(StatusCodes.Status404NotFound);
 
+// --- Skill endorsements / references (a recruiter/peer vouches for a skill) ---
+v1.MapGet("/skills/{skillId:guid}/endorsements", async (
+        Guid skillId,
+        IQueryHandler<GetSkillEndorsementsQuery, IReadOnlyList<SkillEndorsementDto>> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new GetSkillEndorsementsQuery(skillId), ct);
+        return result.ToHttpResult();
+    })
+    .WithName("GetSkillEndorsements")
+    .WithSummary("List a skill's endorsements / references.")
+    .Produces<IReadOnlyList<SkillEndorsementDto>>(StatusCodes.Status200OK);
+
+v1.MapPost("/skills/{skillId:guid}/endorsements", async (
+        Guid skillId,
+        EndorseSkillBody body,
+        ICommandHandler<EndorseSkillCommand, SkillEndorsementDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new EndorseSkillCommand(skillId, body.Endorser, body.Note), ct);
+        return result.ToCreatedResult(dto => $"/v1/professionals/skills/{skillId}/endorsements/{dto.Id}");
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminWritePolicy)
+    .WithName("EndorseSkill")
+    .WithSummary("Endorse a professional's skill. Requires an admin (write) role.")
+    .Produces<SkillEndorsementDto>(StatusCodes.Status201Created)
+    .ProducesProblem(StatusCodes.Status400BadRequest)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden)
+    .ProducesProblem(StatusCodes.Status404NotFound)
+    .ProducesProblem(StatusCodes.Status409Conflict);
+
 // --- In-app notification center for the current ("me") profile ---
 v1.MapGet("/me/notifications", async (
         bool? unreadOnly,
@@ -337,6 +369,11 @@ internal sealed record AddSkillBody(string Name, int Level);
 /// <summary>Request body for updating a skill's proficiency.</summary>
 /// <param name="Level">New proficiency (0–100).</param>
 internal sealed record UpdateSkillBody(int Level);
+
+/// <summary>Request body for endorsing a skill.</summary>
+/// <param name="Endorser">Endorser name.</param>
+/// <param name="Note">Optional reference note.</param>
+internal sealed record EndorseSkillBody(string Endorser, string? Note);
 
 /// <summary>Exposed so integration tests can use <c>WebApplicationFactory</c> (charter Part 14).</summary>
 public partial class Program;

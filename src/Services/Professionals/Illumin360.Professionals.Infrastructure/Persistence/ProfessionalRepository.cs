@@ -73,6 +73,25 @@ public sealed class ProfessionalRepository(ProfessionalsDbContext db) : IProfess
     public void RemoveSkill(ProfessionalSkill skill) => _db.Skills.Remove(skill);
 
     /// <inheritdoc />
+    public Task<ProfessionalSkill?> GetSkillByIdAsync(Guid skillId, CancellationToken cancellationToken) =>
+        _db.Skills.FirstOrDefaultAsync(s => s.Id == skillId, cancellationToken);
+
+    /// <inheritdoc />
+    public void AddEndorsement(SkillEndorsement endorsement) => _db.SkillEndorsements.Add(endorsement);
+
+    /// <inheritdoc />
+    public async Task<bool> EndorsementExistsAsync(Guid skillId, string endorser, CancellationToken cancellationToken) =>
+        await _db.SkillEndorsements.AsNoTracking()
+            .AnyAsync(e => e.SkillId == skillId && EF.Functions.ILike(e.Endorser, endorser), cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<SkillEndorsement>> ListEndorsementsAsync(Guid skillId, CancellationToken cancellationToken) =>
+        await _db.SkillEndorsements.AsNoTracking()
+            .Where(e => e.SkillId == skillId)
+            .OrderByDescending(e => e.CreatedAt)
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
     public void AddNotification(ProfessionalNotification notification) => _db.Notifications.Add(notification);
 
     /// <inheritdoc />

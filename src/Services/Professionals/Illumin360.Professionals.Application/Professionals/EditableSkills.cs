@@ -9,7 +9,8 @@ namespace Illumin360.Professionals.Application.Professionals;
 /// <param name="Name">Skill name.</param>
 /// <param name="Level">Proficiency (0–100).</param>
 /// <param name="Trend">Market trend tag.</param>
-public sealed record EditableSkillDto(Guid Id, string Name, int Level, string Trend)
+/// <param name="Endorsements">Number of endorsements received.</param>
+public sealed record EditableSkillDto(Guid Id, string Name, int Level, string Trend, int Endorsements)
 {
     /// <summary>Projects a domain <see cref="ProfessionalSkill"/> into the transport DTO.</summary>
     /// <param name="s">The skill.</param>
@@ -17,7 +18,7 @@ public sealed record EditableSkillDto(Guid Id, string Name, int Level, string Tr
     public static EditableSkillDto FromDomain(ProfessionalSkill s)
     {
         ArgumentNullException.ThrowIfNull(s);
-        return new EditableSkillDto(s.Id, s.Name, s.Level, s.Trend);
+        return new EditableSkillDto(s.Id, s.Name, s.Level, s.Trend, s.Endorsements);
     }
 }
 
