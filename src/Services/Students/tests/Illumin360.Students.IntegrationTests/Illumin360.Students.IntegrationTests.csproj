@@ -11,6 +11,7 @@
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
     <PackageReference Include="Testcontainers.PostgreSql" />
     <PackageReference Include="Testcontainers.Minio" />
+    <PackageReference Include="DocumentFormat.OpenXml" />
     <PackageReference Include="coverlet.collector" />
     <PackageReference Include="MassTransit.EntityFrameworkCore" />
     <ProjectReference Include="..\..\Illumin360.Students.Api\Illumin360.Students.Api.csproj" />

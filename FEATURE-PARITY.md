@@ -18,7 +18,7 @@ flip the status to ✅ (add the commit/PR ref).
 | Availability status | ✅ | `SetAvailability` on students & professionals |
 | Skills & proficiency | 🟡 | Seeded skill rows; not user-editable |
 | Resume/CV upload & storage | ✅ | MinIO-backed upload/download for professionals & students (self-service `/me/cv`) and candidates (per-id, admin) via `Illumin360.Storage` |
-| Resume parsing (skills/experience extraction) | 🟡 | Shared `Illumin360.Resume` extracts CV text (PDF/DOCX/TXT) + detects skills; Professionals `/me/cv/apply-skills` **auto-adds** new skills to the profile ("Scan CV & add skills" UI). Students/candidates + experience extraction pending |
+| Resume parsing (skills/experience extraction) | 🟡 | Shared `Illumin360.Resume` extracts CV text (PDF/DOCX/TXT) + detects skills; **professionals & students** `/me/cv/apply-skills` auto-add new skills to the profile ("Scan CV & add skills" UI). Candidates + experience/education extraction pending |
 | Candidate search (boolean / faceted) | 🟡 | City ILIKE filter only |
 | Recruiter notes / private activity log | 🟡 | Read-only activity feed; no recruiter notes |
 | Tags / labels | ⬜ | |
@@ -176,5 +176,6 @@ flip the status to ✅ (add the commit/PR ref).
 - Employer "top candidates for a role" ranking endpoint (`GET /candidates/top`) (2026-08-10).
 - Resume parsing (`Illumin360.Resume`) — CV text extraction + skill detection, wired to Professionals `/me/cv/parse` + UI (2026-08-10).
 - Auto-apply detected CV skills to the professional profile (`/me/cv/apply-skills`), reflected live (2026-08-10).
+- Extended CV parse/apply-skills to students (same `/me/cv/apply-skills` + "Scan CV" UI) (2026-08-10).
 
 _Update this file as items are ticked; link the commit/PR that delivered each._
