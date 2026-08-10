@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <RootNamespace>Illumin360.Employers.Api</RootNamespace>
+    <UserSecretsId>illumin360-employers</UserSecretsId>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <PackageReference Include="AspNetCore.HealthChecks.UI.Client" />
+    <ProjectReference Include="..\Illumin360.Employers.Application\Illumin360.Employers.Application.csproj" />
+    <ProjectReference Include="..\Illumin360.Employers.Infrastructure\Illumin360.Employers.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\..\BuildingBlocks\Observability\Illumin360.Observability.csproj" />
+    <ProjectReference Include="..\..\..\BuildingBlocks\Web\Illumin360.Web.csproj" />
+    <ProjectReference Include="..\..\..\BuildingBlocks\Security\Illumin360.Security.csproj" />
+  </ItemGroup>
+</Project>
