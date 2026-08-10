@@ -86,6 +86,9 @@ export default function Admin({ session }: { session: Session }) {
   const [liveVers, setLiveVers] = useState<{ id: string; entity: string; kind: string; risk: string; submitted: string; status: string }[] | null>(null);
   const [liveTickets, setLiveTickets] = useState<{ id: string; subject: string; priority: string; requester: string; status: string; assignee: string | null }[] | null>(null);
   const [liveAccounts, setLiveAccounts] = useState<{ id: string; name: string; kind: string; email: string; status: string }[] | null>(null);
+  const [pipelineReqs, setPipelineReqs] = useState<{ id: string; title: string; city: string }[] | null>(null);
+  const [pipelineReqId, setPipelineReqId] = useState<string | null>(null);
+  const [pipelineApps, setPipelineApps] = useState<{ id: string; talentType: string; matchScore: number; status: string }[] | null>(null);
   useEffect(() => { fetch(import.meta.env.BASE_URL + "admin.json").then((r) => r.json()).then(setD); }, []);
   // Live platform signals from the microservices (via BFF → gateway). Talent count and talent-by-city are
   // real (Candidates service); finance/ops tiles (MRR, subscriptions, tickets, verifications) have no backing
@@ -115,6 +118,22 @@ export default function Admin({ session }: { session: Session }) {
       .then((v) => { if (Array.isArray(v)) setLiveAccounts(v); })
       .catch(() => { /* keep snapshot */ });
   }, []);
+  // Recruitment application pipeline (kanban): open roles + the selected role's applications.
+  useEffect(() => {
+    fetch("/api/recruitment/requests?status=open&pageSize=8")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((v: { id: string; title: string; city: string }[] | null) => {
+        if (Array.isArray(v) && v.length > 0) { setPipelineReqs(v.map((x) => ({ id: x.id, title: x.title, city: x.city }))); setPipelineReqId(v[0].id); }
+      })
+      .catch(() => { /* recruitment offline */ });
+  }, []);
+  useEffect(() => {
+    if (!pipelineReqId) return;
+    fetch(`/api/recruitment/requests/${pipelineReqId}/applications`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((v) => { if (Array.isArray(v)) setPipelineApps(v); })
+      .catch(() => { /* keep empty */ });
+  }, [pipelineReqId]);
   if (!d) return <div className="grid place-items-center h-screen text-ink-mid font-mono text-sm animate-pulse">{t("admin.loading")}</div>;
 
   const k = d.kpis;
@@ -144,6 +163,14 @@ export default function Admin({ session }: { session: Session }) {
       setLiveAccounts((prev) => (prev ? prev.map((a) => (a.id === id ? { ...a, status: updated?.status ?? (action === "suspend" ? "suspended" : "active") } : a)) : prev));
     }
   };
+  const transitionApp = async (id: string, action: "advance" | "reject") => {
+    const r = await fetch(`/api/recruitment/applications/${id}/${action}`, { method: "POST", credentials: "same-origin" });
+    if (r.ok) {
+      const u = await r.json().catch(() => null);
+      setPipelineApps((prev) => (prev ? prev.map((a) => (a.id === id ? { ...a, status: u?.status ?? (action === "reject" ? "rejected" : a.status) } : a)) : prev));
+    }
+  };
+  const pipelineStages = ["applied", "reviewed", "shortlisted", "hired", "rejected"];
   const degraded = d.services.filter((s) => s.status !== "operational").length;
   const nav: [React.ReactNode, string, boolean][] = [[ICN.grid, t("admin.nav.overview"), true], [ICN.users, t("admin.nav.users"), false], [ICN.cash, t("admin.nav.revenue"), false], [ICN.shield, t("admin.nav.moderation"), false], [ICN.server, t("admin.nav.system"), false], [ICN.gear, t("admin.nav.settings"), false]];
   const initials = (session.name || "Admin").split(" ").map((x) => x[0]).slice(0, 2).join("");
@@ -358,6 +385,44 @@ export default function Admin({ session }: { session: Session }) {
                 </table>
               </motion.section>
             </div>
+          )}
+
+          {pipelineReqs && pipelineReqs.length > 0 && (
+            <motion.section variants={fade} className="card p-5">
+              <div className="flex items-center justify-between mb-3 gap-3 flex-wrap">
+                <div><h3 className="font-display text-[15px] font-bold text-ink-hi">{t("admin.pipeline.title", "Application pipeline")}</h3><p className="text-[11px] text-ink-lo mt-0.5">{t("admin.pipeline.sub", "Move applicants through the hiring stages.")}</p></div>
+                <div className="flex flex-wrap gap-1.5">
+                  {pipelineReqs.map((r) => (
+                    <button key={r.id} onClick={() => setPipelineReqId(r.id)} className={`rounded-lg px-2.5 py-1 text-[11px] font-semibold transition ${pipelineReqId === r.id ? "bg-brand/20 text-brand-bright" : "bg-panel2/60 text-ink-lo hover:text-ink-hi"}`}>{r.title}</button>
+                  ))}
+                </div>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3">
+                {pipelineStages.map((stage) => {
+                  const cards = (pipelineApps ?? []).filter((a) => a.status === stage);
+                  const terminal = stage === "hired" || stage === "rejected";
+                  return (
+                    <div key={stage} className="rounded-xl border border-line/60 bg-panel2/30 p-2.5">
+                      <div className="flex items-center justify-between mb-2"><span className="eyebrow capitalize">{stage}</span><span className="num text-[11px] text-ink-lo">{cards.length}</span></div>
+                      <div className="space-y-2">
+                        {cards.map((a) => (
+                          <div key={a.id} className={`rounded-lg border p-2 ${stage === "hired" ? "border-brand/40 bg-brand/[0.06]" : stage === "rejected" ? "border-pink/30 bg-pink/[0.05]" : "border-line/50 bg-panel/40"}`}>
+                            <div className="flex items-center justify-between"><span className="text-[11px] text-ink-hi capitalize">{a.talentType}</span><span className="num text-[11px] text-brand-bright">{Math.round(a.matchScore)}%</span></div>
+                            {!terminal && (
+                              <div className="mt-1.5 flex gap-1.5">
+                                <button onClick={() => transitionApp(a.id, "advance")} className="rounded bg-brand/15 px-2 py-0.5 text-[10px] font-semibold text-brand-bright hover:bg-brand/25 transition">{t("admin.pipeline.advance", "Advance")}</button>
+                                <button onClick={() => transitionApp(a.id, "reject")} className="rounded bg-pink/15 px-2 py-0.5 text-[10px] font-semibold text-pink hover:bg-pink/25 transition">{t("admin.pipeline.reject", "Reject")}</button>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                        {cards.length === 0 && <div className="text-[10px] text-ink-lo py-1">—</div>}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </motion.section>
           )}
 
           <footer className="flex flex-wrap items-center justify-between gap-2 pt-1 pb-4 text-[11px] text-ink-lo">
