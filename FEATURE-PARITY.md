@@ -102,12 +102,13 @@ flip the status to ✅ (add the commit/PR ref).
 | Feature | Status | Notes |
 |---|---|---|
 | Event-driven notifications (outbox) | ✅ | MassTransit outbox + Notifications worker |
-| Transactional email (templated) | 🟡 | Keycloak verify email only; worker is a stub |
+| Transactional email (templated) | ✅ | Shared `Illumin360.Email` (MailKit/SMTP → Mailpit) + templates; Notifications worker sends a welcome email on registration. Application-event emails pending |
 | In-app notification center | ⬜ | |
 | In-app messaging (candidate↔employer) | ⬜ | |
 | Bulk email / campaigns | ⬜ | |
 
-- [ ] Real templated email on key events (application received, status change)
+- [x] Email infrastructure — shared `Illumin360.Email` (MailKit SMTP → Mailpit) + templates; Notifications worker sends a **welcome email on registration** (verified end-to-end with a Testcontainers Mailpit)
+- [ ] Templated emails on application received / status change (wire recruitment events → worker)
 - [ ] In-app notification center
 - [ ] Direct messaging between employer and candidate
 
@@ -162,8 +163,8 @@ flip the status to ✅ (add the commit/PR ref).
 ---
 
 ### Progress
-- Total build items: 30
-- Done: 8
+- Total build items: 31
+- Done: 9
 - In progress: 0
 
 **Changelog of ticks**
@@ -179,5 +180,6 @@ flip the status to ✅ (add the commit/PR ref).
 - Extended CV parse/apply-skills to students (same `/me/cv/apply-skills` + "Scan CV" UI) (2026-08-10).
 - Application pipeline stage-transition endpoints (advance/reject) with a domain stage machine (2026-08-10).
 - Applicant status timeline — "My applications" panel + `GET /recruitment/talents/{id}/applications` (2026-08-10).
+- Email infrastructure (`Illumin360.Email`, MailKit→Mailpit) + welcome email on registration; Mailpit-verified (2026-08-10).
 
 _Update this file as items are ticked; link the commit/PR that delivered each._

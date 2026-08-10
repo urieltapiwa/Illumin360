@@ -1,3 +1,4 @@
+using Illumin360.Email;
 using Illumin360.Notifications.Worker.Consumers;
 using Illumin360.Observability;
 using MassTransit;
@@ -15,6 +16,9 @@ builder.Services.AddHealthChecks()
 // --- Messaging: MassTransit + RabbitMQ, consuming Candidates integration events ---
 var rabbitConnectionString = builder.Configuration.GetConnectionString("rabbitmq")
     ?? "amqp://illumin:illumin@localhost:5672";
+
+// --- Transactional email (SMTP; Mailpit in dev) ---
+builder.Services.AddIllumin360Email(builder.Configuration);
 
 builder.Services.AddMassTransit(x =>
 {

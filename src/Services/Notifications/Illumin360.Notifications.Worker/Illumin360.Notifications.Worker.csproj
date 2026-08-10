@@ -9,4 +9,7 @@
     <ProjectReference Include="..\..\Candidates\Illumin360.Candidates.Contracts\Illumin360.Candidates.Contracts.csproj" />
     <ProjectReference Include="..\..\..\BuildingBlocks\Observability\Illumin360.Observability.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\BuildingBlocks\Email\Illumin360.Email.csproj" />
+  </ItemGroup>
 </Project>
