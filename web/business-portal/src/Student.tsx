@@ -7,10 +7,10 @@ import { logout, type Session } from "./auth";
 import { LanguageSwitcher, ThemeSwitcher } from "@illumin360/ui";
 
 interface StudentData {
-  persona: { name: string; field: string; school: string; year: string; graduating: string; readiness: number; program: string; city: string };
+  persona: { name: string; field: string; school: string; year: string; graduating: string; readiness: number; program: string; city: string; availability?: string };
   kpis: { profileViews: number; viewsDelta: number; internshipMatches: number; applications: number; skillsDone: number; mentorSessions: number; readiness: number };
   viewsTrend: number[];
-  matches: { role: string; company: string; city: string; match: number; stipendLo: number; stipendHi: number; type: string; posted: string }[];
+  matches: { role: string; company: string; city: string; match: number; stipendLo: number; stipendHi: number; type: string; posted: string; id?: string; status?: string }[];
   learning: { name: string; progress: number; tag: string }[];
   pipeline: { stage: string; value: number }[];
   skills: { name: string; level: number }[];
@@ -43,6 +43,7 @@ const tagColor: Record<string, string> = { done: "text-brand-bright", "in progre
 export default function Student(_props: { session: Session }) {
   const [d, setD] = useState<StudentData | null>(null);
   const [live, setLive] = useState(false);
+  const [matchFilter, setMatchFilter] = useState<"all" | "saved" | "applied">("all");
   const { t } = useTranslation();
   // Live-first: read the student's dashboard from the Students service (via the BFF/gateway); fall back to
   // the bundled snapshot if the API is unavailable. Mirrors the Business dashboard's live-data pattern.
@@ -64,6 +65,21 @@ export default function Student(_props: { session: Session }) {
   }, []);
   if (!d) return <div className="grid place-items-center h-screen text-ink-mid font-mono text-sm animate-pulse">{t("student.loading")}</div>;
   const p = d.persona, k = d.kpis;
+  const availability = p.availability ?? "Open to internships";
+  // Self-service actions (only meaningful when logged in / live; snapshot matches have no id).
+  const act = async (matchId: string | undefined, action: "save" | "dismiss" | "apply") => {
+    if (!matchId) return;
+    const r = await fetch(`/api/students/me/matches/${matchId}/${action}`, { method: "POST", credentials: "same-origin" });
+    if (r.ok) {
+      const updated = await r.json().catch(() => null);
+      setD((prev) => (prev ? { ...prev, matches: prev.matches.map((m) => (m.id === matchId ? { ...m, status: updated?.status ?? action + "d" } : m)) } : prev));
+    }
+  };
+  const toggleAvailability = async () => {
+    const next = /open/i.test(availability) ? "Not looking" : "Open to internships";
+    const r = await fetch(`/api/students/me/availability`, { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: JSON.stringify({ availability: next }) });
+    if (r.ok) { const v = await r.json().catch(() => next); setD((prev) => (prev ? { ...prev, persona: { ...prev.persona, availability: typeof v === "string" ? v : next } } : prev)); }
+  };
   const nav: [React.ReactNode, string, boolean][] = [[N.path, "student.nav.path", true], [N.cap, "student.nav.internships", false], [N.book, "student.nav.learning", false], [N.chat, "student.nav.mentors", false], [N.gear, "student.nav.settings", false]];
   const initials = p.name.split(" ").map((x) => x[0]).slice(0, 2).join("");
   return (
@@ -84,6 +100,9 @@ export default function Student(_props: { session: Session }) {
           <div className="ml-auto flex items-center gap-3">
             <LanguageSwitcher />
             <ThemeSwitcher />
+            {live && (
+              <button onClick={toggleAvailability} title="Toggle availability" className={`chip !text-[11px] hidden md:inline-flex transition ${/open/i.test(availability) ? "!text-brand-bright !border-brand/30" : "!text-ink-mid !border-line/70"}`}><span className={`h-1.5 w-1.5 rounded-full ${/open/i.test(availability) ? "bg-brand-bright" : "bg-ink-lo"}`} />{availability}</button>
+            )}
             <span className="chip !text-[11px] !text-gold !border-gold/30 hidden md:inline-flex">★ {p.program}</span>
             <div className="hidden md:flex items-center gap-2.5 rounded-xl border border-line/70 bg-panel2/50 pl-2.5 pr-2 py-1.5"><div className="grid h-7 w-7 place-items-center rounded-lg bg-brand/20 text-[11px] font-bold text-brand-bright">{initials}</div><div className="leading-tight"><div className="text-xs font-semibold text-ink-hi">{p.name}</div><div className="text-[10px] text-ink-lo">{p.field}</div></div><button onClick={logout} title={t("student.topbar.signOut")} className="ml-1 text-ink-lo hover:text-pink transition"><Ic d={N.out} s={15} /></button></div>
           </div>
@@ -104,15 +123,47 @@ export default function Student(_props: { session: Session }) {
           </div>
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
             <motion.section variants={fade} className="card p-5 xl:col-span-2">
-              <div className="flex items-center justify-between mb-3"><div><h3 className="font-display text-[15px] font-bold text-ink-hi">{t("student.matches.title")}</h3><p className="text-[11px] text-ink-lo mt-0.5">{t("student.matches.sub")}</p></div><span className="chip !text-[10px]">{t("student.matches.count", { n: d.matches.length })}</span></div>
+              <div className="flex items-center justify-between mb-3">
+                <div><h3 className="font-display text-[15px] font-bold text-ink-hi">{t("student.matches.title")}</h3><p className="text-[11px] text-ink-lo mt-0.5">{t("student.matches.sub")}</p></div>
+                {live ? (
+                  <div className="flex items-center gap-0.5 rounded-lg bg-panel2/50 p-0.5">
+                    {(["all", "saved", "applied"] as const).map((f) => (
+                      <button key={f} onClick={() => setMatchFilter(f)} className={`rounded-md px-2.5 py-1 text-[11px] font-semibold capitalize transition ${matchFilter === f ? "bg-brand/20 text-brand-bright" : "text-ink-lo hover:text-ink-hi"}`}>{f}</button>
+                    ))}
+                  </div>
+                ) : (
+                  <span className="chip !text-[10px]">{t("student.matches.count", { n: d.matches.length })}</span>
+                )}
+              </div>
+              {(() => {
+                const visible = d.matches.filter((m) => m.status !== "dismissed").filter((m) => matchFilter === "all" || m.status === matchFilter);
+                if (visible.length === 0) {
+                  return <div className="py-8 text-center text-[12px] text-ink-lo">No {matchFilter === "all" ? "" : matchFilter + " "}matches right now.</div>;
+                }
+                return (
               <div className="grid sm:grid-cols-2 gap-3">
-                {d.matches.map((m, i) => (
-                  <div key={i} className="rounded-xl border border-line/60 bg-panel2/40 p-3.5 hover:border-brand/40 transition">
+                {visible.map((m, i) => (
+                  <div key={m.id ?? i} className={`rounded-xl border p-3.5 transition ${m.status === "applied" ? "border-brand/50 bg-brand/[0.06]" : m.status === "saved" ? "border-gold/40 bg-panel2/40" : "border-line/60 bg-panel2/40 hover:border-brand/40"}`}>
                     <div className="flex items-start justify-between gap-2"><div className="min-w-0"><div className="text-sm font-semibold text-ink-hi truncate">{m.role}</div><div className="text-[11px] text-ink-mid truncate">{m.company} · {m.city}</div></div><div className="text-right shrink-0"><div className="num text-base font-bold text-brand-bright">{m.match}%</div><div className="text-[9px] text-ink-lo uppercase">{t("student.matches.match")}</div></div></div>
                     <div className="mt-2.5 flex items-center justify-between"><span className="text-[11px] text-gold num">{kK(m.stipendLo)}–{kK(m.stipendHi)}</span><span className="text-[10px] text-ink-lo">{m.type} · {m.posted}</span></div>
+                    {live && m.id && (
+                      <div className="mt-2.5 flex items-center gap-1.5 border-t border-line/40 pt-2.5">
+                        {m.status === "applied" ? (
+                          <span className="chip !text-[10px] !text-brand-bright !border-brand/30">✓ Applied</span>
+                        ) : (
+                          <>
+                            <button onClick={() => act(m.id, "apply")} className="rounded-lg bg-brand/15 px-2.5 py-1 text-[11px] font-semibold text-brand-bright hover:bg-brand/25 transition">Apply</button>
+                            <button onClick={() => act(m.id, "save")} className={`rounded-lg px-2.5 py-1 text-[11px] font-semibold transition ${m.status === "saved" ? "bg-gold/20 text-gold" : "bg-panel2/70 text-ink-mid hover:text-ink-hi"}`}>{m.status === "saved" ? "Saved" : "Save"}</button>
+                            <button onClick={() => act(m.id, "dismiss")} className="ml-auto rounded-lg px-2.5 py-1 text-[11px] font-semibold text-ink-lo hover:text-pink transition">Dismiss</button>
+                          </>
+                        )}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
+                );
+              })()}
             </motion.section>
             <motion.section variants={fade} className="card p-5">
               <h3 className="font-display text-[15px] font-bold text-ink-hi">{t("student.learning.title")}</h3><p className="text-[11px] text-ink-lo mt-0.5 mb-3">{t("student.learning.sub")}</p>

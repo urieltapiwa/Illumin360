@@ -33,6 +33,22 @@ public sealed class StudentRepository(StudentsDbContext db) : IStudentRepository
     public void Add(Student student) => _db.Students.Add(student);
 
     /// <inheritdoc />
+    public async Task<StudentId?> GetDefaultStudentIdAsync(CancellationToken cancellationToken)
+    {
+        var s = await _db.Students.AsNoTracking().OrderBy(x => x.CreatedAt)
+            .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+        return s?.Id;
+    }
+
+    /// <inheritdoc />
+    public Task<Student?> GetTrackedAsync(StudentId id, CancellationToken cancellationToken) =>
+        _db.Students.FirstOrDefaultAsync(s => s.Id == id, cancellationToken);
+
+    /// <inheritdoc />
+    public Task<StudentMatch?> GetMatchAsync(StudentId studentId, Guid matchId, CancellationToken cancellationToken) =>
+        _db.Matches.FirstOrDefaultAsync(m => m.Id == matchId && m.StudentId == studentId, cancellationToken);
+
+    /// <inheritdoc />
     public Task<int> SaveChangesAsync(CancellationToken cancellationToken) =>
         _db.SaveChangesAsync(cancellationToken);
 

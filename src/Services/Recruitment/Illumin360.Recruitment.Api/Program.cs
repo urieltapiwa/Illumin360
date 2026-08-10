@@ -120,7 +120,32 @@ v1.MapPost("/requests", async (
     .ProducesProblem(StatusCodes.Status401Unauthorized)
     .ProducesProblem(StatusCodes.Status403Forbidden);
 
+v1.MapPost("/requests/{id:guid}/apply", async (
+        Guid id,
+        ApplyToRequestBody body,
+        ICommandHandler<ApplyToRequestCommand, ApplicationDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(
+            new ApplyToRequestCommand(id, body.TalentId, body.TalentType ?? "professional"), ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.ProfessionalPolicy)
+    .WithName("ApplyToRecruitmentRequest")
+    .WithSummary("Apply to an open recruitment request. Requires a signed-in professional role.")
+    .Produces<ApplicationDto>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status400BadRequest)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden)
+    .ProducesProblem(StatusCodes.Status404NotFound)
+    .ProducesProblem(StatusCodes.Status409Conflict);
+
 app.Run();
+
+/// <summary>Request body for applying to a recruitment request.</summary>
+/// <param name="TalentId">The applying talent's id.</param>
+/// <param name="TalentType">Talent type (<c>student</c>/<c>professional</c>); defaults to professional.</param>
+internal sealed record ApplyToRequestBody(Guid TalentId, string? TalentType);
 
 /// <summary>Exposed so integration tests can use <c>WebApplicationFactory</c> (charter Part 14).</summary>
 public partial class Program;

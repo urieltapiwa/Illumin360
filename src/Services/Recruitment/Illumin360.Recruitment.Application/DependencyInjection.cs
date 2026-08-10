@@ -27,6 +27,9 @@ public static class DependencyInjection
         services.AddScoped<
             ICommandHandler<PostRecruitmentRequestCommand, RecruitmentRequestDto>,
             PostRecruitmentRequestCommandHandler>();
+        services.AddScoped<
+            ICommandHandler<ApplyToRequestCommand, ApplicationDto>,
+            ApplyToRequestCommandHandler>();
         return services;
     }
 }

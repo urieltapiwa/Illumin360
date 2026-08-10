@@ -1,4 +1,5 @@
 using Illumin360.Students.Application.Abstractions;
+using Illumin360.Students.Domain;
 
 namespace Illumin360.Students.Application.Students;
 
@@ -11,6 +12,7 @@ namespace Illumin360.Students.Application.Students;
 /// <param name="Readiness">Career-readiness score (0–100).</param>
 /// <param name="Program">Sponsoring programme.</param>
 /// <param name="City">Home city.</param>
+/// <param name="Availability">Availability label shown to employers.</param>
 public sealed record PersonaDto(
     string Name,
     string Field,
@@ -19,7 +21,8 @@ public sealed record PersonaDto(
     string Graduating,
     int Readiness,
     string Program,
-    string City);
+    string City,
+    string Availability);
 
 /// <summary>Headline KPIs shown on the student dashboard.</summary>
 /// <param name="ProfileViews">Total profile views.</param>
@@ -47,6 +50,8 @@ public sealed record KpisDto(
 /// <param name="StipendHi">Upper stipend bound (NAD).</param>
 /// <param name="Type">Engagement type.</param>
 /// <param name="Posted">Relative posted-time label.</param>
+/// <param name="Id">Match id (for actions).</param>
+/// <param name="Status">Disposition: new/saved/dismissed/applied.</param>
 public sealed record MatchDto(
     string Role,
     string Company,
@@ -55,7 +60,9 @@ public sealed record MatchDto(
     int StipendLo,
     int StipendHi,
     string Type,
-    string Posted);
+    string Posted,
+    Guid Id,
+    string Status);
 
 /// <summary>A learning module with completion progress.</summary>
 /// <param name="Name">Module name.</param>
@@ -110,7 +117,7 @@ public sealed record StudentDashboardDto(
 
         return new StudentDashboardDto(
             s.Id.Value,
-            new PersonaDto(s.FullName, s.Field, s.School, s.Year, s.Graduating, s.Readiness, s.Program, s.City),
+            new PersonaDto(s.FullName, s.Field, s.School, s.Year, s.Graduating, s.Readiness, s.Program, s.City, s.Availability),
             new KpisDto(
                 s.ProfileViews,
                 s.ViewsDelta,
@@ -120,8 +127,7 @@ public sealed record StudentDashboardDto(
                 s.MentorSessions,
                 s.Readiness),
             s.ViewsTrend,
-            [.. d.Matches.Select(m => new MatchDto(
-                m.Role, m.Company, m.City, m.MatchScore, m.StipendLo, m.StipendHi, m.Type, m.PostedLabel))],
+            [.. d.Matches.Select(m => new MatchDto(m.Role, m.Company, m.City, m.MatchScore, m.StipendLo, m.StipendHi, m.Type, m.PostedLabel, m.Id, m.Status switch { MatchStatus.Saved => "saved", MatchStatus.Dismissed => "dismissed", MatchStatus.Applied => "applied", _ => "new" }))],
             [.. d.Learning.Select(l => new LearningDto(l.Name, l.Progress, l.Tag))],
             [.. d.Pipeline.Select(p => new PipelineDto(p.Stage, p.Value))],
             [.. d.Skills.Select(sk => new SkillDto(sk.Name, sk.Level))],
