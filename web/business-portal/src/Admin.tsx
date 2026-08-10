@@ -125,6 +125,10 @@ export default function Admin({ session }: { session: Session }) {
   // Duplicate-candidate detection.
   type DupGroup = { name: string; count: number; candidates: SearchCandidate[] };
   const [dupes, setDupes] = useState<DupGroup[] | null>(null);
+  // Requisition enrichment (salary/type/remote/tags) for the selected pipeline role.
+  type ReqDetail = { salaryMin: number | null; salaryMax: number | null; currency: string; employmentType: string; remote: boolean; tags: string[] };
+  const [reqDetail, setReqDetail] = useState<ReqDetail | null>(null);
+  const [reqTagDraft, setReqTagDraft] = useState("");
   useEffect(() => { fetch(import.meta.env.BASE_URL + "admin.json").then((r) => r.json()).then(setD); }, []);
   // Live platform signals from the microservices (via BFF → gateway). Talent count and talent-by-city are
   // real (Candidates service); finance/ops tiles (MRR, subscriptions, tickets, verifications) have no backing
@@ -168,6 +172,10 @@ export default function Admin({ session }: { session: Session }) {
     fetch(`/api/recruitment/requests/${pipelineReqId}/applications`)
       .then((r) => (r.ok ? r.json() : null))
       .then((v) => { if (Array.isArray(v)) setPipelineApps(v); })
+      .catch(() => { /* keep empty */ });
+    fetch(`/api/recruitment/requests/${pipelineReqId}/details`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((v) => { if (v) setReqDetail(v); })
       .catch(() => { /* keep empty */ });
   }, [pipelineReqId]);
   // Recruiter CRM: client list (re-fetched on status-filter change).
@@ -338,6 +346,22 @@ export default function Admin({ session }: { session: Session }) {
   const removeCandTag = async (label: string) => {
     const r = await fetch(`/api/candidates/${csOpen}/tags/${encodeURIComponent(label)}`, { method: "DELETE", credentials: "same-origin" });
     if (r.ok) setCsTags(await r.json());
+  };
+  const saveReqDetail = async (patch: Partial<ReqDetail>) => {
+    if (!pipelineReqId || !reqDetail) return;
+    const next = { ...reqDetail, ...patch };
+    setReqDetail(next);
+    const r = await fetch(`/api/recruitment/requests/${pipelineReqId}/details`, { method: "PUT", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: JSON.stringify({ salaryMin: next.salaryMin, salaryMax: next.salaryMax, currency: next.currency || "NAD", employmentType: next.employmentType, remote: next.remote }) });
+    if (r.ok) setReqDetail(await r.json());
+  };
+  const addReqTag = async () => {
+    if (!pipelineReqId || !reqTagDraft.trim()) return;
+    const r = await fetch(`/api/recruitment/requests/${pipelineReqId}/tags`, { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: JSON.stringify({ label: reqTagDraft.trim() }) });
+    if (r.ok) { const tags = await r.json(); setReqDetail((d) => (d ? { ...d, tags } : d)); setReqTagDraft(""); }
+  };
+  const removeReqTag = async (label: string) => {
+    const r = await fetch(`/api/recruitment/requests/${pipelineReqId}/tags/${encodeURIComponent(label)}`, { method: "DELETE", credentials: "same-origin" });
+    if (r.ok) { const tags = await r.json(); setReqDetail((d) => (d ? { ...d, tags } : d)); }
   };
   const pipelineStages = ["applied", "reviewed", "shortlisted", "hired", "rejected"];
   const degraded = d.services.filter((s) => s.status !== "operational").length;
@@ -566,6 +590,30 @@ export default function Admin({ session }: { session: Session }) {
                   ))}
                 </div>
               </div>
+              {reqDetail && (
+                <div className="mb-4 rounded-xl border border-line/60 bg-panel2/30 p-3.5">
+                  <div className="flex flex-wrap items-end gap-3">
+                    <label className="text-[11px] text-ink-lo">{t("admin.req.salaryMin", "Salary min (N$)")}
+                      <input type="number" value={reqDetail.salaryMin ?? ""} onChange={(e) => setReqDetail((d) => (d ? { ...d, salaryMin: e.target.value ? Number(e.target.value) : null } : d))} onBlur={() => saveReqDetail({})} className="mt-1 block w-28 rounded-lg border border-line/70 bg-panel2/50 px-2 py-1 text-[12px] text-ink-hi focus:border-brand/50 focus:outline-none" />
+                    </label>
+                    <label className="text-[11px] text-ink-lo">{t("admin.req.salaryMax", "Salary max (N$)")}
+                      <input type="number" value={reqDetail.salaryMax ?? ""} onChange={(e) => setReqDetail((d) => (d ? { ...d, salaryMax: e.target.value ? Number(e.target.value) : null } : d))} onBlur={() => saveReqDetail({})} className="mt-1 block w-28 rounded-lg border border-line/70 bg-panel2/50 px-2 py-1 text-[12px] text-ink-hi focus:border-brand/50 focus:outline-none" />
+                    </label>
+                    <label className="text-[11px] text-ink-lo">{t("admin.req.type", "Type")}
+                      <select value={reqDetail.employmentType} onChange={(e) => saveReqDetail({ employmentType: e.target.value })} className="mt-1 block rounded-lg border border-line/70 bg-panel2/50 px-2 py-1 text-[12px] text-ink-hi capitalize focus:border-brand/50 focus:outline-none">
+                        {["fulltime", "parttime", "contract", "internship", "temporary"].map((tt) => <option key={tt} value={tt}>{tt}</option>)}
+                      </select>
+                    </label>
+                    <label className="flex items-center gap-2 text-[11px] text-ink-mid"><input type="checkbox" checked={reqDetail.remote} onChange={(e) => saveReqDetail({ remote: e.target.checked })} />{t("admin.req.remote", "Remote")}</label>
+                  </div>
+                  <div className="mt-3 flex flex-wrap items-center gap-1.5">
+                    {reqDetail.tags.map((tag) => (
+                      <span key={tag} className="chip !text-[10px] !text-brand-bright !border-brand/30">{tag} <button onClick={() => removeReqTag(tag)} className="ml-1 hover:text-pink">✕</button></span>
+                    ))}
+                    <input value={reqTagDraft} onChange={(e) => setReqTagDraft(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") addReqTag(); }} placeholder={t("admin.req.addTag", "Add tag")} className="w-28 rounded-lg border border-line/70 bg-panel2/50 px-2 py-1 text-[11px] text-ink-hi placeholder:text-ink-lo focus:border-brand/50 focus:outline-none" />
+                  </div>
+                </div>
+              )}
               <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3">
                 {pipelineStages.map((stage) => {
                   const cards = (pipelineApps ?? []).filter((a) => a.status === stage);

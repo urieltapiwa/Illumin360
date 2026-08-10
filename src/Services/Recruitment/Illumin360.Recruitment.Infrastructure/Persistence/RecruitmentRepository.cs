@@ -213,6 +213,35 @@ public sealed class RecruitmentRepository(RecruitmentDbContext db) : IRecruitmen
             .ConfigureAwait(false);
 
     /// <inheritdoc />
+    public async Task<RequisitionDetail?> GetRequisitionDetailAsync(Guid requestId, CancellationToken cancellationToken)
+        => await _db.RequisitionDetails.FirstOrDefaultAsync(d => d.RequestId == requestId, cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
+    public void AddRequisitionDetail(RequisitionDetail detail) => _db.RequisitionDetails.Add(detail);
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<RequisitionTag>> ListRequisitionTagsAsync(Guid requestId, CancellationToken cancellationToken)
+        => await _db.RequisitionTags.AsNoTracking()
+            .Where(t => t.RequestId == requestId)
+            .OrderBy(t => t.Label)
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
+    public async Task<bool> RequisitionTagExistsAsync(Guid requestId, string label, CancellationToken cancellationToken)
+        => await _db.RequisitionTags.AsNoTracking()
+            .AnyAsync(t => t.RequestId == requestId && t.Label == label, cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
+    public async Task<RequisitionTag?> GetRequisitionTagAsync(Guid requestId, string label, CancellationToken cancellationToken)
+        => await _db.RequisitionTags.FirstOrDefaultAsync(t => t.RequestId == requestId && t.Label == label, cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
+    public void AddRequisitionTag(RequisitionTag tag) => _db.RequisitionTags.Add(tag);
+
+    /// <inheritdoc />
+    public void RemoveRequisitionTag(RequisitionTag tag) => _db.RequisitionTags.Remove(tag);
+
+    /// <inheritdoc />
     public async Task SaveChangesAsync(CancellationToken cancellationToken)
         => await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 

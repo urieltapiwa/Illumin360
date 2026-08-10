@@ -40,6 +40,12 @@ public sealed class RecruitmentDbContext(DbContextOptions<RecruitmentDbContext> 
     /// <summary>Onboarding tasks set (owned + migration-managed by this service).</summary>
     public DbSet<OnboardingTask> OnboardingTasks => Set<OnboardingTask>();
 
+    /// <summary>Requisition enrichment (salary/type/remote) set.</summary>
+    public DbSet<RequisitionDetail> RequisitionDetails => Set<RequisitionDetail>();
+
+    /// <summary>Requisition tags set.</summary>
+    public DbSet<RequisitionTag> RequisitionTags => Set<RequisitionTag>();
+
     /// <inheritdoc />
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -208,6 +214,37 @@ public sealed class RecruitmentDbContext(DbContextOptions<RecruitmentDbContext> 
             b.Property(t => t.IsDone).HasColumnName("is_done");
             b.Property(t => t.CompletedAt).HasColumnName("completed_at");
             b.HasIndex(t => t.ChecklistId);
+            b.Ignore(t => t.DomainEvents);
+        });
+
+        var employmentConverter = new ValueConverter<EmploymentType, string>(
+            v => v.ToString(),
+            v => Enum.Parse<EmploymentType>(v));
+
+        modelBuilder.Entity<RequisitionDetail>(b =>
+        {
+            b.ToTable("requisition_details");
+            b.HasKey(d => d.Id);
+            b.Property(d => d.Id).HasColumnName("id");
+            b.Property(d => d.RequestId).HasColumnName("request_id");
+            b.Property(d => d.SalaryMin).HasColumnName("salary_min");
+            b.Property(d => d.SalaryMax).HasColumnName("salary_max");
+            b.Property(d => d.Currency).HasColumnName("currency").HasMaxLength(3);
+            b.Property(d => d.EmploymentType).HasColumnName("employment_type").HasConversion(employmentConverter).HasMaxLength(20);
+            b.Property(d => d.Remote).HasColumnName("remote");
+            b.Property(d => d.CreatedAt).HasColumnName("created_at");
+            b.HasIndex(d => d.RequestId).IsUnique();
+            b.Ignore(d => d.DomainEvents);
+        });
+
+        modelBuilder.Entity<RequisitionTag>(b =>
+        {
+            b.ToTable("requisition_tags");
+            b.HasKey(t => t.Id);
+            b.Property(t => t.Id).HasColumnName("id");
+            b.Property(t => t.RequestId).HasColumnName("request_id");
+            b.Property(t => t.Label).HasColumnName("label").HasMaxLength(40);
+            b.HasIndex(t => new { t.RequestId, t.Label }).IsUnique();
             b.Ignore(t => t.DomainEvents);
         });
 

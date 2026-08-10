@@ -110,6 +110,18 @@ public static class DependencyInjection
             IQueryHandler<GetOnboardingQuery, OnboardingChecklistDto>,
             GetOnboardingQueryHandler>();
         services.AddScoped<
+            IQueryHandler<GetRequisitionDetailQuery, RequisitionDetailDto>,
+            GetRequisitionDetailQueryHandler>();
+        services.AddScoped<
+            ICommandHandler<SetRequisitionDetailCommand, RequisitionDetailDto>,
+            SetRequisitionDetailCommandHandler>();
+        services.AddScoped<
+            ICommandHandler<AddRequisitionTagCommand, IReadOnlyList<string>>,
+            AddRequisitionTagCommandHandler>();
+        services.AddScoped<
+            ICommandHandler<RemoveRequisitionTagCommand, IReadOnlyList<string>>,
+            RemoveRequisitionTagCommandHandler>();
+        services.AddScoped<
             ICommandHandler<ToggleOnboardingTaskCommand, OnboardingTaskDto>,
             ToggleOnboardingTaskCommandHandler>();
         services.AddScoped<

@@ -111,6 +111,72 @@ v1.MapGet("/requests/{id:guid}/applications", async (
     .WithSummary("List applications for a recruitment request, highest match score first.")
     .Produces<IReadOnlyList<ApplicationDto>>(StatusCodes.Status200OK);
 
+// --- Requisition enrichment: salary range, employment type, remote flag + tags ---
+v1.MapGet("/requests/{id:guid}/details", async (
+        Guid id,
+        IQueryHandler<GetRequisitionDetailQuery, RequisitionDetailDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new GetRequisitionDetailQuery(id), ct);
+        return result.ToHttpResult();
+    })
+    .WithName("GetRequisitionDetail")
+    .WithSummary("Get a requisition's salary range, employment type, remote flag and tags.")
+    .Produces<RequisitionDetailDto>(StatusCodes.Status200OK);
+
+v1.MapPut("/requests/{id:guid}/details", async (
+        Guid id,
+        RequisitionDetailBody body,
+        ICommandHandler<SetRequisitionDetailCommand, RequisitionDetailDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(
+            new SetRequisitionDetailCommand(id, body.SalaryMin, body.SalaryMax, body.Currency, body.EmploymentType, body.Remote), ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminWritePolicy)
+    .WithName("SetRequisitionDetail")
+    .WithSummary("Set a requisition's salary range, employment type and remote flag. Requires an admin (write) role.")
+    .Produces<RequisitionDetailDto>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status400BadRequest)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden)
+    .ProducesProblem(StatusCodes.Status404NotFound);
+
+v1.MapPost("/requests/{id:guid}/tags", async (
+        Guid id,
+        RequisitionTagBody body,
+        ICommandHandler<AddRequisitionTagCommand, IReadOnlyList<string>> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new AddRequisitionTagCommand(id, body.Label), ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminWritePolicy)
+    .WithName("AddRequisitionTag")
+    .WithSummary("Add a category tag to a requisition (idempotent). Requires an admin (write) role.")
+    .Produces<IReadOnlyList<string>>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status400BadRequest)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden)
+    .ProducesProblem(StatusCodes.Status404NotFound);
+
+v1.MapDelete("/requests/{id:guid}/tags/{label}", async (
+        Guid id,
+        string label,
+        ICommandHandler<RemoveRequisitionTagCommand, IReadOnlyList<string>> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new RemoveRequisitionTagCommand(id, label), ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminWritePolicy)
+    .WithName("RemoveRequisitionTag")
+    .WithSummary("Remove a category tag from a requisition. Requires an admin (write) role.")
+    .Produces<IReadOnlyList<string>>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden);
+
 v1.MapPost("/requests", async (
         PostRecruitmentRequestCommand command,
         ICommandHandler<PostRecruitmentRequestCommand, RecruitmentRequestDto> handler,
@@ -725,6 +791,18 @@ internal sealed record AddContactBody(string Name, string? Title, string? Email,
 /// <param name="TalentId">The applying talent's id.</param>
 /// <param name="TalentType">Talent type (<c>student</c>/<c>professional</c>); defaults to professional.</param>
 internal sealed record ApplyToRequestBody(Guid TalentId, string? TalentType);
+
+/// <summary>Request body for setting a requisition's enrichment detail.</summary>
+/// <param name="SalaryMin">Lower salary bound.</param>
+/// <param name="SalaryMax">Upper salary bound.</param>
+/// <param name="Currency">Currency code.</param>
+/// <param name="EmploymentType">Employment-type name (fulltime/parttime/contract/internship/temporary).</param>
+/// <param name="Remote">Whether remote.</param>
+internal sealed record RequisitionDetailBody(int? SalaryMin, int? SalaryMax, string? Currency, string? EmploymentType, bool Remote);
+
+/// <summary>Request body for adding a requisition tag.</summary>
+/// <param name="Label">The tag label.</param>
+internal sealed record RequisitionTagBody(string Label);
 
 /// <summary>Request body for starting an onboarding checklist.</summary>
 /// <param name="RoleTitle">The hired role title.</param>
