@@ -69,12 +69,13 @@ flip the status to ✅ (add the commit/PR ref).
 | Real matching engine (skills/location weighting) | ✅ | Shared weighted engine: professional & student matches, marketplace open-role ranking, and employer top-candidates (`GET /candidates/top`) |
 | Personalized recommendations | ✅ | Professional matches and marketplace open roles both ranked by engine score (`/me/role-scores`) |
 | Saved searches | ✅ | Talent saved searches (create/list/delete + run-results) — Recruitment `saved_searches` table + professional-portal panel |
-| Job alerts / email digests | 🟡 | Per-search alerts opt-in flag (toggle); scheduled digest sender pending |
+| Job alerts / email digests | ✅ | Per-search alerts opt-in + a scheduled `JobAlertScheduler` that runs alert-enabled searches → `JobAlertDigest` event → Notifications worker emails the matches |
 | Talent pools / shortlists | ⬜ | |
 
 - [x] Matching engine (weighted city + role + skills) producing real scores — shared `Illumin360.Matching`, applied to **professional & student** matches (ranked by score) and the professional marketplace panel
 - [x] "Recommended roles for you" — marketplace open roles ranked per professional (`POST /me/role-scores`, match % shown/sorted) — and the employer flip side, "top candidates for a role" (`GET /v1/candidates/top?title=&city=`)
-- [x] Saved searches — talent CRUD + run-results (`/v1/recruitment/saved-searches`), professional-portal panel, plus a per-search **job-alerts opt-in** toggle. The scheduled alert-digest sender (run searches on a cron → email new matches) is the remaining follow-up
+- [x] Saved searches — talent CRUD + run-results (`/v1/recruitment/saved-searches`), professional-portal panel, plus a per-search **job-alerts opt-in** toggle
+- [x] Scheduled alert-digest sender — `JobAlertScheduler` background service runs alert-enabled searches on an interval, publishes `JobAlertDigest` (outbox) → Notifications worker emails the matching roles
 - [ ] Shortlists / talent pools
 
 ## E. Interviews & scheduling
@@ -163,8 +164,8 @@ flip the status to ✅ (add the commit/PR ref).
 ---
 
 ### Progress
-- Total build items: 31
-- Done: 11
+- Total build items: 32
+- Done: 12
 - In progress: 0
 
 **Changelog of ticks**
@@ -183,5 +184,6 @@ flip the status to ✅ (add the commit/PR ref).
 - Email infrastructure (`Illumin360.Email`, MailKit→Mailpit) + welcome email on registration; Mailpit-verified (2026-08-10).
 - Application-event emails — Recruitment publishes ApplicationSubmitted/StatusChanged (outbox) → worker sends templated emails (2026-08-10).
 - Saved searches (CRUD + run-results) + per-search job-alerts opt-in; professional-portal panel (2026-08-10).
+- Scheduled job-alert digest sender — JobAlertScheduler → JobAlertDigest event → worker emails matches (2026-08-10).
 
 _Update this file as items are ticked; link the commit/PR that delivered each._

@@ -25,6 +25,7 @@ builder.Services.AddMassTransit(x =>
     x.AddConsumer<CandidateRegisteredConsumer>();
     x.AddConsumer<ApplicationSubmittedConsumer>();
     x.AddConsumer<ApplicationStatusChangedConsumer>();
+    x.AddConsumer<JobAlertDigestConsumer>();
     x.SetKebabCaseEndpointNameFormatter();
     x.UsingRabbitMq((context, cfg) =>
     {

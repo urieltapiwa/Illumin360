@@ -22,6 +22,16 @@ public class NotificationTemplatesTests
     }
 
     [Fact]
+    public void JobAlertDigest_lists_count_and_sample_roles()
+    {
+        var email = NotificationTemplates.JobAlertDigest("Dev roles", 2, ["Software Developer", "Data Engineer"]);
+
+        email.Subject.Should().Contain("2 new role");
+        email.HtmlBody.Should().Contain("Dev roles");
+        email.HtmlBody.Should().Contain("Software Developer");
+    }
+
+    [Fact]
     public void ApplicationStatusChanged_mentions_role_and_status()
     {
         var email = NotificationTemplates.ApplicationStatusChanged("Software Developer", "shortlisted");
