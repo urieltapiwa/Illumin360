@@ -88,6 +88,15 @@ export default function Professional(_props: { session: Session }) {
   const [matchFilter, setMatchFilter] = useState<"all" | "saved" | "applied">("all");
   // Open-roles the professional has applied to this session (marketplace panel is otherwise stateless).
   const [appliedRoles, setAppliedRoles] = useState<Record<string, "pending" | "done" | "error">>({});
+  const [cv, setCv] = useState<{ fileName: string; uploadedAt: string } | null>(null);
+  const [cvBusy, setCvBusy] = useState<"idle" | "uploading" | "error">("idle");
+  // Current CV metadata (if any). Reads are open; upload requires an authenticated professional.
+  useEffect(() => {
+    fetch("/api/professionals/me/cv")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((v) => { if (v && v.fileName) setCv({ fileName: v.fileName, uploadedAt: v.uploadedAt }); })
+      .catch(() => { /* no CV / offline */ });
+  }, []);
   // P2: live open roles from the Recruitment marketplace (real recruitment_requests).
   useEffect(() => {
     fetch("/api/recruitment/requests?status=open&pageSize=6")
@@ -130,6 +139,26 @@ export default function Professional(_props: { session: Session }) {
     const next = /open/i.test(p.availability) ? "Not looking" : "Open to opportunities";
     const r = await fetch(`/api/professionals/me/availability`, { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: JSON.stringify({ availability: next }) });
     if (r.ok) { const v = await r.json().catch(() => next); setD((prev) => (prev ? { ...prev, persona: { ...prev.persona, availability: typeof v === "string" ? v : next } } : prev)); }
+  };
+  // Upload / replace the professional's CV (stored in MinIO via the Professionals service).
+  const uploadCv = async (files: FileList | null) => {
+    const file = files?.[0];
+    if (!file) return;
+    setCvBusy("uploading");
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const r = await fetch("/api/professionals/me/cv", { method: "POST", credentials: "same-origin", body: fd });
+      if (r.ok) {
+        const v = await r.json().catch(() => null);
+        setCv({ fileName: v?.fileName ?? file.name, uploadedAt: v?.uploadedAt ?? new Date().toISOString() });
+        setCvBusy("idle");
+      } else {
+        setCvBusy("error");
+      }
+    } catch {
+      setCvBusy("error");
+    }
   };
   // Apply to a live marketplace open role — records a real application in the Recruitment service.
   const applyToRole = async (roleId: string) => {
@@ -227,6 +256,31 @@ export default function Professional(_props: { session: Session }) {
               </div>
             </motion.section>
           </div>
+
+          {/* CV / résumé */}
+          <motion.section variants={fade} className="card p-5">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div>
+                <h3 className="font-display text-[15px] font-bold text-ink-hi">{t("pro.cv.title", "CV / Résumé")}</h3>
+                <p className="text-[11px] text-ink-lo mt-0.5">
+                  {cv
+                    ? t("pro.cv.current", "{{name}} · uploaded {{date}}", { name: cv.fileName, date: new Date(cv.uploadedAt).toLocaleDateString() })
+                    : t("pro.cv.none", "No CV uploaded yet. PDF or Word, up to 5 MB.")}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                {cv && (
+                  <a href="/api/professionals/me/cv/download" className="chip !text-[11px] !text-ink-mid hover:!text-ink-hi transition">{t("pro.cv.download", "Download")}</a>
+                )}
+                {live && (
+                  <label className={`rounded-lg px-3 py-1.5 text-[11px] font-semibold transition cursor-pointer ${cvBusy === "uploading" ? "bg-panel2/70 text-ink-lo" : "bg-brand/15 text-brand-bright hover:bg-brand/25"}`}>
+                    {cvBusy === "uploading" ? t("pro.cv.uploading", "Uploading…") : cvBusy === "error" ? t("pro.cv.retry", "Retry upload") : cv ? t("pro.cv.replace", "Replace CV") : t("pro.cv.upload", "Upload CV")}
+                    <input type="file" accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" className="hidden" disabled={cvBusy === "uploading"} onChange={(e) => uploadCv(e.target.files)} />
+                  </label>
+                )}
+              </div>
+            </div>
+          </motion.section>
 
           {/* matches + pipeline */}
           <div id="pro-matches" className="grid grid-cols-1 xl:grid-cols-3 gap-5 scroll-mt-24">

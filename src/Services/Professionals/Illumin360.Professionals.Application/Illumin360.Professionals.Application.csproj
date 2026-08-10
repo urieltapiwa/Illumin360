@@ -8,4 +8,7 @@
     <ProjectReference Include="..\Illumin360.Professionals.Contracts\Illumin360.Professionals.Contracts.csproj" />
     <ProjectReference Include="..\Illumin360.Professionals.Domain\Illumin360.Professionals.Domain.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\BuildingBlocks\Storage\Illumin360.Storage.csproj" />
+  </ItemGroup>
 </Project>

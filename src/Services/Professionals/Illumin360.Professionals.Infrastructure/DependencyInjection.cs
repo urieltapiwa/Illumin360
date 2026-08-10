@@ -1,6 +1,7 @@
 using Illumin360.Professionals.Application.Abstractions;
 using Illumin360.Professionals.Infrastructure.Messaging;
 using Illumin360.Professionals.Infrastructure.Persistence;
+using Illumin360.Storage;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -26,6 +27,9 @@ public static class DependencyInjection
 
         services.AddDbContext<ProfessionalsDbContext>(o => o.UseNpgsql(connectionString));
         services.AddScoped<IProfessionalRepository, ProfessionalRepository>();
+
+        // Object storage (MinIO/S3) for CV uploads.
+        services.AddIllumin360Storage(configuration);
 
         // --- Messaging: MassTransit + RabbitMQ with the EF Core transactional bus outbox ---
         // Integration events published by handlers are stored in the professionals database's outbox

@@ -82,8 +82,14 @@ public sealed class ProfessionalsDbContext(DbContextOptions<ProfessionalsDbConte
             b.Property(p => p.SalaryP75).HasColumnName("salary_p75");
             b.Property(p => p.SalaryYou).HasColumnName("salary_you");
             b.Property(p => p.CreatedAt).HasColumnName("created_at");
+            b.Property(p => p.CvObjectKey).HasColumnName("cv_object_key").HasMaxLength(400);
+            b.Property(p => p.CvFileName).HasColumnName("cv_file_name").HasMaxLength(260);
+            b.Property(p => p.CvContentType).HasColumnName("cv_content_type").HasMaxLength(120);
+            b.Property(p => p.CvSize).HasColumnName("cv_size");
+            b.Property(p => p.CvUploadedAt).HasColumnName("cv_uploaded_at");
             b.Ignore(p => p.DomainEvents);
             b.Ignore(p => p.FullName);
+            b.Ignore(p => p.HasCv);
         });
 
         modelBuilder.Entity<ProfessionalMatch>(b =>

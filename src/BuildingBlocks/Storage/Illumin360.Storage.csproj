@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Illumin360.Storage</RootNamespace>
+  </PropertyGroup>
+  <!-- Shared object-storage adapter: an S3-compatible client (MinIO in dev) behind a small port, so
+       services can store and hand out uploaded files (CVs, documents) without each wiring its own client. -->
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="AWSSDK.S3" />
+  </ItemGroup>
+</Project>

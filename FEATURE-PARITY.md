@@ -17,7 +17,7 @@ flip the status to ✅ (add the commit/PR ref).
 | Candidate & talent profiles (student/professional) | ✅ | Candidates + Students + Professionals services |
 | Availability status | ✅ | `SetAvailability` on students & professionals |
 | Skills & proficiency | 🟡 | Seeded skill rows; not user-editable |
-| Resume/CV upload & storage | ⬜ | MinIO is in the stack but unused |
+| Resume/CV upload & storage | 🟡 | Professionals done (MinIO-backed upload/download via `Illumin360.Storage`); students & candidates pending |
 | Resume parsing (skills/experience extraction) | ⬜ | EazyRecruit/OpenCATS have this |
 | Candidate search (boolean / faceted) | 🟡 | City ILIKE filter only |
 | Recruiter notes / private activity log | 🟡 | Read-only activity feed; no recruiter notes |
@@ -25,7 +25,8 @@ flip the status to ✅ (add the commit/PR ref).
 | Skill endorsements / references | ⬜ | |
 | Duplicate detection | ⬜ | |
 
-- [ ] CV/resume upload → MinIO (per candidate/student/professional)
+- [x] Shared object-storage building block (`Illumin360.Storage`) + Professionals CV upload/download → MinIO (verified end-to-end with a Testcontainers MinIO roundtrip)
+- [ ] Extend CV upload to students & candidates
 - [ ] Resume parsing to prefill skills/experience
 - [ ] Editable skills with proficiency
 - [ ] Faceted candidate search (skills, city, availability)
@@ -154,7 +155,7 @@ flip the status to ✅ (add the commit/PR ref).
 | Self-registration + email verification | ✅ | 3 user types, compensating profile creation |
 | i18n (EN + Afrikaans) | ✅ | all five portals |
 | REST API + OpenAPI | ✅ | per service |
-| Object storage (MinIO) | 🟡 | Provisioned, not yet used by a feature |
+| Object storage (MinIO) | ✅ | `Illumin360.Storage` building block; CV uploads use it |
 | Integration test coverage | ✅ | Testcontainers smoke tests + TestSupport |
 | Mobile app | ⬜ | OrangeHRM has one |
 
@@ -162,10 +163,11 @@ flip the status to ✅ (add the commit/PR ref).
 
 ### Progress
 - Total build items: 30
-- Done: 1
+- Done: 2
 - In progress: 0
 
 **Changelog of ticks**
 - Admin portal tickets + accounts panels — completed the ticket Assign action (2026-08-10).
+- Shared object storage + Professionals CV upload/download (MinIO), end-to-end tested (2026-08-10).
 
 _Update this file as items are ticked; link the commit/PR that delivered each._
