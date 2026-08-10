@@ -122,6 +122,53 @@ public sealed class RecruitmentRepository(RecruitmentDbContext db) : IRecruitmen
             .ConfigureAwait(false);
 
     /// <inheritdoc />
+    public void AddClient(Client client) => _db.Clients.Add(client);
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<Client>> ListClientsAsync(ClientStatus? status, CancellationToken cancellationToken)
+    {
+        var query = _db.Clients.AsNoTracking();
+        if (status is { } s)
+        {
+            query = query.Where(c => c.Status == s);
+        }
+
+        return await query
+            .OrderByDescending(c => c.CreatedAt)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task<Client?> GetClientAsync(ClientId id, CancellationToken cancellationToken)
+        => await _db.Clients.FirstOrDefaultAsync(c => c.Id == id, cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
+    public async Task<int> CountContactsAsync(ClientId clientId, CancellationToken cancellationToken)
+        => await _db.ClientContacts.AsNoTracking()
+            .CountAsync(c => c.ClientId == clientId, cancellationToken)
+            .ConfigureAwait(false);
+
+    /// <inheritdoc />
+    public void AddClientContact(ClientContact contact) => _db.ClientContacts.Add(contact);
+
+    /// <inheritdoc />
+    public void RemoveClientContact(ClientContact contact) => _db.ClientContacts.Remove(contact);
+
+    /// <inheritdoc />
+    public async Task<ClientContact?> GetClientContactAsync(ClientContactId id, CancellationToken cancellationToken)
+        => await _db.ClientContacts.FirstOrDefaultAsync(c => c.Id == id, cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<ClientContact>> ListContactsForClientAsync(ClientId clientId, CancellationToken cancellationToken)
+        => await _db.ClientContacts.AsNoTracking()
+            .Where(c => c.ClientId == clientId)
+            .OrderByDescending(c => c.IsPrimary)
+            .ThenBy(c => c.Name)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+    /// <inheritdoc />
     public async Task SaveChangesAsync(CancellationToken cancellationToken)
         => await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 

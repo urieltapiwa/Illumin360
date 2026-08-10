@@ -97,6 +97,43 @@ public interface IRecruitmentRepository
     /// <returns>The talent's applications.</returns>
     Task<IReadOnlyList<RecruitmentApplication>> ListApplicationsForTalentAsync(Guid talentId, int skip, int take, CancellationToken cancellationToken);
 
+    /// <summary>Stages a new CRM client for insertion.</summary>
+    /// <param name="client">The client to add.</param>
+    void AddClient(Client client);
+
+    /// <summary>Lists CRM clients (optionally filtered by status), newest first.</summary>
+    /// <param name="status">Optional status filter.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<IReadOnlyList<Client>> ListClientsAsync(ClientStatus? status, CancellationToken cancellationToken);
+
+    /// <summary>Loads a client for update (change-tracked), or null if not present.</summary>
+    /// <param name="id">The client id.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<Client?> GetClientAsync(ClientId id, CancellationToken cancellationToken);
+
+    /// <summary>Counts a client's contacts.</summary>
+    /// <param name="clientId">The client id.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<int> CountContactsAsync(ClientId clientId, CancellationToken cancellationToken);
+
+    /// <summary>Stages a new client contact for insertion.</summary>
+    /// <param name="contact">The contact to add.</param>
+    void AddClientContact(ClientContact contact);
+
+    /// <summary>Removes a client contact.</summary>
+    /// <param name="contact">The contact to remove.</param>
+    void RemoveClientContact(ClientContact contact);
+
+    /// <summary>Loads a client contact for update, or null if not present.</summary>
+    /// <param name="id">The contact id.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<ClientContact?> GetClientContactAsync(ClientContactId id, CancellationToken cancellationToken);
+
+    /// <summary>Lists a client's contacts, primary first then by name.</summary>
+    /// <param name="clientId">The client id.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<IReadOnlyList<ClientContact>> ListContactsForClientAsync(ClientId clientId, CancellationToken cancellationToken);
+
     /// <summary>Commits staged changes to the data store.</summary>
     /// <param name="cancellationToken">Cancellation token.</param>
     Task SaveChangesAsync(CancellationToken cancellationToken);

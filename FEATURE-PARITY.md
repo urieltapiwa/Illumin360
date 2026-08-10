@@ -120,13 +120,14 @@ flip the status to ✅ (add the commit/PR ref).
 | Employer/company profile service | ✅ | New `Illumin360.Employers` microservice — company profile get/register/update (`/v1/employers`), DB-per-service + migration + seed, gateway route |
 | Employer portal UI | ✅ | `?portal=employer` page — company profile view + inline edit (industry/city/website/about) against `/api/employers/me`, plus a "top candidates for a role" panel wired to `/api/candidates/top` |
 | Multi-user employer teams + roles | ✅ | `employer_team_members` table + `/v1/employers/me/team` list/invite/change-role/remove (owner/recruiter/viewer), "at least one owner" invariant, unique email per employer; team panel in the employer portal |
-| Recruiter CRM (clients/contacts) | ⬜ | OpenCATS has this |
+| Recruiter CRM (clients/contacts) | ✅ | `clients` + `client_contacts` tables in Recruitment; `/v1/recruitment/clients` list/create/status + contacts add/remove (prospect/active/inactive), seeded demo clients, Client CRM panel in the admin portal |
 | Branded careers page | ⬜ | |
 
 - [x] Employers service — new `Illumin360.Employers` microservice (Domain/Application/Infrastructure/Api) with company profile get/register/update, DB-per-service (migrate + seed), gateway route `/api/employers/**`, unit + Testcontainers integration tests
 - [x] Employers deploy — chiseled non-root Dockerfile + `employers-api` service in `docker-compose.apps.yml` (port 5206, gateway dependency; `illumin360_employers` DB already provisioned by the init script)
 - [x] Employer portal UI — `?portal=employer` company-profile page: live profile view + inline edit (industry/city/website/about; company name fixed) via `PUT /api/employers/me`, and a "top candidates for a role" ranking panel (`GET /api/candidates/top`). Read-only snapshot fallback when the API is offline. Company **members/teams** are the follow-up
 - [x] Employer team roles (owner/recruiter/viewer) — `TeamMember` aggregate + `employer_team_members` table (unique email per employer), `/v1/employers/me/team` list/invite/change-role/remove (writes admin-gated), "at least one owner" invariant guarding demotion & removal (409), seeded founding owner, unit + Testcontainers integration tests, and a team-management panel in the employer portal
+- [x] Recruiter CRM (clients + contacts) — `Client`/`ClientContact` aggregates + `clients`/`client_contacts` tables (owned by Recruitment), `/v1/recruitment/clients` list (status filter) / create / change-status / add-contact / remove-contact (writes admin-gated), status lifecycle prospect→active→inactive, seeded demo clients, unit tests, and a Client CRM panel in the admin portal
 
 ## I. Admin & governance
 | Feature | Status | Notes |
@@ -168,7 +169,7 @@ flip the status to ✅ (add the commit/PR ref).
 
 ### Progress
 - Total build items: 32
-- Done: 21
+- Done: 22
 - In progress: 0
 
 **Changelog of ticks**
@@ -196,5 +197,6 @@ flip the status to ✅ (add the commit/PR ref).
 - Employers service wired into docker-compose (Dockerfile + `employers-api` on 5206, gateway dependency) (2026-08-10).
 - Employer portal UI — `?portal=employer` company-profile view + inline edit + top-candidates panel (2026-08-10).
 - Employer team roles — `employer_team_members` + `/v1/employers/me/team` CRUD (owner/recruiter/viewer), last-owner invariant, portal team panel (2026-08-10).
+- Recruiter CRM — `clients`/`client_contacts` in Recruitment + `/v1/recruitment/clients` CRUD, status lifecycle, seeded demo clients, admin-portal Client CRM panel (2026-08-10).
 
 _Update this file as items are ticked; link the commit/PR that delivered each._

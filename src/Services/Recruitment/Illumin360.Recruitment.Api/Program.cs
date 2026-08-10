@@ -43,6 +43,7 @@ await using (var scope = app.Services.CreateAsyncScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<RecruitmentDbContext>();
     await db.Database.MigrateAsync();
+    await CrmSeeder.SeedAsync(db, CancellationToken.None);
 }
 
 app.UseExceptionHandler();
@@ -352,7 +353,122 @@ v1.MapPost("/applications/{id:guid}/reject", async (
     .ProducesProblem(StatusCodes.Status404NotFound)
     .ProducesProblem(StatusCodes.Status409Conflict);
 
+// --- Recruiter CRM: client companies + contacts (internal recruiter tooling) ---
+v1.MapGet("/clients", async (
+        string? status,
+        IQueryHandler<ListClientsQuery, IReadOnlyList<ClientDto>> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new ListClientsQuery(status), ct);
+        return result.ToHttpResult();
+    })
+    .WithName("ListClients")
+    .WithSummary("List CRM clients, optionally filtered by status (prospect/active/inactive).")
+    .Produces<IReadOnlyList<ClientDto>>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status400BadRequest);
+
+v1.MapGet("/clients/{id:guid}", async (
+        Guid id,
+        IQueryHandler<GetClientQuery, ClientDetailDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new GetClientQuery(id), ct);
+        return result.ToHttpResult();
+    })
+    .WithName("GetClient")
+    .WithSummary("Get a CRM client with its contacts.")
+    .Produces<ClientDetailDto>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status404NotFound);
+
+v1.MapPost("/clients", async (
+        CreateClientBody body,
+        ICommandHandler<CreateClientCommand, ClientDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new CreateClientCommand(body.Name, body.Industry, body.City, body.Notes), ct);
+        return result.ToCreatedResult(dto => $"/v1/recruitment/clients/{dto.Id}");
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminWritePolicy)
+    .WithName("CreateClient")
+    .WithSummary("Create a CRM client. Requires an admin (write) role.")
+    .Produces<ClientDto>(StatusCodes.Status201Created)
+    .ProducesProblem(StatusCodes.Status400BadRequest)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden);
+
+v1.MapPost("/clients/{id:guid}/status", async (
+        Guid id,
+        ChangeClientStatusBody body,
+        ICommandHandler<ChangeClientStatusCommand, ClientDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new ChangeClientStatusCommand(id, body.Status), ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminWritePolicy)
+    .WithName("ChangeClientStatus")
+    .WithSummary("Change a client's relationship status. Requires an admin (write) role.")
+    .Produces<ClientDto>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status400BadRequest)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden)
+    .ProducesProblem(StatusCodes.Status404NotFound);
+
+v1.MapPost("/clients/{id:guid}/contacts", async (
+        Guid id,
+        AddContactBody body,
+        ICommandHandler<AddClientContactCommand, ClientContactDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(
+            new AddClientContactCommand(id, body.Name, body.Title, body.Email, body.Phone, body.IsPrimary), ct);
+        return result.ToCreatedResult(dto => $"/v1/recruitment/clients/{id}/contacts/{dto.Id}");
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminWritePolicy)
+    .WithName("AddClientContact")
+    .WithSummary("Add a contact to a client. Requires an admin (write) role.")
+    .Produces<ClientContactDto>(StatusCodes.Status201Created)
+    .ProducesProblem(StatusCodes.Status400BadRequest)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden)
+    .ProducesProblem(StatusCodes.Status404NotFound);
+
+v1.MapDelete("/clients/{id:guid}/contacts/{contactId:guid}", async (
+        Guid contactId,
+        ICommandHandler<RemoveClientContactCommand, bool> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new RemoveClientContactCommand(contactId), ct);
+        return result.IsSuccess ? Results.NoContent() : result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminWritePolicy)
+    .WithName("RemoveClientContact")
+    .WithSummary("Remove a contact from a client. Requires an admin (write) role.")
+    .Produces(StatusCodes.Status204NoContent)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden)
+    .ProducesProblem(StatusCodes.Status404NotFound);
+
 app.Run();
+
+/// <summary>Request body for creating a CRM client.</summary>
+/// <param name="Name">Company name.</param>
+/// <param name="Industry">Optional industry.</param>
+/// <param name="City">Optional city.</param>
+/// <param name="Notes">Optional notes.</param>
+internal sealed record CreateClientBody(string Name, string? Industry, string? City, string? Notes);
+
+/// <summary>Request body for changing a client's status.</summary>
+/// <param name="Status">The new status (prospect/active/inactive).</param>
+internal sealed record ChangeClientStatusBody(string Status);
+
+/// <summary>Request body for adding a client contact.</summary>
+/// <param name="Name">Contact name.</param>
+/// <param name="Title">Optional job title.</param>
+/// <param name="Email">Optional email.</param>
+/// <param name="Phone">Optional phone.</param>
+/// <param name="IsPrimary">Whether this is the primary contact.</param>
+internal sealed record AddContactBody(string Name, string? Title, string? Email, string? Phone, bool IsPrimary);
 
 /// <summary>Request body for applying to a recruitment request.</summary>
 /// <param name="TalentId">The applying talent's id.</param>

@@ -70,6 +70,24 @@ public static class DependencyInjection
         services.AddScoped<
             IQueryHandler<GetInterviewIcsQuery, string>,
             GetInterviewIcsQueryHandler>();
+        services.AddScoped<
+            IQueryHandler<ListClientsQuery, IReadOnlyList<ClientDto>>,
+            ListClientsQueryHandler>();
+        services.AddScoped<
+            IQueryHandler<GetClientQuery, ClientDetailDto>,
+            GetClientQueryHandler>();
+        services.AddScoped<
+            ICommandHandler<CreateClientCommand, ClientDto>,
+            CreateClientCommandHandler>();
+        services.AddScoped<
+            ICommandHandler<ChangeClientStatusCommand, ClientDto>,
+            ChangeClientStatusCommandHandler>();
+        services.AddScoped<
+            ICommandHandler<AddClientContactCommand, ClientContactDto>,
+            AddClientContactCommandHandler>();
+        services.AddScoped<
+            ICommandHandler<RemoveClientContactCommand, bool>,
+            RemoveClientContactCommandHandler>();
         return services;
     }
 }
