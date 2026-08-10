@@ -111,6 +111,28 @@ public sealed class CvUploadTests : IAsyncLifetime
         dto!.Skills.Should().Contain(["Python", "SQL", "Docker", "React"]);
     }
 
+    [Fact]
+    public async Task Apply_skills_adds_detected_skills_to_the_profile()
+    {
+        var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", TestJwt.ForRoles(["client.user"]));
+
+        using var content = DocxForm("Backend engineer skilled in Kubernetes and GraphQL.");
+        (await client.PostAsync("/v1/professionals/me/cv", content)).StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var apply = await client.PostAsync("/v1/professionals/me/cv/apply-skills", content: null);
+        apply.StatusCode.Should().Be(HttpStatusCode.OK);
+        var dto = await apply.Content.ReadFromJsonAsync<AppliedSkills>();
+        dto!.Added.Should().Contain(["Kubernetes", "GraphQL"]);
+
+        // The new skills now show on the dashboard profile.
+        using var doc = System.Text.Json.JsonDocument.Parse(await (await client.GetAsync("/v1/professionals/me")).Content.ReadAsStringAsync());
+        var names = doc.RootElement.GetProperty("skills").EnumerateArray().Select(s => s.GetProperty("name").GetString()).ToList();
+        names.Should().Contain(["Kubernetes", "GraphQL"]);
+    }
+
+    private sealed record AppliedSkills(List<string> Detected, List<string> Added);
+
     private static MultipartFormDataContent DocxForm(string text)
     {
         using var ms = new MemoryStream();

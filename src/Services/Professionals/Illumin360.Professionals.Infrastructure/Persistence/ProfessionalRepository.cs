@@ -49,6 +49,16 @@ public sealed class ProfessionalRepository(ProfessionalsDbContext db) : IProfess
         _db.Matches.FirstOrDefaultAsync(m => m.Id == matchId && m.ProfessionalId == professionalId, cancellationToken);
 
     /// <inheritdoc />
+    public async Task<IReadOnlyList<string>> GetSkillNamesAsync(ProfessionalId professionalId, CancellationToken cancellationToken) =>
+        await _db.Skills.AsNoTracking()
+            .Where(s => s.ProfessionalId == professionalId)
+            .Select(s => s.Name)
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
+    public void AddSkill(ProfessionalSkill skill) => _db.Skills.Add(skill);
+
+    /// <inheritdoc />
     public Task<int> SaveChangesAsync(CancellationToken cancellationToken) =>
         _db.SaveChangesAsync(cancellationToken);
 

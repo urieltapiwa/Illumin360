@@ -217,6 +217,21 @@ v1.MapPost("/me/cv/parse", async (
     .ProducesProblem(StatusCodes.Status403Forbidden)
     .ProducesProblem(StatusCodes.Status404NotFound);
 
+v1.MapPost("/me/cv/apply-skills", async (
+        ICommandHandler<ApplyCvSkillsCommand, AppliedSkillsDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new ApplyCvSkillsCommand(), ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.ProfessionalPolicy)
+    .WithName("ApplyCvSkills")
+    .WithSummary("Parse the current profile's CV and add newly detected skills to the profile. Requires a professional role.")
+    .Produces<AppliedSkillsDto>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden)
+    .ProducesProblem(StatusCodes.Status404NotFound);
+
 app.Run();
 
 /// <summary>Exposed so integration tests can use <c>WebApplicationFactory</c> (charter Part 14).</summary>
