@@ -95,6 +95,43 @@ public sealed class CvUploadTests : IAsyncLifetime
         bytes.Should().NotBeEmpty();
     }
 
+    [Fact]
+    public async Task Uploaded_cv_parses_into_detected_skills()
+    {
+        var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", TestJwt.ForRoles(["client.user"]));
+
+        using var content = DocxForm("Senior Python developer with SQL, Docker and React experience.");
+        (await client.PostAsync("/v1/professionals/me/cv", content)).StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var parse = await client.PostAsync("/v1/professionals/me/cv/parse", content: null);
+        parse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var dto = await parse.Content.ReadFromJsonAsync<CvSkills>();
+        dto!.Skills.Should().Contain(["Python", "SQL", "Docker", "React"]);
+    }
+
+    private static MultipartFormDataContent DocxForm(string text)
+    {
+        using var ms = new MemoryStream();
+        using (var doc = DocumentFormat.OpenXml.Packaging.WordprocessingDocument.Create(ms, DocumentFormat.OpenXml.WordprocessingDocumentType.Document))
+        {
+            var main = doc.AddMainDocumentPart();
+            main.Document = new DocumentFormat.OpenXml.Wordprocessing.Document(
+                new DocumentFormat.OpenXml.Wordprocessing.Body(
+                    new DocumentFormat.OpenXml.Wordprocessing.Paragraph(
+                        new DocumentFormat.OpenXml.Wordprocessing.Run(
+                            new DocumentFormat.OpenXml.Wordprocessing.Text(text)))));
+            main.Document.Save();
+        }
+
+        var file = new ByteArrayContent(ms.ToArray());
+        file.Headers.ContentType = new MediaTypeHeaderValue("application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+        return new MultipartFormDataContent { { file, "file", "cv.docx" } };
+    }
+
+    private sealed record CvSkills(List<string> Skills);
+
     private static MultipartFormDataContent PdfForm()
     {
         var bytes = Encoding.ASCII.GetBytes("%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF");

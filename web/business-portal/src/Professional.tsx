@@ -91,6 +91,8 @@ export default function Professional(_props: { session: Session }) {
   const [appliedRoles, setAppliedRoles] = useState<Record<string, "pending" | "done" | "error">>({});
   const [cv, setCv] = useState<{ fileName: string; uploadedAt: string } | null>(null);
   const [cvBusy, setCvBusy] = useState<"idle" | "uploading" | "error">("idle");
+  const [cvSkills, setCvSkills] = useState<string[] | null>(null);
+  const [scanning, setScanning] = useState(false);
   // Current CV metadata (if any). Reads are open; upload requires an authenticated professional.
   useEffect(() => {
     fetch("/api/professionals/me/cv")
@@ -152,6 +154,16 @@ export default function Professional(_props: { session: Session }) {
     const next = /open/i.test(p.availability) ? "Not looking" : "Open to opportunities";
     const r = await fetch(`/api/professionals/me/availability`, { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: JSON.stringify({ availability: next }) });
     if (r.ok) { const v = await r.json().catch(() => next); setD((prev) => (prev ? { ...prev, persona: { ...prev.persona, availability: typeof v === "string" ? v : next } } : prev)); }
+  };
+  // Extract skills from the uploaded CV (resume parsing via the Professionals service).
+  const parseCv = async () => {
+    setScanning(true);
+    try {
+      const r = await fetch("/api/professionals/me/cv/parse", { method: "POST", credentials: "same-origin" });
+      if (r.ok) { const v = await r.json().catch(() => null); setCvSkills(Array.isArray(v?.skills) ? v.skills : []); }
+    } finally {
+      setScanning(false);
+    }
   };
   // Upload / replace the professional's CV (stored in MinIO via the Professionals service).
   const uploadCv = async (files: FileList | null) => {
@@ -293,6 +305,16 @@ export default function Professional(_props: { session: Session }) {
                 )}
               </div>
             </div>
+            {live && cv && (
+              <div className="mt-3 border-t border-line/40 pt-3">
+                <button onClick={parseCv} disabled={scanning} className="rounded-lg bg-panel2/70 px-2.5 py-1 text-[11px] font-semibold text-ink-mid hover:text-ink-hi transition disabled:opacity-50">{scanning ? t("pro.cv.scanning", "Scanning…") : t("pro.cv.scan", "Scan CV for skills")}</button>
+                {cvSkills && (cvSkills.length > 0 ? (
+                  <div className="mt-2 flex flex-wrap gap-1.5">{cvSkills.map((s) => <span key={s} className="chip !text-[10px] !text-brand-bright !border-brand/30">{s}</span>)}</div>
+                ) : (
+                  <span className="ml-2 text-[11px] text-ink-lo">{t("pro.cv.noSkills", "No known skills detected.")}</span>
+                ))}
+              </div>
+            )}
           </motion.section>
 
           {/* matches + pipeline */}

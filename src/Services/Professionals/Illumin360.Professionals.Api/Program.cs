@@ -202,6 +202,21 @@ v1.MapPost("/me/role-scores", async (
     .WithSummary("Score a set of marketplace roles against the current profile (recommendations).")
     .Produces<IReadOnlyList<RoleScoreDto>>(StatusCodes.Status200OK);
 
+v1.MapPost("/me/cv/parse", async (
+        IQueryHandler<ParseCvSkillsQuery, CvSkillsDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new ParseCvSkillsQuery(), ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.ProfessionalPolicy)
+    .WithName("ParseCvSkills")
+    .WithSummary("Extract skills from the current profile's uploaded CV. Requires a professional role.")
+    .Produces<CvSkillsDto>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden)
+    .ProducesProblem(StatusCodes.Status404NotFound);
+
 app.Run();
 
 /// <summary>Exposed so integration tests can use <c>WebApplicationFactory</c> (charter Part 14).</summary>
