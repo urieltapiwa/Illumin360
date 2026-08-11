@@ -12,5 +12,6 @@
   <ItemGroup>
     <ProjectReference Include="..\..\..\BuildingBlocks\Storage\Illumin360.Storage.csproj" />
     <ProjectReference Include="..\..\..\BuildingBlocks\Matching\Illumin360.Matching.csproj" />
+    <ProjectReference Include="..\..\..\BuildingBlocks\Resume\Illumin360.Resume.csproj" />
   </ItemGroup>
 </Project>

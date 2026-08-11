@@ -210,6 +210,22 @@ v1.MapPost("/import", async (
     .ProducesProblem(StatusCodes.Status401Unauthorized)
     .ProducesProblem(StatusCodes.Status403Forbidden);
 
+v1.MapPost("/intake/email", async (
+        IngestEmailResumeCommand command,
+        ICommandHandler<IngestEmailResumeCommand, EmailIntakeResultDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(command, ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminWritePolicy)
+    .WithName("IngestEmailResume")
+    .WithSummary("Email-to-ATS intake: parse a résumé emailed to the company inbox into a candidate stub (dedupes by name+city; attaches the CV when it's a supported type). Called by a mailbox poller with an admin (write) identity.")
+    .Produces<EmailIntakeResultDto>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status400BadRequest)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden);
+
 // --- Per-candidate CV upload / download (recruiter/admin registry) ---
 v1.MapPost("/{id:guid}/cv", async (
         Guid id,
