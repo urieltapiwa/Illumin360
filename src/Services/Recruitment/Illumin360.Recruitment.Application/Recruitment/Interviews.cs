@@ -63,6 +63,49 @@ public static class Ics
         return sb.ToString();
     }
 
+    /// <summary>
+    /// Renders a multi-event VCALENDAR feed (subscribable by Google/Outlook) covering every interview
+    /// passed in. Cancelled interviews are marked CANCELLED so subscribers drop them.
+    /// </summary>
+    /// <param name="calendarName">The calendar display name (X-WR-CALNAME).</param>
+    /// <param name="interviews">The interviews to include.</param>
+    /// <returns>The .ics feed text.</returns>
+    public static string BuildFeed(string calendarName, IReadOnlyList<Interview> interviews)
+    {
+        ArgumentNullException.ThrowIfNull(interviews);
+        ArgumentNullException.ThrowIfNull(calendarName);
+        static string Fmt(DateTime dt) => dt.ToString("yyyyMMdd'T'HHmmss'Z'", CultureInfo.InvariantCulture);
+
+        var sb = new StringBuilder();
+        sb.Append("BEGIN:VCALENDAR\r\n");
+        sb.Append("VERSION:2.0\r\n");
+        sb.Append("PRODID:-//Illumin360//Interviews//EN\r\n");
+        sb.Append("CALSCALE:GREGORIAN\r\n");
+        sb.Append("METHOD:PUBLISH\r\n");
+        sb.Append(CultureInfo.InvariantCulture, $"X-WR-CALNAME:{Escape(calendarName)}\r\n");
+        foreach (var interview in interviews)
+        {
+            var start = interview.ScheduledAt.UtcDateTime;
+            var end = start.AddMinutes(interview.DurationMinutes);
+            sb.Append("BEGIN:VEVENT\r\n");
+            sb.Append(CultureInfo.InvariantCulture, $"UID:{interview.Id.Value}@illumin360\r\n");
+            sb.Append(CultureInfo.InvariantCulture, $"DTSTAMP:{Fmt(interview.CreatedAt.UtcDateTime)}\r\n");
+            sb.Append(CultureInfo.InvariantCulture, $"DTSTART:{Fmt(start)}\r\n");
+            sb.Append(CultureInfo.InvariantCulture, $"DTEND:{Fmt(end)}\r\n");
+            sb.Append("SUMMARY:Illumin360 interview\r\n");
+            sb.Append(CultureInfo.InvariantCulture, $"LOCATION:{Escape(interview.Location)}\r\n");
+            if (string.Equals(interview.Status, "cancelled", StringComparison.OrdinalIgnoreCase))
+            {
+                sb.Append("STATUS:CANCELLED\r\n");
+            }
+
+            sb.Append("END:VEVENT\r\n");
+        }
+
+        sb.Append("END:VCALENDAR\r\n");
+        return sb.ToString();
+    }
+
     private static string Escape(string value) =>
         value.Replace("\\", "\\\\", StringComparison.Ordinal)
             .Replace(",", "\\,", StringComparison.Ordinal)
@@ -83,6 +126,25 @@ public sealed record GetInterviewsQuery(Guid ApplicationId) : IQuery<IReadOnlyLi
 
 /// <summary>Gets an interview's .ics invite text.</summary>
 public sealed record GetInterviewIcsQuery(Guid InterviewId) : IQuery<string>;
+
+/// <summary>Gets a subscribable .ics calendar feed of all a talent's interviews.</summary>
+public sealed record GetTalentCalendarFeedQuery(Guid TalentId) : IQuery<string>;
+
+/// <summary>Handles <see cref="GetTalentCalendarFeedQuery"/>.</summary>
+/// <param name="repository">The recruitment repository.</param>
+public sealed class GetTalentCalendarFeedQueryHandler(IRecruitmentRepository repository)
+    : IQueryHandler<GetTalentCalendarFeedQuery, string>
+{
+    private readonly IRecruitmentRepository _repository = repository;
+
+    /// <inheritdoc />
+    public async Task<Result<string>> HandleAsync(GetTalentCalendarFeedQuery query, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(query);
+        var interviews = await _repository.ListInterviewsForTalentAsync(query.TalentId, cancellationToken).ConfigureAwait(false);
+        return Result<string>.Success(Ics.BuildFeed("Illumin360 interviews", interviews));
+    }
+}
 
 /// <summary>Handles <see cref="ScheduleInterviewCommand"/>.</summary>
 /// <param name="repository">The recruitment repository.</param>

@@ -112,6 +112,25 @@ public sealed class RecruitmentRepository(RecruitmentDbContext db) : IRecruitmen
             .ConfigureAwait(false);
 
     /// <inheritdoc />
+    public async Task<IReadOnlyList<Interview>> ListInterviewsForTalentAsync(Guid talentId, CancellationToken cancellationToken)
+    {
+        // Materialise the talent's application ids, then fetch their interviews (soonest first).
+        var appIds = await _db.Applications.AsNoTracking()
+            .Where(a => a.TalentId == talentId)
+            .Select(a => a.Id)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        var appGuids = appIds.Select(id => id.Value).ToList();
+
+        return await _db.Interviews.AsNoTracking()
+            .Where(i => appGuids.Contains(i.ApplicationId))
+            .OrderBy(i => i.ScheduledAt)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
     public async Task<IReadOnlyList<RecruitmentApplication>> ListApplicationsForTalentAsync(Guid talentId, int skip, int take, CancellationToken cancellationToken)
         => await _db.Applications.AsNoTracking()
             .Where(a => a.TalentId == talentId)
