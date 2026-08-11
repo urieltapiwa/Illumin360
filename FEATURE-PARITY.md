@@ -182,9 +182,9 @@ flip the status to ✅ (add the commit/PR ref).
 
 ### Progress
 - Feature-matrix rows: 64 — **63 ✅ have, 1 ⬜ missing** (mobile app, out of scope)
-- Build checklist: **48 / 48 delivered**; deep-audit backlog **Tier 1 = 9/9 + both #1 sub-items**, **Tier 2 = 6/7** (only feedback-loop LTR open — needs captured hire-outcome data)
-- In progress: 0
-- **Final re-sweep (2026-08-11):** 9 unit-test suites green — **300 tests, 0 failures** (Recruitment 136, Candidates 54, Matching 28, Professionals 23, Students 18, Employers 16, Admin 11, Resume 10, Email 4); business-portal build clean; all 14 arc endpoints + all 7 EF migrations (ApplicationForms, ReferralsAndInternalRoles, ApplicationSources, MultiRoundInterviews, CareerViews, FeaturedListings, CandidateCustomFields) confirmed present; `main` clean
+- Build checklist: **48 / 48 delivered**; deep-audit backlog **Tier 1 = 9/9 + both #1 sub-items**, **Tier 2 = 6/7 done + LTR data-capture shipped** (only the LTR model itself remains — gated on accumulated labelled data, not engineering)
+- In progress: LTR model training (data capture live; awaiting enough labelled `match_outcomes`)
+- **Final re-sweep (2026-08-11):** 9 unit-test suites green — **304 tests, 0 failures** (Recruitment 140, Candidates 54, Matching 28, Professionals 23, Students 18, Employers 16, Admin 11, Resume 10, Email 4); business-portal build clean; all arc endpoints (incl. `metrics/outcomes`, `semantic-similar`) + all 8 EF migrations (ApplicationForms, ReferralsAndInternalRoles, ApplicationSources, MultiRoundInterviews, CareerViews, FeaturedListings, CandidateCustomFields, MatchOutcomes) confirmed present; `main` clean
 
 **Changelog of ticks**
 - Admin portal tickets + accounts panels — completed the ticket Assign action (2026-08-10).
