@@ -385,6 +385,14 @@ export default function Admin({ session }: { session: Session }) {
       setOnboarding((ob) => (ob && ob !== "none" ? { ...ob, tasks: ob.tasks.map((t) => (t.id === taskId ? { ...t, isDone: done } : t)), completed: ob.tasks.reduce((n, t) => n + (t.id === taskId ? (done ? 1 : 0) : t.isDone ? 1 : 0), 0) } : ob));
     }
   };
+  const eraseCandidate = async (id: string) => {
+    if (!window.confirm(t("admin.gdpr.eraseConfirm", "Permanently erase this candidate and all their data? This cannot be undone."))) return;
+    const r = await fetch(`/api/candidates/${id}`, { method: "DELETE", credentials: "same-origin" });
+    if (r.ok) {
+      setCsResult((res) => (res ? { ...res, items: res.items.filter((c) => c.id !== id), total: Math.max(0, res.total - 1) } : res));
+      if (csOpen === id) setCsOpen(null);
+    }
+  };
   const addCandNote = async () => {
     if (!csOpen || !csNoteDraft.trim()) return;
     const r = await fetch(`/api/candidates/${csOpen}/notes`, { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: JSON.stringify({ author: session.name || "Recruiter", body: csNoteDraft.trim() }) });
@@ -999,7 +1007,10 @@ export default function Admin({ session }: { session: Session }) {
                           <div>
                             <div className="flex items-center justify-between mb-1.5">
                             <span className="eyebrow">{t("admin.notes.title", "Recruiter notes")}</span>
-                            <a href={`/api/candidates/${c.id}/export`} target="_blank" rel="noreferrer" className="text-[11px] text-ink-lo hover:text-brand-bright transition">{t("admin.gdpr.export", "Export data (GDPR)")}</a>
+                            <div className="flex items-center gap-3">
+                              <a href={`/api/candidates/${c.id}/export`} target="_blank" rel="noreferrer" className="text-[11px] text-ink-lo hover:text-brand-bright transition">{t("admin.gdpr.export", "Export data (GDPR)")}</a>
+                              <button onClick={() => eraseCandidate(c.id)} className="text-[11px] text-ink-lo hover:text-pink transition">{t("admin.gdpr.erase", "Erase (GDPR)")}</button>
+                            </div>
                           </div>
                             <div className="space-y-1.5 mb-2">
                               {csNotes.map((n) => (

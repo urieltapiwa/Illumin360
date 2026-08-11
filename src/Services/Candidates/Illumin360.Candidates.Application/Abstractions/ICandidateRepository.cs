@@ -40,6 +40,14 @@ public interface ICandidateRepository
     /// <param name="candidate">The candidate to add.</param>
     void Add(Candidate candidate);
 
+    /// <summary>
+    /// Right-to-be-forgotten erase: permanently deletes the candidate and all their owned data (notes,
+    /// tags, pool memberships) in one operation.
+    /// </summary>
+    /// <param name="id">The candidate id.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task EraseCandidateAsync(CandidateId id, CancellationToken cancellationToken);
+
     /// <summary>Stages a new recruiter note for insertion.</summary>
     /// <param name="note">The note to add.</param>
     void AddNote(CandidateNote note);

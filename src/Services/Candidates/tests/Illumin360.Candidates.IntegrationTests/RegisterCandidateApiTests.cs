@@ -227,6 +227,29 @@ public sealed class RegisterCandidateApiTests : IAsyncLifetime
     private sealed record Note(Guid Id, string Author, string Body, DateTimeOffset CreatedAt);
 
     [Fact]
+    public async Task Erase_removes_candidate_and_owned_data()
+    {
+        var admin = AdminClient();
+        var reg = await admin.PostAsJsonAsync("/v1/candidates", new RegisterCandidateCommand("Erase", "Me", "Windhoek", "Namibian"));
+        var candidate = await reg.Content.ReadFromJsonAsync<CandidateDto>();
+
+        // Attach a note + a tag, confirm the export sees them.
+        await admin.PostAsJsonAsync($"/v1/candidates/{candidate!.Id}/notes", new { author = "Rita", body = "note" });
+        await admin.PostAsJsonAsync($"/v1/candidates/{candidate.Id}/tags", new { label = "vip" });
+
+        // Erase (right to be forgotten).
+        (await admin.DeleteAsync($"/v1/candidates/{candidate.Id}")).StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        var client = _factory.CreateClient();
+        (await client.GetAsync($"/v1/candidates/{candidate.Id}")).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await client.GetFromJsonAsync<List<Note>>($"/v1/candidates/{candidate.Id}/notes"))!.Should().BeEmpty();
+        (await client.GetFromJsonAsync<List<string>>($"/v1/candidates/{candidate.Id}/tags"))!.Should().BeEmpty();
+
+        // Erasing again is a 404.
+        (await admin.DeleteAsync($"/v1/candidates/{candidate.Id}")).StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
     public async Task Get_unknown_id_returns_404()
     {
         var client = _factory.CreateClient();
