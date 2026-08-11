@@ -226,6 +226,83 @@ v1.MapPost("/intake/email", async (
     .ProducesProblem(StatusCodes.Status401Unauthorized)
     .ProducesProblem(StatusCodes.Status403Forbidden);
 
+// --- Admin-defined custom fields on candidate records ---
+v1.MapGet("/custom-fields", async (
+        IQueryHandler<GetCustomFieldsQuery, IReadOnlyList<CustomFieldDto>> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new GetCustomFieldsQuery(), ct);
+        return result.ToHttpResult();
+    })
+    .WithName("GetCustomFields")
+    .WithSummary("List admin-defined candidate custom-field definitions.")
+    .Produces<IReadOnlyList<CustomFieldDto>>(StatusCodes.Status200OK);
+
+v1.MapPost("/custom-fields", async (
+        AddCustomFieldCommand command,
+        ICommandHandler<AddCustomFieldCommand, CustomFieldDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(command, ct);
+        return result.ToCreatedResult(dto => $"/v1/candidates/custom-fields/{dto.Id}");
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminWritePolicy)
+    .WithName("AddCustomField")
+    .WithSummary("Define a candidate custom field. Requires an admin (write) role.")
+    .Produces<CustomFieldDto>(StatusCodes.Status201Created)
+    .ProducesProblem(StatusCodes.Status400BadRequest)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden)
+    .ProducesProblem(StatusCodes.Status409Conflict);
+
+v1.MapDelete("/custom-fields/{id:guid}", async (
+        Guid id,
+        ICommandHandler<RemoveCustomFieldCommand, bool> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new RemoveCustomFieldCommand(id), ct);
+        return result.IsSuccess ? Results.NoContent() : result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminWritePolicy)
+    .WithName("RemoveCustomField")
+    .WithSummary("Remove a candidate custom-field definition. Requires an admin (write) role.")
+    .Produces(StatusCodes.Status204NoContent)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden)
+    .ProducesProblem(StatusCodes.Status404NotFound);
+
+v1.MapGet("/{id:guid}/custom-values", async (
+        Guid id,
+        IQueryHandler<GetCandidateCustomValuesQuery, IReadOnlyList<CustomValueDto>> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new GetCandidateCustomValuesQuery(id), ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminPolicy)
+    .WithName("GetCandidateCustomValues")
+    .WithSummary("Get a candidate's custom-field values (every defined field, value empty when unset). Requires an admin role.")
+    .Produces<IReadOnlyList<CustomValueDto>>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden);
+
+v1.MapPut("/{id:guid}/custom-values", async (
+        Guid id,
+        SetCustomValuesBody body,
+        ICommandHandler<SetCandidateCustomValuesCommand, int> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new SetCandidateCustomValuesCommand(id, body.Values ?? []), ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminWritePolicy)
+    .WithName("SetCandidateCustomValues")
+    .WithSummary("Set (replace) a candidate's custom-field values. Requires an admin (write) role.")
+    .Produces<int>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status400BadRequest)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden);
+
 // --- Per-candidate CV upload / download (recruiter/admin registry) ---
 v1.MapPost("/{id:guid}/cv", async (
         Guid id,
@@ -465,6 +542,10 @@ internal sealed record AddNoteBody(string? Author, string Body);
 /// <summary>Request body for adding a tag.</summary>
 /// <param name="Label">The tag label.</param>
 internal sealed record AddTagBody(string Label);
+
+/// <summary>Request body for setting a candidate's custom-field values.</summary>
+/// <param name="Values">The values ({definitionId, value}).</param>
+internal sealed record SetCustomValuesBody(IReadOnlyList<CustomValueInput>? Values);
 
 /// <summary>Exposed so integration tests can use <c>WebApplicationFactory</c> (charter Part 14).</summary>
 public partial class Program;

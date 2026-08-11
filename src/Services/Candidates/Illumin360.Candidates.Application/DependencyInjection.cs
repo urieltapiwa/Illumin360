@@ -29,6 +29,11 @@ public static class DependencyInjection
         services.AddScoped<ICommandHandler<RegisterCandidateCommand, CandidateDto>, RegisterCandidateCommandHandler>();
         services.AddScoped<ICommandHandler<ImportCandidatesCommand, ImportResultDto>, ImportCandidatesCommandHandler>();
         services.AddScoped<ICommandHandler<IngestEmailResumeCommand, EmailIntakeResultDto>, IngestEmailResumeCommandHandler>();
+        services.AddScoped<IQueryHandler<GetCustomFieldsQuery, IReadOnlyList<CustomFieldDto>>, GetCustomFieldsQueryHandler>();
+        services.AddScoped<ICommandHandler<AddCustomFieldCommand, CustomFieldDto>, AddCustomFieldCommandHandler>();
+        services.AddScoped<ICommandHandler<RemoveCustomFieldCommand, bool>, RemoveCustomFieldCommandHandler>();
+        services.AddScoped<IQueryHandler<GetCandidateCustomValuesQuery, IReadOnlyList<CustomValueDto>>, GetCandidateCustomValuesQueryHandler>();
+        services.AddScoped<ICommandHandler<SetCandidateCustomValuesCommand, int>, SetCandidateCustomValuesCommandHandler>();
         services.AddScoped<ICommandHandler<UploadCandidateCvCommand, CvDto>, UploadCandidateCvCommandHandler>();
         services.AddScoped<IQueryHandler<GetCandidateCvMetadataQuery, CvDto>, GetCandidateCvMetadataQueryHandler>();
         services.AddScoped<IQueryHandler<DownloadCandidateCvQuery, CvContent>, DownloadCandidateCvQueryHandler>();

@@ -141,4 +141,39 @@ public interface ICandidateRepository
     /// <param name="poolId">The pool id.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     Task<IReadOnlyList<TalentPoolMember>> ListPoolMembersAsync(TalentPoolId poolId, CancellationToken cancellationToken);
+
+    /// <summary>Stages a new custom-field definition for insertion.</summary>
+    /// <param name="field">The definition to add.</param>
+    void AddCustomField(CustomFieldDefinition field);
+
+    /// <summary>Removes a custom-field definition.</summary>
+    /// <param name="field">The definition to remove.</param>
+    void RemoveCustomField(CustomFieldDefinition field);
+
+    /// <summary>Loads a custom-field definition by id, or null.</summary>
+    /// <param name="id">The definition id.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<CustomFieldDefinition?> GetCustomFieldAsync(Guid id, CancellationToken cancellationToken);
+
+    /// <summary>Lists all custom-field definitions, ascending sort order.</summary>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<IReadOnlyList<CustomFieldDefinition>> ListCustomFieldsAsync(CancellationToken cancellationToken);
+
+    /// <summary>Stages a candidate custom-field value for insertion.</summary>
+    /// <param name="value">The value to add.</param>
+    void AddCandidateValue(CandidateCustomValue value);
+
+    /// <summary>Removes a candidate custom-field value.</summary>
+    /// <param name="value">The value to remove.</param>
+    void RemoveCandidateValue(CandidateCustomValue value);
+
+    /// <summary>Lists a candidate's custom-field values (no-tracking).</summary>
+    /// <param name="candidateId">The candidate id.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<IReadOnlyList<CandidateCustomValue>> ListCandidateValuesAsync(Guid candidateId, CancellationToken cancellationToken);
+
+    /// <summary>Lists a candidate's custom-field values (tracked, for replace-on-resubmit).</summary>
+    /// <param name="candidateId">The candidate id.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<IReadOnlyList<CandidateCustomValue>> ListCandidateValuesTrackedAsync(Guid candidateId, CancellationToken cancellationToken);
 }

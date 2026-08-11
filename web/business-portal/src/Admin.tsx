@@ -154,6 +154,12 @@ export default function Admin({ session }: { session: Session }) {
   const [poolOpen, setPoolOpen] = useState<string | null>(null);
   const [poolMembers, setPoolMembers] = useState<PoolMember[]>([]);
   const [poolBusy, setPoolBusy] = useState(false);
+  // Admin-defined candidate custom fields.
+  type CustomField = { id: string; key: string; label: string; kind: string; options: string[]; sortOrder: number };
+  type CustomValue = { definitionId: string; key: string; label: string; kind: string; value: string };
+  const [customFields, setCustomFields] = useState<CustomField[] | null>(null);
+  const [newCustomField, setNewCustomField] = useState({ label: "", kind: "text", options: "" });
+  const [csCustomValues, setCsCustomValues] = useState<Record<string, string>>({});
   // Bulk CSV candidate import.
   const [importCsv, setImportCsv] = useState("");
   const [importBusy, setImportBusy] = useState(false);
@@ -347,6 +353,10 @@ export default function Admin({ session }: { session: Session }) {
       .then((r) => (r.ok ? r.json() : null))
       .then((v) => { if (Array.isArray(v)) setPools(v); })
       .catch(() => { /* offline */ });
+    fetch("/api/candidates/custom-fields")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((v) => { if (Array.isArray(v)) setCustomFields(v); })
+      .catch(() => { /* offline */ });
   }, []);
 
   // Source / channel breakdown (admin).
@@ -372,9 +382,13 @@ export default function Admin({ session }: { session: Session }) {
 
   // Notes + tags for the candidate expanded in search results.
   useEffect(() => {
-    if (!csOpen) { setCsNotes([]); setCsTags([]); return; }
+    if (!csOpen) { setCsNotes([]); setCsTags([]); setCsCustomValues({}); return; }
     fetch(`/api/candidates/${csOpen}/notes`).then((r) => (r.ok ? r.json() : [])).then((v) => Array.isArray(v) && setCsNotes(v)).catch(() => { /* offline */ });
     fetch(`/api/candidates/${csOpen}/tags`).then((r) => (r.ok ? r.json() : [])).then((v) => Array.isArray(v) && setCsTags(v)).catch(() => { /* offline */ });
+    fetch(`/api/candidates/${csOpen}/custom-values`, { credentials: "same-origin" })
+      .then((r) => (r.ok ? r.json() : []))
+      .then((v) => { if (Array.isArray(v)) setCsCustomValues(Object.fromEntries(v.map((x: CustomValue) => [x.definitionId, x.value]))); })
+      .catch(() => { /* offline */ });
   }, [csOpen]);
 
   // Offers + onboarding + interviews for the application selected on a pipeline card.
@@ -619,6 +633,22 @@ export default function Admin({ session }: { session: Session }) {
       const r = await fetch("/api/candidates/pools", { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: JSON.stringify({ name }) });
       if (r.ok) { const p: Pool = await r.json(); setPools((ps) => [...(ps ?? []), p]); setNewPoolName(""); }
     } finally { setPoolBusy(false); }
+  };
+  // Candidate custom-field definitions.
+  const addCustomField = async () => {
+    if (!newCustomField.label.trim()) return;
+    const options = newCustomField.kind === "select" ? newCustomField.options.split(",").map((o) => o.trim()).filter(Boolean) : null;
+    const r = await fetch("/api/candidates/custom-fields", { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: JSON.stringify({ label: newCustomField.label.trim(), kind: newCustomField.kind, options }) });
+    if (r.ok) { const f: CustomField = await r.json(); setCustomFields((fs) => [...(fs ?? []), f]); setNewCustomField({ label: "", kind: "text", options: "" }); }
+  };
+  const removeCustomField = async (id: string) => {
+    const r = await fetch(`/api/candidates/custom-fields/${id}`, { method: "DELETE", credentials: "same-origin" });
+    if (r.ok || r.status === 204) setCustomFields((fs) => (fs ? fs.filter((f) => f.id !== id) : fs));
+  };
+  const saveCustomValues = async () => {
+    if (!csOpen) return;
+    const values = Object.entries(csCustomValues).filter(([, v]) => (v ?? "").trim()).map(([definitionId, value]) => ({ definitionId, value }));
+    await fetch(`/api/candidates/${csOpen}/custom-values`, { method: "PUT", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: JSON.stringify({ values }) });
   };
   // Bulk-import candidates from pasted/uploaded CSV.
   const runImport = async () => {
@@ -1499,6 +1529,29 @@ export default function Admin({ session }: { session: Session }) {
             </motion.section>
           )}
 
+          {customFields && (
+            <motion.section variants={fade} className="card p-5">
+              <div className="mb-3"><h3 className="font-display text-[15px] font-bold text-ink-hi">{t("admin.cf.title", "Candidate custom fields")}</h3><p className="text-[11px] text-ink-lo mt-0.5">{t("admin.cf.sub", "Define extra fields captured on every candidate. Set values from a candidate in search.")}</p></div>
+              <div className="space-y-1.5 mb-2">
+                {customFields.map((f) => (
+                  <div key={f.id} className="flex items-center gap-2 rounded-lg border border-line/50 bg-panel2/40 px-2.5 py-1.5">
+                    <div className="min-w-0 flex-1"><div className="text-[12px] text-ink-hi truncate">{f.label}</div><div className="text-[10px] text-ink-lo">{f.kind}{f.options.length > 0 ? ` · ${f.options.join(" / ")}` : ""}</div></div>
+                    <button onClick={() => removeCustomField(f.id)} className="text-ink-lo hover:text-pink text-[11px]" title={t("admin.cf.remove", "Remove")}>✕</button>
+                  </div>
+                ))}
+                {customFields.length === 0 && <div className="text-[11px] text-ink-lo">{t("admin.cf.none", "No custom fields defined.")}</div>}
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <input value={newCustomField.label} onChange={(e) => setNewCustomField((f) => ({ ...f, label: e.target.value }))} placeholder={t("admin.cf.label", "Field label")} className="flex-1 min-w-[140px] rounded-lg border border-line/70 bg-panel2/50 px-2.5 py-1 text-[12px] text-ink-hi placeholder:text-ink-lo focus:border-brand/50 focus:outline-none" />
+                <select value={newCustomField.kind} onChange={(e) => setNewCustomField((f) => ({ ...f, kind: e.target.value }))} className="rounded-lg border border-line/70 bg-panel2/50 px-2 py-1 text-[12px] text-ink-hi capitalize focus:border-brand/50 focus:outline-none">
+                  {["text", "number", "boolean", "select"].map((k) => <option key={k} value={k}>{k}</option>)}
+                </select>
+                {newCustomField.kind === "select" && <input value={newCustomField.options} onChange={(e) => setNewCustomField((f) => ({ ...f, options: e.target.value }))} placeholder={t("admin.cf.options", "Options, comma-separated")} className="flex-1 min-w-[140px] rounded-lg border border-line/70 bg-panel2/50 px-2.5 py-1 text-[12px] text-ink-hi placeholder:text-ink-lo focus:border-brand/50 focus:outline-none" />}
+                <button onClick={addCustomField} disabled={!newCustomField.label.trim()} className="rounded-lg bg-brand/15 px-3 py-1 text-[11px] font-semibold text-brand-bright hover:bg-brand/25 transition disabled:opacity-50">{t("admin.cf.add", "Add field")}</button>
+              </div>
+            </motion.section>
+          )}
+
           <motion.section variants={fade} className="card p-5">
             <div className="mb-3"><h3 className="font-display text-[15px] font-bold text-ink-hi">{t("admin.import.title", "Bulk import candidates")}</h3><p className="text-[11px] text-ink-lo mt-0.5">{t("admin.import.sub", "Paste or upload CSV — header: firstName,lastName,city,nationality[,availability,headline]. Duplicates (name+city) are skipped.")}</p></div>
             <div className="flex items-center gap-3 mb-2">
@@ -1606,6 +1659,26 @@ export default function Admin({ session }: { session: Session }) {
                                 {pools.map((p) => (
                                   <button key={p.id} onClick={() => addToPool(p.id, c.id)} className="rounded-lg bg-panel2/60 px-2.5 py-1 text-[11px] font-semibold text-ink-mid hover:text-brand-bright hover:bg-brand/10 transition">+ {p.name}</button>
                                 ))}
+                              </div>
+                            </div>
+                          )}
+                          {customFields && customFields.length > 0 && (
+                            <div>
+                              <div className="eyebrow mb-1.5">{t("admin.cf.values", "Custom fields")}</div>
+                              <div className="space-y-2">
+                                {customFields.map((f) => (
+                                  <div key={f.id} className="flex items-center gap-2">
+                                    <label className="text-[12px] text-ink-mid flex-1 min-w-0 truncate">{f.label}</label>
+                                    {f.kind === "boolean" ? (
+                                      <input type="checkbox" checked={csCustomValues[f.id] === "true"} onChange={(e) => setCsCustomValues((m) => ({ ...m, [f.id]: e.target.checked ? "true" : "false" }))} />
+                                    ) : f.kind === "select" ? (
+                                      <select value={csCustomValues[f.id] ?? ""} onChange={(e) => setCsCustomValues((m) => ({ ...m, [f.id]: e.target.value }))} className="rounded-lg border border-line/70 bg-panel2/50 px-2 py-1 text-[12px] text-ink-hi focus:border-brand/50 focus:outline-none"><option value="">—</option>{f.options.map((o) => <option key={o} value={o}>{o}</option>)}</select>
+                                    ) : (
+                                      <input type={f.kind === "number" ? "number" : "text"} value={csCustomValues[f.id] ?? ""} onChange={(e) => setCsCustomValues((m) => ({ ...m, [f.id]: e.target.value }))} className="w-48 rounded-lg border border-line/70 bg-panel2/50 px-2.5 py-1 text-[12px] text-ink-hi focus:border-brand/50 focus:outline-none" />
+                                    )}
+                                  </div>
+                                ))}
+                                <button onClick={saveCustomValues} className="rounded-lg bg-brand/15 px-2.5 py-1 text-[11px] font-semibold text-brand-bright hover:bg-brand/25 transition">{t("admin.cf.save", "Save custom fields")}</button>
                               </div>
                             </div>
                           )}
