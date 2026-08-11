@@ -59,6 +59,29 @@ public sealed partial class ApplicationStatusChangedConsumer(IEmailSender emailS
     private partial void LogStatus(Guid applicationId, string status);
 }
 
+/// <summary>Delivers one bulk-campaign email to its recipient.</summary>
+/// <param name="emailSender">The SMTP email sender.</param>
+/// <param name="logger">Logger.</param>
+public sealed partial class CampaignEmailConsumer(IEmailSender emailSender, ILogger<CampaignEmailConsumer> logger)
+    : IConsumer<CampaignEmailRequested>
+{
+    private readonly IEmailSender _emailSender = emailSender;
+    private readonly ILogger<CampaignEmailConsumer> _logger = logger;
+
+    /// <inheritdoc />
+    public async Task Consume(ConsumeContext<CampaignEmailRequested> context)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+
+        var msg = context.Message;
+        await _emailSender.SendAsync(msg.To, msg.Subject, msg.Body, context.CancellationToken).ConfigureAwait(false);
+        LogCampaign(msg.CampaignId, msg.To);
+    }
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Campaign email sent for {CampaignId} to {To}.")]
+    private partial void LogCampaign(Guid campaignId, string to);
+}
+
 /// <summary>Emails a talent a job-alert digest when their saved search has matching roles.</summary>
 /// <param name="emailSender">The SMTP email sender.</param>
 /// <param name="logger">Logger.</param>

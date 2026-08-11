@@ -89,6 +89,24 @@ public static class DependencyInjection
             ICommandHandler<MarkThreadReadCommand, int>,
             MarkThreadReadCommandHandler>();
         services.AddScoped<
+            IQueryHandler<GetCampaignsQuery, IReadOnlyList<CampaignDto>>,
+            GetCampaignsQueryHandler>();
+        services.AddScoped<
+            IQueryHandler<GetCampaignQuery, CampaignDto>,
+            GetCampaignQueryHandler>();
+        services.AddScoped<
+            ICommandHandler<CreateCampaignCommand, CampaignDto>,
+            CreateCampaignCommandHandler>();
+        services.AddScoped<
+            ICommandHandler<AddCampaignRecipientCommand, CampaignDto>,
+            AddCampaignRecipientCommandHandler>();
+        services.AddScoped<
+            ICommandHandler<RemoveCampaignRecipientCommand, CampaignDto>,
+            RemoveCampaignRecipientCommandHandler>();
+        services.AddScoped<
+            ICommandHandler<SendCampaignCommand, CampaignDto>,
+            SendCampaignCommandHandler>();
+        services.AddScoped<
             IQueryHandler<ListClientsQuery, IReadOnlyList<ClientDto>>,
             ListClientsQueryHandler>();
         services.AddScoped<

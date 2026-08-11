@@ -112,12 +112,13 @@ flip the status to ✅ (add the commit/PR ref).
 | Transactional email (templated) | ✅ | Shared `Illumin360.Email` (MailKit/SMTP → Mailpit) + templates; Notifications worker emails on registration, application received, and application status change (recruitment events via the outbox) |
 | In-app notification center | ✅ | Professional in-app notifications (list / mark-read / mark-all) fed by recruitment events (status change, job alerts); portal panel with unread count |
 | In-app messaging (candidate↔employer) | ✅ | `application_messages` thread per application; `GET/POST /v1/recruitment/applications/{id}/messages` + `/messages/read`; recruiter message panel in the admin application drawer |
-| Bulk email / campaigns | ⬜ | |
+| Bulk email / campaigns | ✅ | `email_campaigns` + `campaign_recipients`; compose/add-recipients/send (`CampaignEmailRequested` outbox event per recipient → Notifications worker emails via SMTP); admin campaigns panel |
 
 - [x] Email infrastructure — shared `Illumin360.Email` (MailKit SMTP → Mailpit) + templates; Notifications worker sends a **welcome email on registration** (verified end-to-end with a Testcontainers Mailpit)
 - [x] Templated emails on application received / status change — Recruitment publishes `ApplicationSubmitted` / `ApplicationStatusChanged` via the outbox; Notifications worker consumers send the emails
 - [x] In-app notification center — Professionals consume recruitment events (status change, job alerts) into a `professional_notifications` store; `/me/notifications` list + mark-read/mark-all + portal panel with unread count
 - [x] Direct messaging between employer and candidate — `ApplicationMessage` aggregate + `application_messages` table (per-application thread, recruiter/talent sender, read receipts); `GET/POST /v1/recruitment/applications/{id}/messages` + `POST …/messages/read` (authenticated); unit tests; recruiter message thread in the admin application drawer. Talent-side UI + push notification are follow-ups
+- [x] Bulk email / campaigns — `EmailCampaign`/`CampaignRecipient` aggregates + `email_campaigns`/`campaign_recipients` tables; compose (draft) / add-remove recipients (idempotent, draft-only) / send; sending publishes a `CampaignEmailRequested` outbox event per recipient → new Notifications-worker `CampaignEmailConsumer` delivers over SMTP; unit tests; admin campaigns panel (compose, recipients, send, status)
 
 ## H. Employer / recruiter tooling
 | Feature | Status | Notes |
@@ -176,7 +177,7 @@ flip the status to ✅ (add the commit/PR ref).
 
 ### Progress
 - Total build items: 48
-- Done: 39
+- Done: 40
 - In progress: 0
 
 **Changelog of ticks**
