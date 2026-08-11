@@ -288,3 +288,133 @@ payroll, attendance/time tracking, leave management, performance/appraisal, empl
 convert-applicant-to-employee/HRIS, org chart, asset management, expense claims, shift scheduling, LMS;
 plus SpotAxis's multi-tenant SaaS billing and Frappe's staffing-plan/headcount planning. Same category as
 the native **mobile app** — a separate product decision, not a parity gap.
+
+---
+
+## v0.3.0 — Commercial parity audit (2026-08-11)
+
+The first two audits benchmarked against **open-source** peers (all of Tier 1 + Tier 2 now shipped in
+v0.2.0). This third pass benchmarks against **10 commercial systems** to plan v0.3.0 — where the market has
+moved since the OSS tools were built.
+
+**Reference systems (commercial):** Greenhouse, Lever, Workday Recruiting, iCIMS, SmartRecruiters, Ashby,
+Bullhorn, LinkedIn Talent Solutions, Upwork, Eightfold AI. *(ATS/CRM · enterprise talent cloud · modern
+all-in-one · staffing-agency · professional graph · freelance marketplace · talent-intelligence.)*
+
+**Where we already hold parity or lead** (built in v0.1–0.2): structured pipeline + kanban + bulk actions,
+configurable application forms & screening questions, source attribution, structured multi-round interviews
++ scorecards, offers + e-sign + onboarding checklist, talent pools, saved searches + job alerts, careers
+SSR/SEO + syndication feeds + featured listings, recruiter CRM, employer teams, in-app messaging + bulk
+email, audit trail + GDPR export/erase, diversity aggregates + time-to-hire/source metrics, and — ahead of
+every OSS peer — **explainable matching, semantic-matching v1, and a full learning-to-rank loop now serving
+live ranking**. The commercial gap is concentrated in four themes below.
+
+**Legend:** ✅ have · 🟡 partial · ⬜ missing. `[DECISION]` = needs a product/governance call before build.
+
+### Capability matrix vs. commercial peers
+| Capability | Us | Exemplars |
+|---|---|---|
+| **AI / GenAI** | | |
+| Learned ranking (LTR) serving live | ✅ | SmartAssistant, Lever Talent Fit |
+| Real embedding matching + vector store (pgvector) | 🟡 v1 hashing, flag-gated | Ashby, Eightfold |
+| GenAI assistant (JD-gen, candidate summaries, message drafting) | ⬜ | all 8 ATS |
+| Conversational apply / screening chatbot (multi-channel) | ⬜ | iCIMS Digital Assistant, Winston |
+| Autonomous AI agents (source/screen/schedule) | ⬜ | LinkedIn Hiring Assistant, Illuminate, Amplify |
+| MCP / LLM tool server over our data | ⬜ | Greenhouse, Ashby |
+| **Skills intelligence** | | |
+| Structured skills + proficiency + endorsements | ✅ | LinkedIn |
+| Skills taxonomy / ontology (normalized, synonyms) | ⬜ | Workday Skills Cloud, Eightfold |
+| Skills inference from work history | ⬜ | Eightfold |
+| Career pathing / development recommendations | ⬜ | Eightfold, Workday Career Hub |
+| **Engagement / CRM** | | |
+| Nurture sequences / drip campaigns (multi-step, triggered) | 🟡 one-shot bulk email | Lever Nurture, Ashby sequences |
+| SMS / text recruiting | ⬜ | iCIMS, SmartRecruiters, Bullhorn |
+| Omnichannel messaging (email+SMS+WhatsApp threaded) | 🟡 email+in-app+push | SmartRecruiters SmartMessage |
+| Talent rediscovery / silver-medalist re-engagement | ⬜ | Workday, iCIMS, Eightfold |
+| Sourcing browser extension (capture to CRM) | ⬜ | Greenhouse, Ashby |
+| **Interviewing** | | |
+| Structured scorecards + multi-round skill ratings | ✅ | Greenhouse |
+| Self-schedule booking links + availability engine | ⬜ | Ashby, Greenhouse, iCIMS |
+| Multi-interviewer / timezone / load-balancing scheduling | 🟡 panels, no availability | Ashby |
+| Reusable interview kits / question banks | ⬜ | Greenhouse, Lever |
+| Interview intelligence (recording / transcript / AI notes) | ⬜ | Greenhouse Notetaker, Lever |
+| **Analytics** | | |
+| Funnel / time-to-hire / source-of-hire | ✅ | all |
+| Custom / interactive report builder | ⬜ | Ashby, Lever Data Explorer |
+| Capacity / hiring forecasting | ⬜ | Ashby Recruiting Planner |
+| DEI representation at each funnel stage | 🟡 aggregate only | Ashby |
+| Quality-of-hire surveys | ⬜ | Ashby |
+| Data-warehouse sync / BI export | 🟡 CSV/PDF | Lever, Ashby |
+| **Distribution** | | |
+| SSR careers + SEO + featured + syndication feeds | ✅ | Greenhouse |
+| Programmatic job advertising / board API multiposting | 🟡 RSS/sitemap/JSON | SmartRecruiters SmartJobs, Workday |
+| Apply Connect / LinkedIn Job Wrapping | ⬜ | LinkedIn |
+| Careers personalization + landing pages + ADA | 🟡 SSR+search+featured | iCIMS Attract |
+| **Hiring ops / compliance** | | |
+| Audit trail + GDPR export/erase | ✅ | all |
+| Multi-step offer / req approval routing | 🟡 req approval + offer send | Workday, iCIMS, Ashby |
+| Real e-signature provider (DocuSign-class) | 🟡 typed-name e-sign | Greenhouse, Ashby |
+| Background-check integration | ⬜ | Checkr partners |
+| Onboarding docs / e-forms / I-9 | 🟡 task checklist | iCIMS, Bullhorn |
+| OFCCP/EEOC self-ID + federal reporting | 🟡 diversity aggregates | Greenhouse, Lever |
+| Assessments integration (coding/skills tests) | ⬜ | Ashby, Greenhouse |
+| **Platform / ecosystem** | | |
+| REST API + OpenAPI + internal outbox | ✅ | all |
+| Public API keys + outbound webhook subscriptions | 🟡 internal only | all |
+| App marketplace / partner catalog | ⬜ | Greenhouse 500+, SmartRecruiters 350+ |
+| Enterprise SSO (SAML) + SCIM provisioning | 🟡 OIDC (Keycloak) | enterprise ATS |
+| **Marketplace-native (Upwork/Eightfold axis)** | | |
+| Payments / escrow / milestones / contracts | ⬜ (deliberate) | Upwork |
+| Two-sided reviews / reputation score | ⬜ | Upwork JSS |
+| Worker classification / compliance / EOR | ⬜ | Upwork Enterprise |
+| Contingent-workforce visibility / VMS / pay-bill | ⬜ | Bullhorn, Workday VNDLY, Eightfold Flex |
+| Skill badges / assessments / vetting | 🟡 endorsements | Upwork badges |
+
+### v0.3.0 committed scope (decisions locked 2026-08-12)
+Three directional forks were decided by the product owner:
+1. **AI / data egress → hosted, opt-in per tenant.** Hosted LLM/embedding APIs are allowed behind a
+   per-tenant flag (default **off**), governed by a data-processing addendum. Unlocks the real-embedding
+   upgrade + GenAI assistant this milestone (chatbot/agents remain Tier 2). Needs a DPA + egress sign-off
+   before the flag ships on.
+2. **Marketplace → full transaction layer.** Illumin360 becomes *transactional*: payments/escrow,
+   milestones, contracts, and two-sided reviews/reputation are **in scope for v0.3.0** (moved up from Tier 3).
+   This is the milestone's largest workstream — **design-doc-first**, and it needs a `[DECISION: payment
+   provider]` (e.g. Stripe Connect / escrow partner) + a worker-classification/compliance stance.
+3. **Tier 1 headliners → all four committed:** talent rediscovery, nurture sequences, self-schedule +
+   interview kits, skills taxonomy v1.
+
+**v0.3.0 = three workstreams:** (A) AI-native — embeddings+pgvector, GenAI assistant [hosted opt-in];
+(B) Recruiting depth — rediscovery, nurture sequences, self-schedule + interview kits, skills taxonomy v1;
+(C) Transactional marketplace — payments/escrow, milestones, contracts, reviews/reputation [design-doc first].
+Tracked as GitHub milestone **v0.3.0** with one issue per item.
+
+### Proposed v0.3.0 backlog (tiered)
+
+**Tier 1 — headliners (high fit; build largely on what we have).** Ordered by fit×leverage:
+- [ ] **Talent rediscovery / silver-medalists** — re-evaluate past applicants (incl. rejected) against a new requisition using the existing matching engine + `match_outcomes` + talent pools. *Pure engineering, no external dep — highest-fit item.*
+- [ ] **Nurture sequences / drip campaigns** — extend one-shot `email_campaigns` into multi-step, triggered sequences (delays, stage/segment triggers, stop-on-reply). *Engineering.*
+- [ ] **Self-schedule interview booking** — candidate self-booking links over interviewer availability windows (timezone-aware), reusing interviews/attendees. *Engineering.*
+- [ ] **Reusable interview kits / question banks** — per-role kits mapping questions → the skills already scored per round. *Engineering (flagged follow-up in v0.2).*
+- [ ] **Skills taxonomy / ontology v1** — normalize + dedup skills, synonym mapping, canonical skill ids feeding matching. *Can ship dependency-free first (like hashing-embeddings v1), inference later.*
+- [ ] **Real embedding model + pgvector** `[DECISION: data egress]` — swap the flag-gated hashing provider for a hosted/self-hosted model + pgvector persistence, behind the existing `IEmbeddingProvider`. *Already designed (`03-architecture/semantic-matching-design.md`); gated on the egress call.*
+- [ ] **GenAI assistant** `[DECISION: LLM egress]` — JD generation, candidate/CV summarization, message drafting behind a provider flag (self-hostable). *Gated with the embedding decision.*
+- [ ] **SMS / text recruiting** `[DECISION: SMS provider]` — a second notification channel (status, interview reminders, nurture) via a pluggable provider (e.g. Twilio), mirroring the `Illumin360.Email` building block.
+
+**Tier 2 — differentiators / larger or externally-gated:**
+- [ ] Custom/interactive analytics report builder + hiring forecasting + DEI-per-funnel-stage + quality-of-hire surveys
+- [ ] Assessments integration hook (HackerRank/CodeSignal-class) on the pipeline
+- [ ] Multi-step offer/req approval routing + real e-sign provider + background-check hook
+- [ ] Public API keys + outbound webhook subscriptions + a partner-integration catalog
+- [ ] Adverse-impact / fairness auditing over hiring outcomes (extends blind screening + explainable matches)
+- [ ] Career pathing / opportunity recommendations for talent (aligns with the marketplace positioning; reuses matching)
+- [ ] Programmatic board multiposting / Apply Connect `[DECISION: board API credentials]`
+- [ ] Enterprise SSO (SAML) + SCIM provisioning
+- [ ] Conversational apply / screening chatbot + autonomous agents `[DECISION: LLM egress]`
+
+**Tier 3 — strategic forks / out of current scope (need a product decision, not a parity gap):**
+- **Marketplace transaction layer** (Upwork model): payments/escrow, milestones, contracts, two-sided
+  reviews/reputation, worker classification/EOR. A large regulatory + product commitment — the biggest fork
+  for whether Illumin360 becomes *transactional* vs. staying sourcing/ATS + marketplace-matching.
+- **Contingent-workforce back-office** (Bullhorn/VNDLY): VMS, pay-bill, timesheets, redeployment. Staffing-agency breadth, adjacent to the excluded HRMS/payroll set.
+- **Interview recording/transcription intelligence** (Notetaker/Pillar): media capture + AI — heavy, and privacy-sensitive.
+- **Native mobile app** — still a separate product decision.
