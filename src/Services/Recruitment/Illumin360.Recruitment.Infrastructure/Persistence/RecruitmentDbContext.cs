@@ -91,6 +91,15 @@ public sealed class RecruitmentDbContext(DbContextOptions<RecruitmentDbContext> 
     /// <summary>Email campaign recipients set.</summary>
     public DbSet<CampaignRecipient> CampaignRecipients => Set<CampaignRecipient>();
 
+    /// <summary>Nurture / drip sequences.</summary>
+    public DbSet<NurtureSequence> NurtureSequences => Set<NurtureSequence>();
+
+    /// <summary>Nurture sequence steps.</summary>
+    public DbSet<NurtureStep> NurtureSteps => Set<NurtureStep>();
+
+    /// <summary>Nurture sequence enrolments.</summary>
+    public DbSet<NurtureEnrollment> NurtureEnrollments => Set<NurtureEnrollment>();
+
     /// <inheritdoc />
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -528,6 +537,58 @@ public sealed class RecruitmentDbContext(DbContextOptions<RecruitmentDbContext> 
             b.Property(r => r.Email).HasColumnName("email").HasMaxLength(200);
             b.HasIndex(r => new { r.CampaignId, r.Email }).IsUnique();
             b.Ignore(r => r.DomainEvents);
+        });
+
+        var nurtureStatusConverter = new ValueConverter<NurtureStatus, string>(
+            v => v.ToString(),
+            v => Enum.Parse<NurtureStatus>(v));
+
+        var enrollmentStatusConverter = new ValueConverter<EnrollmentStatus, string>(
+            v => v.ToString(),
+            v => Enum.Parse<EnrollmentStatus>(v));
+
+        modelBuilder.Entity<NurtureSequence>(b =>
+        {
+            b.ToTable("nurture_sequences");
+            b.HasKey(s => s.Id);
+            b.Property(s => s.Id).HasColumnName("id");
+            b.Property(s => s.Name).HasColumnName("name").HasMaxLength(160);
+            b.Property(s => s.Status).HasColumnName("status").HasConversion(nurtureStatusConverter).HasMaxLength(20);
+            b.Property(s => s.CreatedAt).HasColumnName("created_at");
+            b.Ignore(s => s.DomainEvents);
+        });
+
+        modelBuilder.Entity<NurtureStep>(b =>
+        {
+            b.ToTable("nurture_steps");
+            b.HasKey(s => s.Id);
+            b.Property(s => s.Id).HasColumnName("id");
+            b.Property(s => s.SequenceId).HasColumnName("sequence_id");
+            b.Property(s => s.StepOrder).HasColumnName("step_order");
+            b.Property(s => s.DelayDays).HasColumnName("delay_days");
+            b.Property(s => s.Subject).HasColumnName("subject").HasMaxLength(200);
+            b.Property(s => s.Body).HasColumnName("body").HasMaxLength(10000);
+            b.Property(s => s.CreatedAt).HasColumnName("created_at");
+            b.HasIndex(s => s.SequenceId);
+            b.Ignore(s => s.DomainEvents);
+        });
+
+        modelBuilder.Entity<NurtureEnrollment>(b =>
+        {
+            b.ToTable("nurture_enrollments");
+            b.HasKey(e => e.Id);
+            b.Property(e => e.Id).HasColumnName("id");
+            b.Property(e => e.SequenceId).HasColumnName("sequence_id");
+            b.Property(e => e.Email).HasColumnName("email").HasMaxLength(200);
+            b.Property(e => e.Name).HasColumnName("name").HasMaxLength(200);
+            b.Property(e => e.Status).HasColumnName("status").HasConversion(enrollmentStatusConverter).HasMaxLength(20);
+            b.Property(e => e.NextStepOrder).HasColumnName("next_step_order");
+            b.Property(e => e.NextSendAt).HasColumnName("next_send_at");
+            b.Property(e => e.EnrolledAt).HasColumnName("enrolled_at");
+            b.Property(e => e.UpdatedAt).HasColumnName("updated_at");
+            b.HasIndex(e => new { e.SequenceId, e.Email }).IsUnique();
+            b.HasIndex(e => new { e.Status, e.NextSendAt });
+            b.Ignore(e => e.DomainEvents);
         });
 
         modelBuilder.Entity<ApplicationRejection>(b =>

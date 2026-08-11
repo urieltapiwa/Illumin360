@@ -644,6 +644,58 @@ public sealed class RecruitmentRepository(RecruitmentDbContext db) : IRecruitmen
             .AnyAsync(t => EF.Functions.ILike(t.Name, name), cancellationToken).ConfigureAwait(false);
 
     /// <inheritdoc />
+    public void AddNurtureSequence(NurtureSequence sequence) => _db.NurtureSequences.Add(sequence);
+
+    /// <inheritdoc />
+    public async Task<NurtureSequence?> GetNurtureSequenceAsync(Guid id, CancellationToken cancellationToken)
+        => await _db.NurtureSequences.FirstOrDefaultAsync(s => s.Id == id, cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<NurtureSequence>> ListNurtureSequencesAsync(CancellationToken cancellationToken)
+        => await _db.NurtureSequences.AsNoTracking().OrderByDescending(s => s.CreatedAt).ToListAsync(cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
+    public void AddNurtureStep(NurtureStep step) => _db.NurtureSteps.Add(step);
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<NurtureStep>> ListNurtureStepsAsync(Guid sequenceId, CancellationToken cancellationToken)
+        => await _db.NurtureSteps.AsNoTracking()
+            .Where(s => s.SequenceId == sequenceId)
+            .OrderBy(s => s.StepOrder)
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
+    public void AddNurtureEnrollment(NurtureEnrollment enrollment) => _db.NurtureEnrollments.Add(enrollment);
+
+    /// <inheritdoc />
+    public async Task<bool> IsEnrolledAsync(Guid sequenceId, string email, CancellationToken cancellationToken)
+        => await _db.NurtureEnrollments.AsNoTracking()
+            .AnyAsync(e => e.SequenceId == sequenceId && e.Email == email, cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
+    public async Task<NurtureEnrollment?> GetNurtureEnrollmentAsync(Guid id, CancellationToken cancellationToken)
+        => await _db.NurtureEnrollments.FirstOrDefaultAsync(e => e.Id == id, cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<NurtureEnrollment>> ListEnrollmentsForSequenceAsync(Guid sequenceId, CancellationToken cancellationToken)
+        => await _db.NurtureEnrollments.AsNoTracking()
+            .Where(e => e.SequenceId == sequenceId)
+            .OrderByDescending(e => e.EnrolledAt)
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
+    public async Task<int> CountActiveEnrollmentsAsync(Guid sequenceId, CancellationToken cancellationToken)
+        => await _db.NurtureEnrollments.AsNoTracking()
+            .CountAsync(e => e.SequenceId == sequenceId && e.Status == EnrollmentStatus.Active, cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<NurtureEnrollment>> ListDueEnrollmentsAsync(DateTimeOffset now, CancellationToken cancellationToken)
+        => await _db.NurtureEnrollments
+            .Where(e => e.Status == EnrollmentStatus.Active && e.NextSendAt <= now)
+            .OrderBy(e => e.NextSendAt)
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
     public async Task SaveChangesAsync(CancellationToken cancellationToken)
         => await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 

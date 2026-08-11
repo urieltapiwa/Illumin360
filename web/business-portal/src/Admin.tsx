@@ -220,6 +220,16 @@ export default function Admin({ session }: { session: Session }) {
   const [campaigns, setCampaigns] = useState<Campaign[] | null>(null);
   const [newCampaign, setNewCampaign] = useState({ name: "", subject: "", body: "" });
   const [campaignRecipient, setCampaignRecipient] = useState<Record<string, string>>({});
+  // Nurture / drip sequences.
+  type NurtureSeq = { id: string; name: string; status: string; stepCount: number; activeEnrollments: number; createdAt: string };
+  type NurtureStep = { id: string; stepOrder: number; delayDays: number; subject: string; body: string };
+  type NurtureEnroll = { id: string; email: string; name: string | null; status: string; nextStepOrder: number; nextSendAt: string };
+  type NurtureDetail = { sequence: NurtureSeq; steps: NurtureStep[]; enrollments: NurtureEnroll[] };
+  const [sequences, setSequences] = useState<NurtureSeq[] | null>(null);
+  const [newSeq, setNewSeq] = useState("");
+  const [seqDetail, setSeqDetail] = useState<NurtureDetail | null>(null);
+  const [stepDraft, setStepDraft] = useState({ delayDays: 0, subject: "", body: "" });
+  const [enrollDraft, setEnrollDraft] = useState({ email: "", name: "" });
   // Audit trail.
   type AuditEntry = { id: string; actor: string; action: string; entityType: string; entityId: string | null; summary: string; occurredAt: string };
   const [audit, setAudit] = useState<AuditEntry[] | null>(null);
@@ -351,6 +361,14 @@ export default function Admin({ session }: { session: Session }) {
     fetch("/api/recruitment/campaigns", { credentials: "same-origin" })
       .then((r) => (r.ok ? r.json() : null))
       .then((v) => { if (Array.isArray(v)) setCampaigns(v); })
+      .catch(() => { /* offline / unauthorised */ });
+  }, []);
+
+  // Nurture / drip sequences.
+  useEffect(() => {
+    fetch("/api/recruitment/nurture", { credentials: "same-origin" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((v) => { if (Array.isArray(v)) setSequences(v); })
       .catch(() => { /* offline / unauthorised */ });
   }, []);
 
@@ -834,6 +852,35 @@ export default function Admin({ session }: { session: Session }) {
   const sendCampaign = async (id: string) => {
     const r = await fetch(`/api/recruitment/campaigns/${id}/send`, { method: "POST", credentials: "same-origin" });
     if (r.ok) patchCampaign(await r.json());
+  };
+  // Nurture sequences.
+  const createSequence = async () => {
+    if (!newSeq.trim()) return;
+    const r = await fetch("/api/recruitment/nurture", { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: JSON.stringify({ name: newSeq.trim() }) });
+    if (r.ok) { const s: NurtureSeq = await r.json(); setSequences((xs) => [s, ...(xs ?? [])]); setNewSeq(""); }
+  };
+  const openSequence = async (id: string) => {
+    if (seqDetail?.sequence.id === id) { setSeqDetail(null); return; }
+    const r = await fetch(`/api/recruitment/nurture/${id}`, { credentials: "same-origin" });
+    if (r.ok) setSeqDetail(await r.json());
+  };
+  const refreshSequence = async (id: string) => {
+    const r = await fetch(`/api/recruitment/nurture/${id}`, { credentials: "same-origin" });
+    if (r.ok) { const d: NurtureDetail = await r.json(); setSeqDetail(d); setSequences((xs) => xs?.map((s) => (s.id === id ? d.sequence : s)) ?? xs); }
+  };
+  const addStep = async (id: string) => {
+    if (!stepDraft.subject.trim() || !stepDraft.body.trim()) return;
+    const r = await fetch(`/api/recruitment/nurture/${id}/steps`, { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: JSON.stringify(stepDraft) });
+    if (r.ok) { setStepDraft({ delayDays: 0, subject: "", body: "" }); await refreshSequence(id); }
+  };
+  const enroll = async (id: string) => {
+    if (!enrollDraft.email.trim()) return;
+    const r = await fetch(`/api/recruitment/nurture/${id}/enroll`, { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: JSON.stringify({ email: enrollDraft.email.trim(), name: enrollDraft.name.trim() || null }) });
+    if (r.ok) { setEnrollDraft({ email: "", name: "" }); await refreshSequence(id); }
+  };
+  const stopEnroll = async (seqId: string, enrollmentId: string) => {
+    const r = await fetch(`/api/recruitment/nurture/enrollments/${enrollmentId}/stop`, { method: "POST", credentials: "same-origin" });
+    if (r.ok) await refreshSequence(seqId);
   };
   const createTemplate = async () => {
     if (!newTemplate.name.trim() || !newTemplate.title.trim()) return;
@@ -1648,6 +1695,70 @@ export default function Admin({ session }: { session: Session }) {
                 </div>
                 <textarea value={newCampaign.body} onChange={(e) => setNewCampaign((f) => ({ ...f, body: e.target.value }))} placeholder={t("admin.camp.body", "Message body…")} className="min-h-[64px] resize-y rounded-lg border border-line/70 bg-panel2/50 px-2.5 py-1.5 text-[12px] text-ink-hi placeholder:text-ink-lo focus:border-brand/50 focus:outline-none" />
                 <button onClick={createCampaign} disabled={!newCampaign.name.trim() || !newCampaign.subject.trim() || !newCampaign.body.trim()} className="justify-self-start rounded-lg bg-brand/15 px-3 py-1.5 text-[11px] font-semibold text-brand-bright hover:bg-brand/25 transition disabled:opacity-50">{t("admin.camp.create", "Create draft")}</button>
+              </div>
+            </motion.section>
+          )}
+
+          {sequences && (
+            <motion.section variants={fade} className="card p-5">
+              <div className="flex items-center justify-between mb-3 gap-3 flex-wrap">
+                <div><h3 className="font-display text-[15px] font-bold text-ink-hi">{t("admin.nurture.title", "Nurture sequences")}</h3><p className="text-[11px] text-ink-lo mt-0.5">{t("admin.nurture.sub", "Multi-step drip emails that send over time as recipients progress.")}</p></div>
+                <span className="chip !text-[10px]">{sequences.length}</span>
+              </div>
+              <div className="space-y-2">
+                {sequences.map((s) => (
+                  <div key={s.id} className="rounded-xl border border-line/60 bg-panel2/40 p-3.5">
+                    <button onClick={() => openSequence(s.id)} className="w-full flex items-center justify-between gap-2 text-left">
+                      <div className="min-w-0"><div className="text-sm font-semibold text-ink-hi truncate">{s.name}</div><div className="text-[11px] text-ink-lo">{t("admin.nurture.counts", "{{steps}} step(s) · {{active}} active", { steps: s.stepCount, active: s.activeEnrollments })}</div></div>
+                      <span className="text-ink-lo text-xs">{seqDetail?.sequence.id === s.id ? "▲" : "▼"}</span>
+                    </button>
+                    {seqDetail?.sequence.id === s.id && (
+                      <div className="mt-3 border-t border-line/40 pt-3 space-y-3">
+                        <div className="space-y-1.5">
+                          {seqDetail.steps.map((st) => (
+                            <div key={st.id} className="flex items-start gap-2 text-[12px]">
+                              <span className="chip !text-[10px] shrink-0">{st.stepOrder}</span>
+                              <div className="min-w-0"><div className="text-ink-hi truncate">{st.subject}</div><div className="text-[10px] text-ink-lo">{st.delayDays === 0 ? t("admin.nurture.immediate", "on enrol") : t("admin.nurture.afterDays", "+{{d}} day(s)", { d: st.delayDays })}</div></div>
+                            </div>
+                          ))}
+                          {seqDetail.steps.length === 0 && <div className="text-[11px] text-ink-lo">{t("admin.nurture.noSteps", "No steps yet — add the first email below.")}</div>}
+                        </div>
+                        <div className="grid gap-1.5 sm:grid-cols-[auto_1fr] items-center">
+                          <input type="number" min={0} value={stepDraft.delayDays} onChange={(e) => setStepDraft((f) => ({ ...f, delayDays: Number(e.target.value) }))} title={t("admin.nurture.delay", "Delay (days)")} className="w-16 rounded-lg border border-line/70 bg-panel2/50 px-2 py-1 text-[12px] text-ink-hi focus:border-brand/50 focus:outline-none" />
+                          <input value={stepDraft.subject} onChange={(e) => setStepDraft((f) => ({ ...f, subject: e.target.value }))} placeholder={t("admin.nurture.subject", "Step subject")} className="rounded-lg border border-line/70 bg-panel2/50 px-2.5 py-1 text-[12px] text-ink-hi placeholder:text-ink-lo focus:border-brand/50 focus:outline-none" />
+                        </div>
+                        <textarea value={stepDraft.body} onChange={(e) => setStepDraft((f) => ({ ...f, body: e.target.value }))} placeholder={t("admin.nurture.body", "Step body…")} className="w-full min-h-[52px] resize-y rounded-lg border border-line/70 bg-panel2/50 px-2.5 py-1.5 text-[12px] text-ink-hi placeholder:text-ink-lo focus:border-brand/50 focus:outline-none" />
+                        <button onClick={() => addStep(s.id)} disabled={!stepDraft.subject.trim() || !stepDraft.body.trim()} className="rounded-lg bg-panel2/70 px-2.5 py-1 text-[11px] font-semibold text-ink-mid hover:text-ink-hi transition disabled:opacity-50">{t("admin.nurture.addStep", "Add step")}</button>
+
+                        <div className="border-t border-line/40 pt-2.5">
+                          <div className="eyebrow mb-1.5">{t("admin.nurture.enrollments", "Enrolments")}</div>
+                          <div className="space-y-1 mb-2">
+                            {seqDetail.enrollments.map((e) => (
+                              <div key={e.id} className="flex items-center justify-between gap-2 text-[12px]">
+                                <span className="text-ink-mid truncate">{e.name ? `${e.name} · ` : ""}{e.email}</span>
+                                <div className="flex items-center gap-2 shrink-0">
+                                  <span className={`chip !text-[10px] capitalize ${e.status === "Active" ? "!text-brand-bright !border-brand/30" : e.status === "Completed" ? "!text-ink-mid" : "!text-pink !border-pink/30"}`}>{e.status}</span>
+                                  {e.status === "Active" && <button onClick={() => stopEnroll(s.id, e.id)} className="text-ink-lo hover:text-pink transition text-[11px]" title={t("admin.nurture.stop", "Stop")}>✕</button>}
+                                </div>
+                              </div>
+                            ))}
+                            {seqDetail.enrollments.length === 0 && <div className="text-[11px] text-ink-lo">{t("admin.nurture.noEnroll", "No recipients enrolled.")}</div>}
+                          </div>
+                          <div className="flex gap-2">
+                            <input value={enrollDraft.email} onChange={(e) => setEnrollDraft((f) => ({ ...f, email: e.target.value }))} placeholder={t("admin.nurture.email", "email@company.na")} className="flex-1 min-w-0 rounded-lg border border-line/70 bg-panel2/50 px-2.5 py-1 text-[12px] text-ink-hi placeholder:text-ink-lo focus:border-brand/50 focus:outline-none" />
+                            <input value={enrollDraft.name} onChange={(e) => setEnrollDraft((f) => ({ ...f, name: e.target.value }))} placeholder={t("admin.nurture.name", "Name")} className="w-24 rounded-lg border border-line/70 bg-panel2/50 px-2.5 py-1 text-[12px] text-ink-hi placeholder:text-ink-lo focus:border-brand/50 focus:outline-none" />
+                            <button onClick={() => enroll(s.id)} disabled={!enrollDraft.email.trim() || seqDetail.steps.length === 0} className="rounded-lg bg-brand/15 px-2.5 py-1 text-[11px] font-semibold text-brand-bright hover:bg-brand/25 transition disabled:opacity-50">{t("admin.nurture.enroll", "Enrol")}</button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+                {sequences.length === 0 && <div className="py-3 text-center text-[12px] text-ink-lo">{t("admin.nurture.empty", "No sequences yet.")}</div>}
+              </div>
+              <div className="mt-3 border-t border-line/40 pt-3 flex gap-2">
+                <input value={newSeq} onChange={(e) => setNewSeq(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") createSequence(); }} placeholder={t("admin.nurture.newName", "New sequence name")} className="flex-1 rounded-lg border border-line/70 bg-panel2/50 px-2.5 py-1.5 text-[12px] text-ink-hi placeholder:text-ink-lo focus:border-brand/50 focus:outline-none" />
+                <button onClick={createSequence} disabled={!newSeq.trim()} className="rounded-lg bg-brand/15 px-3 py-1.5 text-[11px] font-semibold text-brand-bright hover:bg-brand/25 transition disabled:opacity-50">{t("admin.nurture.create", "Create")}</button>
               </div>
             </motion.section>
           )}

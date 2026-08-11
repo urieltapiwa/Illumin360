@@ -475,6 +475,58 @@ public interface IRecruitmentRepository
     /// <param name="cancellationToken">Cancellation token.</param>
     Task<bool> JobTemplateNameExistsAsync(string name, CancellationToken cancellationToken);
 
+    /// <summary>Stages a new nurture sequence for insertion.</summary>
+    /// <param name="sequence">The sequence to add.</param>
+    void AddNurtureSequence(NurtureSequence sequence);
+
+    /// <summary>Loads a nurture sequence by id, or null if not present.</summary>
+    /// <param name="id">The sequence id.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<NurtureSequence?> GetNurtureSequenceAsync(Guid id, CancellationToken cancellationToken);
+
+    /// <summary>Lists all nurture sequences, newest first.</summary>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<IReadOnlyList<NurtureSequence>> ListNurtureSequencesAsync(CancellationToken cancellationToken);
+
+    /// <summary>Stages a new nurture step for insertion.</summary>
+    /// <param name="step">The step to add.</param>
+    void AddNurtureStep(NurtureStep step);
+
+    /// <summary>Lists a sequence's steps in order.</summary>
+    /// <param name="sequenceId">The sequence id.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<IReadOnlyList<NurtureStep>> ListNurtureStepsAsync(Guid sequenceId, CancellationToken cancellationToken);
+
+    /// <summary>Stages a new enrolment for insertion.</summary>
+    /// <param name="enrollment">The enrolment to add.</param>
+    void AddNurtureEnrollment(NurtureEnrollment enrollment);
+
+    /// <summary>Whether an email is already enrolled in a sequence.</summary>
+    /// <param name="sequenceId">The sequence id.</param>
+    /// <param name="email">The recipient email.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<bool> IsEnrolledAsync(Guid sequenceId, string email, CancellationToken cancellationToken);
+
+    /// <summary>Loads an enrolment for update (change-tracked), or null if not present.</summary>
+    /// <param name="id">The enrolment id.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<NurtureEnrollment?> GetNurtureEnrollmentAsync(Guid id, CancellationToken cancellationToken);
+
+    /// <summary>Lists a sequence's enrolments (no-tracking).</summary>
+    /// <param name="sequenceId">The sequence id.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<IReadOnlyList<NurtureEnrollment>> ListEnrollmentsForSequenceAsync(Guid sequenceId, CancellationToken cancellationToken);
+
+    /// <summary>Counts a sequence's active enrolments.</summary>
+    /// <param name="sequenceId">The sequence id.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<int> CountActiveEnrollmentsAsync(Guid sequenceId, CancellationToken cancellationToken);
+
+    /// <summary>Lists active enrolments whose next step is due at or before <paramref name="now"/> (change-tracked, for the runner).</summary>
+    /// <param name="now">The reference time (UTC).</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<IReadOnlyList<NurtureEnrollment>> ListDueEnrollmentsAsync(DateTimeOffset now, CancellationToken cancellationToken);
+
     /// <summary>Commits staged changes to the data store.</summary>
     /// <param name="cancellationToken">Cancellation token.</param>
     Task SaveChangesAsync(CancellationToken cancellationToken);

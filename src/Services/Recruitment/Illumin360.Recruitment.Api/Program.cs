@@ -27,6 +27,12 @@ if (builder.Configuration.GetValue<bool?>("JobAlerts:Enabled") ?? true)
     builder.Services.AddHostedService<Illumin360.Recruitment.Api.JobAlertScheduler>();
 }
 
+// --- Nurture / drip sequences: advance due enrolments (enabled by default; interval via Nurture:IntervalSeconds) ---
+if (builder.Configuration.GetValue<bool?>("Nurture:Enabled") ?? true)
+{
+    builder.Services.AddHostedService<Illumin360.Recruitment.Api.NurtureScheduler>();
+}
+
 // --- AuthN/AuthZ: validate Keycloak JWTs relayed by the BFF; expose admin role policies (charter Part 7) ---
 builder.Services.AddIllumin360Auth(builder.Configuration);
 
@@ -1290,6 +1296,92 @@ v1.MapGet("/metrics/outcomes", async (
     .ProducesProblem(StatusCodes.Status401Unauthorized)
     .ProducesProblem(StatusCodes.Status403Forbidden);
 
+// --- Nurture / drip sequences (admin) ---
+v1.MapGet("/nurture", async (
+        IQueryHandler<ListNurtureSequencesQuery, IReadOnlyList<NurtureSequenceDto>> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new ListNurtureSequencesQuery(), ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminPolicy)
+    .WithName("ListNurtureSequences")
+    .WithSummary("List nurture / drip sequences. Requires an admin role.")
+    .Produces<IReadOnlyList<NurtureSequenceDto>>(StatusCodes.Status200OK);
+
+v1.MapGet("/nurture/{id:guid}", async (
+        Guid id,
+        IQueryHandler<GetNurtureSequenceQuery, NurtureSequenceDetailDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new GetNurtureSequenceQuery(id), ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminPolicy)
+    .WithName("GetNurtureSequence")
+    .WithSummary("Get a nurture sequence with its steps and enrolments. Requires an admin role.")
+    .Produces<NurtureSequenceDetailDto>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status404NotFound);
+
+v1.MapPost("/nurture", async (
+        CreateNurtureSequenceBody body,
+        ICommandHandler<CreateNurtureSequenceCommand, NurtureSequenceDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new CreateNurtureSequenceCommand(body.Name), ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminWritePolicy)
+    .WithName("CreateNurtureSequence")
+    .WithSummary("Create a nurture sequence. Requires an admin-write role.")
+    .Produces<NurtureSequenceDto>(StatusCodes.Status200OK);
+
+v1.MapPost("/nurture/{id:guid}/steps", async (
+        Guid id,
+        AddNurtureStepBody body,
+        ICommandHandler<AddNurtureStepCommand, NurtureStepDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new AddNurtureStepCommand(id, body.DelayDays, body.Subject, body.Body), ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminWritePolicy)
+    .WithName("AddNurtureStep")
+    .WithSummary("Add a step to a nurture sequence. Requires an admin-write role.")
+    .Produces<NurtureStepDto>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status404NotFound);
+
+v1.MapPost("/nurture/{id:guid}/enroll", async (
+        Guid id,
+        EnrollRecipientBody body,
+        ICommandHandler<EnrollRecipientCommand, NurtureEnrollmentDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new EnrollRecipientCommand(id, body.Email, body.Name), ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminWritePolicy)
+    .WithName("EnrollNurtureRecipient")
+    .WithSummary("Enrol a recipient into a nurture sequence. Requires an admin-write role.")
+    .Produces<NurtureEnrollmentDto>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status404NotFound)
+    .ProducesProblem(StatusCodes.Status409Conflict);
+
+v1.MapPost("/nurture/enrollments/{enrollmentId:guid}/stop", async (
+        Guid enrollmentId,
+        ICommandHandler<StopEnrollmentCommand, NurtureEnrollmentDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new StopEnrollmentCommand(enrollmentId), ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminWritePolicy)
+    .WithName("StopNurtureEnrollment")
+    .WithSummary("Stop an active nurture enrolment. Requires an admin-write role.")
+    .Produces<NurtureEnrollmentDto>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status404NotFound)
+    .ProducesProblem(StatusCodes.Status409Conflict);
+
 v1.MapGet("/requests/{id:guid}/rediscovery", async (
         Guid id,
         int? take,
@@ -1703,6 +1795,21 @@ internal sealed record JobTemplateBody(string Name, string Title, string? City, 
 /// <summary>Request body for applying a template.</summary>
 /// <param name="CompanyId">Hiring company id.</param>
 internal sealed record UseTemplateBody(Guid CompanyId);
+
+/// <summary>Request body for creating a nurture sequence.</summary>
+/// <param name="Name">Sequence name.</param>
+internal sealed record CreateNurtureSequenceBody(string Name);
+
+/// <summary>Request body for adding a nurture step.</summary>
+/// <param name="DelayDays">Days after the previous step.</param>
+/// <param name="Subject">Email subject.</param>
+/// <param name="Body">Email body.</param>
+internal sealed record AddNurtureStepBody(int DelayDays, string Subject, string Body);
+
+/// <summary>Request body for enrolling a nurture recipient.</summary>
+/// <param name="Email">Recipient email.</param>
+/// <param name="Name">Recipient name (optional).</param>
+internal sealed record EnrollRecipientBody(string Email, string? Name);
 
 /// <summary>Request body for creating an email campaign.</summary>
 /// <param name="Name">Internal name.</param>
