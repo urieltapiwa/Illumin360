@@ -147,6 +147,8 @@ export default function Admin({ session }: { session: Session }) {
   // "Similar candidates" for the expanded candidate.
   type SimilarCandidate = { id: string; name: string; city: string; headline: string | null; availability: string; score: number };
   const [csSimilar, setCsSimilar] = useState<SimilarCandidate[]>([]);
+  // Semantic "more like this" (flag-gated server-side; empty when the flag is off, so this self-hides).
+  const [csSemantic, setCsSemantic] = useState<SimilarCandidate[]>([]);
   // Duplicate-candidate detection.
   type DupGroup = { name: string; count: number; candidates: SearchCandidate[] };
   const [dupes, setDupes] = useState<DupGroup[] | null>(null);
@@ -387,11 +389,15 @@ export default function Admin({ session }: { session: Session }) {
 
   // Notes + tags for the candidate expanded in search results.
   useEffect(() => {
-    if (!csOpen) { setCsNotes([]); setCsTags([]); setCsCustomValues({}); setCsSimilar([]); return; }
+    if (!csOpen) { setCsNotes([]); setCsTags([]); setCsCustomValues({}); setCsSimilar([]); setCsSemantic([]); return; }
     fetch(`/api/candidates/${csOpen}/similar?take=5`, { credentials: "same-origin" })
       .then((r) => (r.ok ? r.json() : []))
       .then((v) => { if (Array.isArray(v)) setCsSimilar(v); })
       .catch(() => { /* offline */ });
+    fetch(`/api/candidates/${csOpen}/semantic-similar?take=5`, { credentials: "same-origin" })
+      .then((r) => (r.ok ? r.json() : []))
+      .then((v) => { if (Array.isArray(v)) setCsSemantic(v); })
+      .catch(() => { /* offline / flag off */ });
     fetch(`/api/candidates/${csOpen}/notes`).then((r) => (r.ok ? r.json() : [])).then((v) => Array.isArray(v) && setCsNotes(v)).catch(() => { /* offline */ });
     fetch(`/api/candidates/${csOpen}/tags`).then((r) => (r.ok ? r.json() : [])).then((v) => Array.isArray(v) && setCsTags(v)).catch(() => { /* offline */ });
     fetch(`/api/candidates/${csOpen}/custom-values`, { credentials: "same-origin" })
@@ -1700,6 +1706,19 @@ export default function Admin({ session }: { session: Session }) {
                                   <button key={s.id} onClick={() => setCsOpen(s.id)} className="flex w-full items-center gap-2 rounded-lg border border-line/50 bg-panel/40 px-2.5 py-1.5 text-left hover:border-brand/40 transition">
                                     <div className="min-w-0 flex-1"><div className="text-[12px] text-ink-hi truncate">{s.name}</div><div className="text-[10px] text-ink-lo truncate">{s.headline || "—"} · {s.city}</div></div>
                                     <span className="num text-[11px] text-brand-bright shrink-0">{s.score}%</span>
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          {csSemantic.length > 0 && (
+                            <div>
+                              <div className="eyebrow mb-1.5">{t("admin.semantic.title", "Semantically similar")}</div>
+                              <div className="space-y-1.5">
+                                {csSemantic.map((s) => (
+                                  <button key={s.id} onClick={() => setCsOpen(s.id)} className="flex w-full items-center gap-2 rounded-lg border border-line/50 bg-panel/40 px-2.5 py-1.5 text-left hover:border-brand/40 transition">
+                                    <div className="min-w-0 flex-1"><div className="text-[12px] text-ink-hi truncate">{s.name}</div><div className="text-[10px] text-ink-lo truncate">{s.headline || "—"} · {s.city}</div></div>
+                                    <span className="num text-[11px] text-gold shrink-0">{s.score}%</span>
                                   </button>
                                 ))}
                               </div>

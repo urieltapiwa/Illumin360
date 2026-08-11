@@ -1,5 +1,6 @@
 using Illumin360.Candidates.Application.Abstractions;
 using Illumin360.Candidates.Application.Candidates;
+using Illumin360.Matching;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Illumin360.Candidates.Application;
@@ -35,6 +36,10 @@ public static class DependencyInjection
         services.AddScoped<IQueryHandler<GetCandidateCustomValuesQuery, IReadOnlyList<CustomValueDto>>, GetCandidateCustomValuesQueryHandler>();
         services.AddScoped<ICommandHandler<SetCandidateCustomValuesCommand, int>, SetCandidateCustomValuesCommandHandler>();
         services.AddScoped<IQueryHandler<GetSimilarCandidatesQuery, IReadOnlyList<SimilarCandidateDto>>, GetSimilarCandidatesQueryHandler>();
+
+        // Semantic matching v1: deterministic hashing embeddings (no external calls, no data egress).
+        services.AddSingleton<IEmbeddingProvider>(new HashingEmbeddingProvider(256));
+        services.AddScoped<IQueryHandler<GetSemanticSimilarCandidatesQuery, IReadOnlyList<SimilarCandidateDto>>, GetSemanticSimilarCandidatesQueryHandler>();
         services.AddScoped<ICommandHandler<UploadCandidateCvCommand, CvDto>, UploadCandidateCvCommandHandler>();
         services.AddScoped<IQueryHandler<GetCandidateCvMetadataQuery, CvDto>, GetCandidateCvMetadataQueryHandler>();
         services.AddScoped<IQueryHandler<DownloadCandidateCvQuery, CvContent>, DownloadCandidateCvQueryHandler>();
