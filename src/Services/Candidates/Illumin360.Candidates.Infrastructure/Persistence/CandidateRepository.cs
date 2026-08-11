@@ -191,6 +191,44 @@ public sealed class CandidateRepository(CandidatesDbContext db) : ICandidateRepo
         => await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
     /// <inheritdoc />
+    public async Task<DiversityReportDto> GetDiversityReportAsync(CancellationToken cancellationToken)
+    {
+        var set = _db.Candidates.AsNoTracking();
+
+        var total = await set.CountAsync(cancellationToken).ConfigureAwait(false);
+
+        var nationalityRaw = await set
+            .GroupBy(c => c.Nationality)
+            .Select(g => new { Label = g.Key, Count = g.Count() })
+            .OrderByDescending(x => x.Count)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        var cityRaw = await set
+            .GroupBy(c => c.City)
+            .Select(g => new { Label = g.Key, Count = g.Count() })
+            .OrderByDescending(x => x.Count)
+            .Take(20)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        var availabilityRaw = await set
+            .GroupBy(c => c.Availability)
+            .Select(g => new { Status = g.Key, Count = g.Count() })
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        var byNationality = nationalityRaw.Select(x => new CountByLabel(x.Label, x.Count)).ToList();
+        var byCity = cityRaw.Select(x => new CountByLabel(x.Label, x.Count)).ToList();
+        var byAvailability = availabilityRaw
+            .Select(x => new CountByLabel(x.Status.ToString(), x.Count))
+            .OrderByDescending(x => x.Count)
+            .ToList();
+
+        return new DiversityReportDto(total, byNationality, byCity, byAvailability);
+    }
+
+    /// <inheritdoc />
     public async Task<CandidateStatsDto> GetStatsAsync(CancellationToken cancellationToken)
     {
         var set = _db.Candidates.AsNoTracking();

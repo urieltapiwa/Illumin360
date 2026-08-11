@@ -100,6 +100,11 @@ public interface ICandidateRepository
     /// <returns>Aggregate candidate statistics.</returns>
     Task<CandidateStatsDto> GetStatsAsync(CancellationToken cancellationToken);
 
+    /// <summary>Returns an anonymised diversity report (counts by nationality, city and availability).</summary>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The diversity report.</returns>
+    Task<DiversityReportDto> GetDiversityReportAsync(CancellationToken cancellationToken);
+
     /// <summary>Stages a new talent pool for insertion.</summary>
     /// <param name="pool">The pool to add.</param>
     void AddPool(TalentPool pool);

@@ -125,6 +125,20 @@ v1.MapGet("/duplicates", async (
     .WithSummary("Find suspected-duplicate candidates (shared name, optionally same city).")
     .Produces<IReadOnlyList<DuplicateGroupDto>>(StatusCodes.Status200OK);
 
+v1.MapGet("/diversity", async (
+        IQueryHandler<GetDiversityReportQuery, DiversityReportDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new GetDiversityReportQuery(), ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminPolicy)
+    .WithName("GetDiversityReport")
+    .WithSummary("Anonymised diversity/EEO report over the candidate pool (counts by nationality/city/availability). Requires an admin role.")
+    .Produces<DiversityReportDto>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden);
+
 v1.MapGet("/stats", async (
         IQueryHandler<GetCandidateStatsQuery, CandidateStatsDto> handler,
         CancellationToken ct) =>
