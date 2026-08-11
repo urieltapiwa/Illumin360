@@ -157,10 +157,10 @@ flip the status to ✅ (add the commit/PR ref).
 |---|---|---|
 | Recruitment stats / funnel / dashboards | ✅ | `/v1/recruitment/stats` + portal charts |
 | Time-to-hire / source metrics | ✅ | `GET /v1/recruitment/metrics/hiring` — avg/median days apply→hire + source-of-hire (applications/hires per talent type); admin hiring-metrics panel |
-| Custom reports / CSV-PDF export | ⬜ | |
+| Custom reports / CSV-PDF export | 🟡 | CSV export done — `GET /v1/recruitment/reports/source-of-hire.csv` + `/funnel.csv` (RFC-4180, admin-gated); admin download links. PDF export pending |
 | Diversity / EEO reporting | ⬜ | |
 
-- [ ] Export dashboards/reports to CSV/PDF
+- [x] Export reports to CSV — pure `ReportsCsv` renderer (RFC-4180 quoting) + `GET /v1/recruitment/reports/source-of-hire.csv` and `/funnel.csv` (admin-gated), reusing the metrics/stats handlers; unit tests; admin download links on the hiring-metrics panel. PDF export is a follow-up
 - [x] Time-to-hire and source-of-hire metrics — `GetHiringMetricsQuery` + `GET /v1/recruitment/metrics/hiring` computes avg/median days from apply→hire-decision and applications/hires per source (talent type); pure `HiringMath` (avg/median) unit-tested; admin hiring-metrics panel (tiles + per-source conversion bars)
 
 ## K. Platform / cross-cutting
@@ -178,7 +178,7 @@ flip the status to ✅ (add the commit/PR ref).
 
 ### Progress
 - Total build items: 48
-- Done: 44
+- Done: 45
 - In progress: 0
 
 **Changelog of ticks**
