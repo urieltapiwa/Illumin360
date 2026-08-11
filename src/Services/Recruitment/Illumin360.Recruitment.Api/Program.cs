@@ -621,15 +621,16 @@ v1.MapPost("/applications/{id:guid}/advance", async (
 
 v1.MapPost("/applications/{id:guid}/reject", async (
         Guid id,
+        RejectApplicationBody? body,
         ICommandHandler<RejectApplicationCommand, ApplicationDto> handler,
         CancellationToken ct) =>
     {
-        var result = await handler.HandleAsync(new RejectApplicationCommand(id), ct);
+        var result = await handler.HandleAsync(new RejectApplicationCommand(id, body?.Reason, body?.RejectedBy), ct);
         return result.ToHttpResult();
     })
     .RequireAuthorization(AuthenticationExtensions.AdminWritePolicy)
     .WithName("RejectApplication")
-    .WithSummary("Reject an application (terminal). Requires an admin (write) role.")
+    .WithSummary("Reject an application (terminal), optionally with a free-text reason. Requires an admin (write) role.")
     .Produces<ApplicationDto>(StatusCodes.Status200OK)
     .ProducesProblem(StatusCodes.Status401Unauthorized)
     .ProducesProblem(StatusCodes.Status403Forbidden)
@@ -1309,6 +1310,11 @@ internal sealed record AttendeeBody(string Name, string? Email, string? Role);
 /// <param name="ApplicationIds">The applications to transition.</param>
 /// <param name="Action">The action (<c>advance</c>/<c>reject</c>).</param>
 internal sealed record BulkApplicationsBody(IReadOnlyList<Guid>? ApplicationIds, string Action);
+
+/// <summary>Request body for rejecting an application with an optional reason.</summary>
+/// <param name="Reason">Free-text rejection reason.</param>
+/// <param name="RejectedBy">Who rejected, if known.</param>
+internal sealed record RejectApplicationBody(string? Reason, string? RejectedBy);
 
 /// <summary>Request body for starting an onboarding checklist.</summary>
 /// <param name="RoleTitle">The hired role title.</param>

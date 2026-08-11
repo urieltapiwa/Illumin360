@@ -30,7 +30,13 @@ public sealed class GetApplicationsForRequestQueryHandler(IRecruitmentRepository
             .ListApplicationsAsync(new RequestId(query.RequestId), (page - 1) * pageSize, pageSize, cancellationToken)
             .ConfigureAwait(false);
 
-        IReadOnlyList<ApplicationDto> dtos = apps.Select(ApplicationDto.FromDomain).ToList();
+        var reasons = await _repository
+            .GetRejectionReasonsAsync(apps.Select(a => a.Id.Value).ToList(), cancellationToken)
+            .ConfigureAwait(false);
+
+        IReadOnlyList<ApplicationDto> dtos = apps
+            .Select(a => ApplicationDto.FromDomain(a, reasons.GetValueOrDefault(a.Id.Value)))
+            .ToList();
         return Result<IReadOnlyList<ApplicationDto>>.Success(dtos);
     }
 }

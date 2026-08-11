@@ -56,12 +56,13 @@ flip the status to ✅ (add the commit/PR ref).
 | Apply to role | ✅ | marketplace apply + student/prof match apply |
 | Applications-per-request listing | ✅ | `GET /requests/{id}/applications` |
 | Pipeline stages (applied→reviewed→shortlist→interview→hire) | ✅ | Recruiter transition endpoints advance/reject with terminal-decision guards (409) |
-| Advance / reject application (with reason) | 🟡 | Advance/reject endpoints (admin-gated); a free-text reason needs a new column on the externally-seeded `applications` table (pending) |
+| Advance / reject application (with reason) | ✅ | Advance/reject endpoints (admin-gated); free-text reject reason stored in a service-owned `application_rejections` side-table (the seeded `applications` table isn't writable), surfaced on the application listing + kanban cards |
 | Kanban pipeline board (per requisition) | ✅ | Admin-portal "Application pipeline" board — role selector + stage columns (applied→…→hired/rejected) with advance/reject. Drag-drop is a polish follow-up |
 | Bulk actions | ✅ | `POST /v1/recruitment/applications/bulk` advances/rejects many applications at once (per-item results, batch cap, dedup); kanban card checkboxes + bulk action bar |
 | Application status visible to applicant | ✅ | "My applications" live status timeline (`GET /recruitment/talents/{id}/applications`) on the professional portal |
 
-- [x] Application stage-transition endpoints — `POST /v1/recruitment/applications/{id}/advance|reject` (admin-gated), domain stage machine (applied→reviewed→shortlisted→hired) with terminal-conflict guards. Free-text reject reason pending (needs a column on the externally-seeded `applications` table)
+- [x] Application stage-transition endpoints — `POST /v1/recruitment/applications/{id}/advance|reject` (admin-gated), domain stage machine (applied→reviewed→shortlisted→hired) with terminal-conflict guards
+- [x] Free-text reject reason — `ApplicationRejection` aggregate + service-owned `application_rejections` side-table (unique per application; the seeded `applications` table has no writable column); `reject` accepts an optional reason (validated ≤1000 chars), surfaced on the applications listing (`ApplicationDto.RejectReason`) and kanban cards; unit tests
 - [x] Recruiter pipeline board — Admin-portal kanban per requisition (role selector + stage columns, advance/reject on cards, live match %). Drag-drop = polish follow-up
 - [x] Applicant-facing application status timeline — "My applications" panel on the professional portal, live status per applied role (`GET /recruitment/talents/{id}/applications`)
 - [x] Bulk actions — `POST /v1/recruitment/applications/bulk` advances/rejects many applications in one request (dedup, 200-item cap, per-item ok/status/error, single save, outbox event per success), writes admin-gated; unit tests; kanban card checkboxes + a bulk action bar (advance/reject/clear) in the admin portal
@@ -180,7 +181,7 @@ flip the status to ✅ (add the commit/PR ref).
 
 ### Progress
 - Total build items: 48
-- Done: 48
+- Done: 49
 - In progress: 0
 
 **Changelog of ticks**

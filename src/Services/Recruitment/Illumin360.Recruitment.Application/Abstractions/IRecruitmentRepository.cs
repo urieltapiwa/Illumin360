@@ -53,6 +53,20 @@ public interface IRecruitmentRepository
     /// <returns>The tracked application, or null.</returns>
     Task<RecruitmentApplication?> GetApplicationAsync(ApplicationId id, CancellationToken cancellationToken);
 
+    /// <summary>Stages a new rejection record for insertion.</summary>
+    /// <param name="rejection">The rejection to add.</param>
+    void AddApplicationRejection(ApplicationRejection rejection);
+
+    /// <summary>Loads an application's rejection record for update, or null if none.</summary>
+    /// <param name="applicationId">The application id.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<ApplicationRejection?> GetRejectionForApplicationAsync(Guid applicationId, CancellationToken cancellationToken);
+
+    /// <summary>Returns rejection reasons for the given application ids, keyed by application id.</summary>
+    /// <param name="applicationIds">The application ids.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<IReadOnlyDictionary<Guid, string>> GetRejectionReasonsAsync(IReadOnlyList<Guid> applicationIds, CancellationToken cancellationToken);
+
     /// <summary>Stages a new saved search for insertion.</summary>
     /// <param name="savedSearch">The saved search to add.</param>
     void AddSavedSearch(SavedSearch savedSearch);
