@@ -5,9 +5,17 @@ using Illumin360.Storage;
 
 namespace Illumin360.Professionals.Application.Professionals;
 
-/// <summary>Skills detected in the current professional's uploaded CV.</summary>
+/// <summary>A parsed CV experience/education entry.</summary>
+/// <param name="Title">Role title or qualification.</param>
+/// <param name="Organization">Employer or institution, if detected.</param>
+/// <param name="Period">Date/period text, if detected.</param>
+public sealed record CvEntryDto(string Title, string? Organization, string? Period);
+
+/// <summary>Skills, experience and education detected in the current professional's uploaded CV.</summary>
 /// <param name="Skills">Detected skill names.</param>
-public sealed record CvSkillsDto(IReadOnlyList<string> Skills);
+/// <param name="Experience">Detected work-experience entries.</param>
+/// <param name="Education">Detected education entries.</param>
+public sealed record CvSkillsDto(IReadOnlyList<string> Skills, IReadOnlyList<CvEntryDto> Experience, IReadOnlyList<CvEntryDto> Education);
 
 /// <summary>Parses the current ("me") professional's stored CV and detects skills.</summary>
 public sealed record ParseCvSkillsQuery : IQuery<CvSkillsDto>;
@@ -38,6 +46,10 @@ public sealed class ParseCvSkillsQueryHandler(IProfessionalRepository repository
 
         await using var content = download.Content;
         var text = ResumeTextExtractor.Extract(content, me.CvContentType ?? download.ContentType);
-        return new CvSkillsDto(SkillExtractor.Detect(text));
+        var experience = ExperienceExtractor.ExtractExperience(text)
+            .Select(e => new CvEntryDto(e.Title, e.Organization, e.Period)).ToList();
+        var education = ExperienceExtractor.ExtractEducation(text)
+            .Select(e => new CvEntryDto(e.Title, e.Organization, e.Period)).ToList();
+        return new CvSkillsDto(SkillExtractor.Detect(text), experience, education);
     }
 }
