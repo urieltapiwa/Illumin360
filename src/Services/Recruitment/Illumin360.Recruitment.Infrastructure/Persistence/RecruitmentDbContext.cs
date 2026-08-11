@@ -109,6 +109,9 @@ public sealed class RecruitmentDbContext(DbContextOptions<RecruitmentDbContext> 
     /// <summary>Self-schedule interview booking slots.</summary>
     public DbSet<InterviewBookingSlot> InterviewBookingSlots => Set<InterviewBookingSlot>();
 
+    /// <summary>Two-sided engagement (hire) reviews.</summary>
+    public DbSet<EngagementReview> EngagementReviews => Set<EngagementReview>();
+
     /// <inheritdoc />
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -598,6 +601,28 @@ public sealed class RecruitmentDbContext(DbContextOptions<RecruitmentDbContext> 
             b.HasIndex(e => new { e.SequenceId, e.Email }).IsUnique();
             b.HasIndex(e => new { e.Status, e.NextSendAt });
             b.Ignore(e => e.DomainEvents);
+        });
+
+        var reviewerConverter = new ValueConverter<ReviewerSide, string>(
+            v => v.ToString(),
+            v => Enum.Parse<ReviewerSide>(v));
+
+        modelBuilder.Entity<EngagementReview>(b =>
+        {
+            b.ToTable("engagement_reviews");
+            b.HasKey(r => r.Id);
+            b.Property(r => r.Id).HasColumnName("id");
+            b.Property(r => r.ApplicationId).HasColumnName("application_id");
+            b.Property(r => r.RequestId).HasColumnName("request_id");
+            b.Property(r => r.TalentId).HasColumnName("talent_id");
+            b.Property(r => r.Reviewer).HasColumnName("reviewer").HasConversion(reviewerConverter).HasMaxLength(20);
+            b.Property(r => r.Rating).HasColumnName("rating");
+            b.Property(r => r.Comment).HasColumnName("comment").HasMaxLength(2000);
+            b.Property(r => r.Visible).HasColumnName("visible");
+            b.Property(r => r.CreatedAt).HasColumnName("created_at");
+            b.HasIndex(r => new { r.ApplicationId, r.Reviewer }).IsUnique();
+            b.HasIndex(r => new { r.TalentId, r.Visible });
+            b.Ignore(r => r.DomainEvents);
         });
 
         modelBuilder.Entity<InterviewKit>(b =>

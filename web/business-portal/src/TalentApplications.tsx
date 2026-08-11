@@ -14,6 +14,7 @@ interface TalentApp { id: string; roleTitle: string; city: string; status: strin
 interface Offer { id: string; applicationId: string; title: string; salaryAmount: number; currency: string; startDate: string; status: string; notes: string | null; signedByName: string | null; signedAt: string | null; }
 interface Message { id: string; sender: string; senderName: string; body: string; sentAt: string; read: boolean; }
 interface BookSlot { id: string; applicationId: string; proposedAt: string; durationMinutes: number; location: string; status: string; }
+interface Review { id: string; reviewer: string; rating: number; comment: string | null; createdAt: string; }
 
 const statusChip = (status: string) =>
   status === "hired" || status === "accepted" ? "!text-brand-bright !border-brand/30"
@@ -31,6 +32,8 @@ export default function TalentApplications({ talentId, senderName, live }: { tal
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [signNames, setSignNames] = useState<Record<string, string>>({});
   const [slots, setSlots] = useState<Record<string, BookSlot[]>>({});
+  const [reviews, setReviews] = useState<Record<string, Review[]>>({});
+  const [reviewDrafts, setReviewDrafts] = useState<Record<string, { rating: number; comment: string }>>({});
   const [busy, setBusy] = useState<string | null>(null);
 
   useEffect(() => {
@@ -43,11 +46,13 @@ export default function TalentApplications({ talentId, senderName, live }: { tal
 
   const loadDetail = useCallback(async (appId: string) => {
     try {
-      const [o, m, s] = await Promise.all([
+      const [o, m, s, rv] = await Promise.all([
         fetch(`/api/recruitment/applications/${appId}/offers`, { credentials: "same-origin" }).then((r) => (r.ok ? r.json() : [])),
         fetch(`/api/recruitment/applications/${appId}/messages`, { credentials: "same-origin" }).then((r) => (r.ok ? r.json() : [])),
         fetch(`/api/recruitment/applications/${appId}/booking-slots`, { credentials: "same-origin" }).then((r) => (r.ok ? r.json() : [])),
+        fetch(`/api/recruitment/applications/${appId}/reviews`, { credentials: "same-origin" }).then((r) => (r.ok ? r.json() : [])),
       ]);
+      if (Array.isArray(rv)) setReviews((prev) => ({ ...prev, [appId]: rv }));
       if (Array.isArray(s)) setSlots((prev) => ({ ...prev, [appId]: s }));
       if (Array.isArray(o)) setOffers((prev) => ({ ...prev, [appId]: o }));
       if (Array.isArray(m)) {
@@ -91,6 +96,14 @@ export default function TalentApplications({ talentId, senderName, live }: { tal
         setOffers((prev) => ({ ...prev, [appId]: (prev[appId] ?? []).map((o) => (o.id === offerId ? updated : o)) }));
         setApps((prev) => (prev ? prev.map((a) => (a.id === appId ? { ...a, status: "hired" } : a)) : prev));
       }
+    } finally { setBusy(null); }
+  };
+  const submitReview = async (appId: string) => {
+    const draft = reviewDrafts[appId] ?? { rating: 5, comment: "" };
+    setBusy(appId + "review");
+    try {
+      const r = await fetch(`/api/recruitment/applications/${appId}/review`, { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: JSON.stringify({ reviewer: "talent", rating: draft.rating, comment: draft.comment.trim() || null }) });
+      if (r.ok) { await loadDetail(appId); setReviewDrafts((p) => ({ ...p, [appId]: { rating: 5, comment: "" } })); }
     } finally { setBusy(null); }
   };
   const bookSlot = async (appId: string, slotId: string) => {
@@ -222,6 +235,42 @@ export default function TalentApplications({ talentId, senderName, live }: { tal
                         </div>
                       )}
                     </div>
+
+                    {/* Reviews (marketplace trust) — only for a completed hire */}
+                    {a.status === "hired" && (() => {
+                      const appReviews = reviews[a.id] ?? [];
+                      const alreadyReviewed = appReviews.some((r) => r.reviewer === "Talent");
+                      const draft = reviewDrafts[a.id] ?? { rating: 5, comment: "" };
+                      return (
+                        <div>
+                          <div className="eyebrow mb-2">{t("talent.review.title", "Reviews")}</div>
+                          {appReviews.length > 0 ? (
+                            <div className="space-y-1.5 mb-2">
+                              {appReviews.map((r) => (
+                                <div key={r.id} className="rounded-lg border border-line/60 bg-base/40 px-3 py-2">
+                                  <div className="flex items-center justify-between"><span className="text-[10px] font-semibold text-ink-lo">{r.reviewer === "Talent" ? t("talent.review.you", "You") : t("talent.review.employer", "Employer")}</span><span className="text-gold text-[12px]">{"★".repeat(r.rating)}<span className="text-ink-lo">{"★".repeat(5 - r.rating)}</span></span></div>
+                                  {r.comment && <div className="text-[12px] text-ink-hi mt-0.5">{r.comment}</div>}
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-[11px] text-ink-lo mb-2">{t("talent.review.blind", "Reviews stay hidden until both sides submit.")}</p>
+                          )}
+                          {live && !alreadyReviewed && (
+                            <div className="rounded-lg border border-line/60 bg-base/40 p-2.5">
+                              <div className="flex items-center gap-1 mb-1.5">
+                                {[1, 2, 3, 4, 5].map((n) => (
+                                  <button key={n} onClick={() => setReviewDrafts((p) => ({ ...p, [a.id]: { ...draft, rating: n } }))} className={`text-[16px] transition ${draft.rating >= n ? "text-gold" : "text-ink-lo hover:text-gold/60"}`}>★</button>
+                                ))}
+                                <span className="ml-1 text-[11px] text-ink-lo">{t("talent.review.rate", "Rate the employer")}</span>
+                              </div>
+                              <textarea value={draft.comment} onChange={(e) => setReviewDrafts((p) => ({ ...p, [a.id]: { ...draft, comment: e.target.value } }))} placeholder={t("talent.review.comment", "How was working with them? (optional)")} className="w-full min-h-[44px] resize-y rounded-lg border border-line/70 bg-panel2/50 px-2.5 py-1.5 text-[12px] text-ink-hi placeholder:text-ink-lo focus:border-brand/50 focus:outline-none" />
+                              <button onClick={() => submitReview(a.id)} disabled={busy === a.id + "review"} className="mt-1.5 rounded-lg bg-brand/15 px-3 py-1 text-[11px] font-semibold text-brand-bright hover:bg-brand/25 transition disabled:opacity-50">{busy === a.id + "review" ? t("talent.review.submitting", "Submitting…") : t("talent.review.submit", "Submit review")}</button>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
                 )}
               </div>

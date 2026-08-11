@@ -165,6 +165,9 @@ public static class DependencyInjection
         services.AddScoped<ICommandHandler<OfferBookingSlotCommand, BookingSlotDto>, OfferBookingSlotCommandHandler>();
         services.AddScoped<ICommandHandler<BookSlotCommand, BookingSlotDto>, BookSlotCommandHandler>();
         services.AddScoped<IQueryHandler<ListBookingSlotsQuery, IReadOnlyList<BookingSlotDto>>, ListBookingSlotsQueryHandler>();
+        services.AddScoped<ICommandHandler<LeaveReviewCommand, ReviewDto>, LeaveReviewCommandHandler>();
+        services.AddScoped<IQueryHandler<GetApplicationReviewsQuery, IReadOnlyList<ReviewDto>>, GetApplicationReviewsQueryHandler>();
+        services.AddScoped<IQueryHandler<GetTalentReputationQuery, ReputationDto>, GetTalentReputationQueryHandler>();
         services.AddScoped<
             IQueryHandler<GetApplicationThreadQuery, IReadOnlyList<MessageDto>>,
             GetApplicationThreadQueryHandler>();

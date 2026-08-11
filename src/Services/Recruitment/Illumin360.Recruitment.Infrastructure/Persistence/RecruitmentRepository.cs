@@ -737,6 +737,27 @@ public sealed class RecruitmentRepository(RecruitmentDbContext db) : IRecruitmen
             .ToListAsync(cancellationToken).ConfigureAwait(false);
 
     /// <inheritdoc />
+    public void AddEngagementReview(EngagementReview review) => _db.EngagementReviews.Add(review);
+
+    /// <inheritdoc />
+    public async Task<EngagementReview?> GetReviewAsync(Guid applicationId, ReviewerSide reviewer, CancellationToken cancellationToken)
+        => await _db.EngagementReviews
+            .FirstOrDefaultAsync(r => r.ApplicationId == applicationId && r.Reviewer == reviewer, cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<EngagementReview>> ListReviewsForApplicationAsync(Guid applicationId, CancellationToken cancellationToken)
+        => await _db.EngagementReviews.AsNoTracking()
+            .Where(r => r.ApplicationId == applicationId)
+            .OrderBy(r => r.CreatedAt)
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<EngagementReview>> ListReviewsForTalentAsync(Guid talentId, CancellationToken cancellationToken)
+        => await _db.EngagementReviews.AsNoTracking()
+            .Where(r => r.TalentId == talentId)
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
     public async Task SaveChangesAsync(CancellationToken cancellationToken)
         => await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
