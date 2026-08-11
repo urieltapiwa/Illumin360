@@ -214,6 +214,17 @@ v1.MapPost("/me/skill-gap", async (
     .WithSummary("Analyse the current profile's skills against a role's required skills (matched / missing / coverage).")
     .Produces<SkillGapDto>(StatusCodes.Status200OK);
 
+v1.MapGet("/me/skills/canonical", async (
+        IQueryHandler<GetCanonicalSkillsQuery, CanonicalSkillsDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new GetCanonicalSkillsQuery(), ct);
+        return result.ToHttpResult();
+    })
+    .WithName("GetCanonicalSkills")
+    .WithSummary("Map the current profile's skills onto the canonical skills taxonomy and flag duplicate/synonym skills to merge.")
+    .Produces<CanonicalSkillsDto>(StatusCodes.Status200OK);
+
 v1.MapPost("/me/role-explanation", async (
         RoleToScore role,
         IQueryHandler<ExplainRoleQuery, RoleExplanationDto> handler,

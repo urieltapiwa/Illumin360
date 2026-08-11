@@ -48,4 +48,16 @@ public class SkillGapAnalyzerTests
         result.Missing.Should().BeEquivalentTo("go", "sql");
         result.Matched.Should().BeEmpty();
     }
+
+    [Fact]
+    public void Taxonomy_mode_matches_synonyms_and_reports_canonical_names()
+    {
+        // Candidate lists "JS"; role wants "JavaScript" — a raw compare would miss it, taxonomy matches.
+        var raw = SkillGapAnalyzer.Analyze(["JS"], ["JavaScript"]);
+        raw.CoveragePercent.Should().Be(0);
+
+        var taxonomy = SkillGapAnalyzer.Analyze(["JS"], ["JavaScript"], useTaxonomy: true);
+        taxonomy.CoveragePercent.Should().Be(100);
+        taxonomy.Matched.Should().ContainSingle().Which.Should().Be("JavaScript");
+    }
 }

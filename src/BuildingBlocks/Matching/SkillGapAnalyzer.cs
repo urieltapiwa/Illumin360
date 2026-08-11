@@ -21,17 +21,22 @@ public static class SkillGapAnalyzer
     /// <summary>Analyses a candidate's skills against a role's required skills.</summary>
     /// <param name="candidateSkills">The candidate's skills.</param>
     /// <param name="requiredSkills">The role's required skills.</param>
+    /// <param name="useTaxonomy">
+    /// When true, both sides are canonicalised through <see cref="SkillTaxonomy"/> before comparison, so
+    /// synonyms match (e.g. "JS" ⇔ "JavaScript") and results read as canonical display names. Default false
+    /// keeps the original case-insensitive raw-string behaviour.
+    /// </param>
     /// <returns>The matched / missing / extra breakdown + coverage percentage.</returns>
-    public static SkillGapResult Analyze(IEnumerable<string>? candidateSkills, IEnumerable<string>? requiredSkills)
+    public static SkillGapResult Analyze(IEnumerable<string>? candidateSkills, IEnumerable<string>? requiredSkills, bool useTaxonomy = false)
     {
-        var have = Normalize(candidateSkills);
-        var required = NormalizeOrdered(requiredSkills);
-        var haveSet = new HashSet<string>(have, StringComparer.Ordinal);
-        var requiredSet = new HashSet<string>(required, StringComparer.Ordinal);
+        var have = Project(candidateSkills, useTaxonomy);
+        var required = Project(requiredSkills, useTaxonomy);
+        var haveKeys = new HashSet<string>(have.Select(h => h.Key), StringComparer.Ordinal);
+        var requiredKeys = new HashSet<string>(required.Select(r => r.Key), StringComparer.Ordinal);
 
-        var matched = required.Where(haveSet.Contains).ToList();
-        var missing = required.Where(r => !haveSet.Contains(r)).ToList();
-        var extra = have.Where(h => !requiredSet.Contains(h)).ToList();
+        var matched = required.Where(r => haveKeys.Contains(r.Key)).Select(r => r.Display).ToList();
+        var missing = required.Where(r => !haveKeys.Contains(r.Key)).Select(r => r.Display).ToList();
+        var extra = have.Where(h => !requiredKeys.Contains(h.Key)).Select(h => h.Display).ToList();
 
         var coverage = required.Count == 0
             ? 100
@@ -40,25 +45,32 @@ public static class SkillGapAnalyzer
         return new SkillGapResult(matched, missing, extra, coverage);
     }
 
-    // Normalised, de-duplicated, order-not-preserved (for the candidate side).
-    private static List<string> Normalize(IEnumerable<string>? skills)
-        => (skills ?? [])
-            .Select(s => s?.Trim().ToLowerInvariant() ?? string.Empty)
-            .Where(s => s.Length > 0)
-            .Distinct(StringComparer.Ordinal)
-            .ToList();
-
-    // Normalised, de-duplicated, first-seen order preserved (for the required side).
-    private static List<string> NormalizeOrdered(IEnumerable<string>? skills)
+    // De-duplicated by key, first-seen order preserved. Key drives comparison; Display is the human output.
+    // Raw mode: key = display = trimmed-lowercased (original behaviour). Taxonomy mode: key = canonical id,
+    // display = canonical display name.
+    private static List<(string Key, string Display)> Project(IEnumerable<string>? skills, bool useTaxonomy)
     {
         var seen = new HashSet<string>(StringComparer.Ordinal);
-        var result = new List<string>();
+        var result = new List<(string Key, string Display)>();
         foreach (var raw in skills ?? [])
         {
-            var s = raw?.Trim().ToLowerInvariant() ?? string.Empty;
-            if (s.Length > 0 && seen.Add(s))
+            string key;
+            string display;
+            if (useTaxonomy)
             {
-                result.Add(s);
+                var canonical = SkillTaxonomy.Canonicalize(raw);
+                key = canonical.Id;
+                display = canonical.Display;
+            }
+            else
+            {
+                key = raw?.Trim().ToLowerInvariant() ?? string.Empty;
+                display = key;
+            }
+
+            if (key.Length > 0 && seen.Add(key))
+            {
+                result.Add((key, display));
             }
         }
 
