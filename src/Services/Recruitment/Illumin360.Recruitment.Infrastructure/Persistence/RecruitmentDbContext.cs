@@ -76,6 +76,9 @@ public sealed class RecruitmentDbContext(DbContextOptions<RecruitmentDbContext> 
     /// <summary>Captured hiring outcomes (labelled LTR training data).</summary>
     public DbSet<MatchOutcome> MatchOutcomes => Set<MatchOutcome>();
 
+    /// <summary>Talent-side apply-time match features (per application).</summary>
+    public DbSet<ApplicationFeatures> ApplicationFeatures => Set<ApplicationFeatures>();
+
     /// <summary>Application conversation messages set.</summary>
     public DbSet<ApplicationMessage> ApplicationMessages => Set<ApplicationMessage>();
 
@@ -425,6 +428,20 @@ public sealed class RecruitmentDbContext(DbContextOptions<RecruitmentDbContext> 
             b.Ignore(v => v.DomainEvents);
         });
 
+        modelBuilder.Entity<ApplicationFeatures>(b =>
+        {
+            b.ToTable("application_features");
+            b.HasKey(f => f.Id);
+            b.Property(f => f.Id).HasColumnName("id");
+            b.Property(f => f.ApplicationId).HasColumnName("application_id");
+            b.Property(f => f.CitySignal).HasColumnName("city_signal");
+            b.Property(f => f.RoleSignal).HasColumnName("role_signal");
+            b.Property(f => f.SkillSignal).HasColumnName("skill_signal");
+            b.Property(f => f.CreatedAt).HasColumnName("created_at");
+            b.HasIndex(f => f.ApplicationId).IsUnique();
+            b.Ignore(f => f.DomainEvents);
+        });
+
         modelBuilder.Entity<MatchOutcome>(b =>
         {
             b.ToTable("match_outcomes");
@@ -443,6 +460,9 @@ public sealed class RecruitmentDbContext(DbContextOptions<RecruitmentDbContext> 
             b.Property(o => o.AvgInterviewRating).HasColumnName("avg_interview_rating").HasPrecision(4, 2);
             b.Property(o => o.HadOffer).HasColumnName("had_offer");
             b.Property(o => o.DaysToDecision).HasColumnName("days_to_decision");
+            b.Property(o => o.CitySignal).HasColumnName("city_signal");
+            b.Property(o => o.RoleSignal).HasColumnName("role_signal");
+            b.Property(o => o.SkillSignal).HasColumnName("skill_signal");
             b.Ignore(o => o.IsHire);
             b.HasIndex(o => o.ApplicationId).IsUnique();
             b.Ignore(o => o.DomainEvents);

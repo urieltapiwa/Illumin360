@@ -47,9 +47,9 @@ public sealed class AdvanceApplicationCommandHandler(IRecruitmentRepository repo
         {
             var now = DateTimeOffset.UtcNow;
             var f = await _repository.GetOutcomeFeaturesAsync(application.Id.Value, application.RequestId.Value, cancellationToken).ConfigureAwait(false)
-                ?? new OutcomeFeatureSnapshot("direct", false, 0, null, false);
+                ?? new OutcomeFeatureSnapshot("direct", false, 0, null, false, 0, 0, 0);
             var days = (int)(now - application.AppliedAt).TotalDays;
-            var outcome = MatchOutcome.Capture(application.Id.Value, application.RequestId.Value, application.TalentId, application.TalentType, application.MatchScore, true, now, f.Source, f.Remote, f.InterviewCount, f.AvgInterviewRating, f.HadOffer, days);
+            var outcome = MatchOutcome.Capture(application.Id.Value, application.RequestId.Value, application.TalentId, application.TalentType, application.MatchScore, true, now, f.Source, f.Remote, f.InterviewCount, f.AvgInterviewRating, f.HadOffer, days, f.CitySignal, f.RoleSignal, f.SkillSignal);
             if (outcome.IsSuccess)
             {
                 _repository.AddMatchOutcome(outcome.Value!);
@@ -110,9 +110,9 @@ public sealed class RejectApplicationCommandHandler(IRecruitmentRepository repos
         {
             var now = DateTimeOffset.UtcNow;
             var f = await _repository.GetOutcomeFeaturesAsync(application.Id.Value, application.RequestId.Value, cancellationToken).ConfigureAwait(false)
-                ?? new OutcomeFeatureSnapshot("direct", false, 0, null, false);
+                ?? new OutcomeFeatureSnapshot("direct", false, 0, null, false, 0, 0, 0);
             var days = (int)(now - application.AppliedAt).TotalDays;
-            var outcome = MatchOutcome.Capture(application.Id.Value, application.RequestId.Value, application.TalentId, application.TalentType, application.MatchScore, false, now, f.Source, f.Remote, f.InterviewCount, f.AvgInterviewRating, f.HadOffer, days);
+            var outcome = MatchOutcome.Capture(application.Id.Value, application.RequestId.Value, application.TalentId, application.TalentType, application.MatchScore, false, now, f.Source, f.Remote, f.InterviewCount, f.AvgInterviewRating, f.HadOffer, days, f.CitySignal, f.RoleSignal, f.SkillSignal);
             if (outcome.IsSuccess)
             {
                 _repository.AddMatchOutcome(outcome.Value!);

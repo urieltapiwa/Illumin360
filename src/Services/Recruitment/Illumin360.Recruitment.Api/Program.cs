@@ -356,7 +356,7 @@ v1.MapPost("/requests/{id:guid}/apply", async (
         CancellationToken ct) =>
     {
         var result = await handler.HandleAsync(
-            new ApplyToRequestCommand(id, body.TalentId, body.TalentType ?? "professional", body.Source), ct);
+            new ApplyToRequestCommand(id, body.TalentId, body.TalentType ?? "professional", body.Source, body.CitySignal, body.RoleSignal, body.SkillSignal), ct);
         return result.ToHttpResult();
     })
     .RequireAuthorization(AuthenticationExtensions.ProfessionalPolicy)
@@ -1621,7 +1621,10 @@ internal sealed record AddContactBody(string Name, string? Title, string? Email,
 /// <param name="TalentId">The applying talent's id.</param>
 /// <param name="TalentType">Talent type (<c>student</c>/<c>professional</c>); defaults to professional.</param>
 /// <param name="Source">Arrival channel (e.g. careers, referral, campaign, board); defaults to direct.</param>
-internal sealed record ApplyToRequestBody(Guid TalentId, string? TalentType, string? Source = null);
+/// <param name="CitySignal">Talent-side city-fit points (0–100), if the portal supplies them.</param>
+/// <param name="RoleSignal">Talent-side role-affinity points (0–100).</param>
+/// <param name="SkillSignal">Talent-side skill-fit points (0–100).</param>
+internal sealed record ApplyToRequestBody(Guid TalentId, string? TalentType, string? Source = null, int? CitySignal = null, int? RoleSignal = null, int? SkillSignal = null);
 
 /// <summary>Request body for setting an application's arrival channel.</summary>
 /// <param name="Channel">The arrival channel (e.g. referral, campaign, careers, board).</param>

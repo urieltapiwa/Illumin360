@@ -100,7 +100,7 @@ export default function Professional(_props: { session: Session }) {
   // Open-roles the professional has applied to this session (marketplace panel is otherwise stateless).
   const [appliedRoles, setAppliedRoles] = useState<Record<string, "pending" | "done" | "error">>({});
   // Apply-time screening form (only opens for roles that have application-form questions).
-  const [applyForm, setApplyForm] = useState<{ roleId: string; roleTitle: string; questions: FormQuestion[] } | null>(null);
+  const [applyForm, setApplyForm] = useState<{ roleId: string; roleTitle: string; questions: FormQuestion[]; features: { citySignal?: number; roleSignal?: number; skillSignal?: number } } | null>(null);
   // "Why this match?" per-signal explanation, lazily fetched per role.
   type RoleExplanation = { score: number; signals: { name: string; points: number; reason: string }[] };
   const [explain, setExplain] = useState<Record<string, RoleExplanation>>({});
@@ -284,16 +284,30 @@ export default function Professional(_props: { session: Session }) {
       setCvBusy("error");
     }
   };
+  // The talent-side match signals for a role (city/role/skill points), captured with the application as
+  // LTR features (Recruitment can't compute these — only the talent portal can).
+  const roleSignals = async (roleId: string): Promise<{ citySignal?: number; roleSignal?: number; skillSignal?: number }> => {
+    const role = openRoles?.find((x) => x.id === roleId);
+    if (!role) return {};
+    try {
+      const r = await fetch("/api/professionals/me/role-explanation", { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: JSON.stringify({ id: role.id, title: role.title, city: role.city, industry: "" }) });
+      if (!r.ok) return {};
+      const e: RoleExplanation = await r.json();
+      const pt = (name: string) => e.signals.find((s) => s.name === name)?.points ?? 0;
+      return { citySignal: pt("City"), roleSignal: pt("Role"), skillSignal: pt("Skills") };
+    } catch { return {}; }
+  };
   // Apply to a live marketplace open role — records a real application in the Recruitment service.
   const doApply = async (roleId: string) => {
     if (!d.id) return;
     setAppliedRoles((prev) => ({ ...prev, [roleId]: "pending" }));
     try {
+      const sig = await roleSignals(roleId);
       const r = await fetch(`/api/recruitment/requests/${roleId}/apply`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "same-origin",
-        body: JSON.stringify({ talentId: d.id, talentType: "professional", source: "careers" }),
+        body: JSON.stringify({ talentId: d.id, talentType: "professional", source: "careers", ...sig }),
       });
       // 409 (already applied) is a benign "already done" from our point of view.
       setAppliedRoles((prev) => ({ ...prev, [roleId]: r.ok || r.status === 409 ? "done" : "error" }));
@@ -309,7 +323,8 @@ export default function Professional(_props: { session: Session }) {
       const questions = fr.ok ? await fr.json() : [];
       if (Array.isArray(questions) && questions.length > 0) {
         const role = openRoles?.find((x) => x.id === roleId);
-        setApplyForm({ roleId, roleTitle: role?.title ?? "role", questions });
+        const features = await roleSignals(roleId);
+        setApplyForm({ roleId, roleTitle: role?.title ?? "role", questions, features });
         return;
       }
     } catch { /* form unavailable — fall through to a direct apply */ }
@@ -747,6 +762,7 @@ export default function Professional(_props: { session: Session }) {
           talentId={d.id}
           talentType="professional"
           questions={applyForm.questions}
+          features={applyForm.features}
           onClose={() => setApplyForm(null)}
           onApplied={(state) => setAppliedRoles((prev) => ({ ...prev, [applyForm.roleId]: state }))}
         />

@@ -14,6 +14,7 @@ export default function ApplyForm({
   talentId,
   talentType,
   questions,
+  features,
   onClose,
   onApplied,
 }: {
@@ -22,6 +23,7 @@ export default function ApplyForm({
   talentId: string;
   talentType: string;
   questions: FormQuestion[];
+  features?: { citySignal?: number; roleSignal?: number; skillSignal?: number };
   onClose: () => void;
   onApplied: (state: "done" | "error") => void;
 }) {
@@ -42,7 +44,7 @@ export default function ApplyForm({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "same-origin",
-        body: JSON.stringify({ talentId, talentType, source: "careers" }),
+        body: JSON.stringify({ talentId, talentType, source: "careers", ...features }),
       });
       if (!r.ok && r.status !== 409) { setError(t("apply.failed", "Could not apply — please try again.")); return; }
       // On 409 (already applied) we have no fresh application id, so answers are skipped.
