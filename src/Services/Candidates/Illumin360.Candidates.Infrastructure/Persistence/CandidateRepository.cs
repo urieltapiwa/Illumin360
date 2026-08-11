@@ -177,6 +177,16 @@ public sealed class CandidateRepository(CandidatesDbContext db) : ICandidateRepo
     public void Add(Candidate candidate) => _db.Candidates.Add(candidate);
 
     /// <inheritdoc />
+    public async Task EraseCandidateAsync(CandidateId id, CancellationToken cancellationToken)
+    {
+        // Delete owned rows first, then the candidate. ExecuteDelete runs immediately (its own statement).
+        await _db.TalentPoolMembers.Where(m => m.CandidateId == id).ExecuteDeleteAsync(cancellationToken).ConfigureAwait(false);
+        await _db.CandidateTags.Where(t => t.CandidateId == id).ExecuteDeleteAsync(cancellationToken).ConfigureAwait(false);
+        await _db.CandidateNotes.Where(n => n.CandidateId == id).ExecuteDeleteAsync(cancellationToken).ConfigureAwait(false);
+        await _db.Candidates.Where(c => c.Id == id).ExecuteDeleteAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
     public async Task SaveChangesAsync(CancellationToken cancellationToken)
         => await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 

@@ -81,6 +81,22 @@ v1.MapGet("/search", async (
     .Produces<CandidateSearchResultDto>(StatusCodes.Status200OK)
     .ProducesProblem(StatusCodes.Status400BadRequest);
 
+v1.MapDelete("/{id:guid}", async (
+        Guid id,
+        ICommandHandler<EraseCandidateCommand, bool> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new EraseCandidateCommand(id), ct);
+        return result.IsSuccess ? Results.NoContent() : result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminWritePolicy)
+    .WithName("EraseCandidate")
+    .WithSummary("GDPR right-to-be-forgotten: permanently erase a candidate and all their data. Requires an admin (write) role.")
+    .Produces(StatusCodes.Status204NoContent)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden)
+    .ProducesProblem(StatusCodes.Status404NotFound);
+
 v1.MapGet("/{id:guid}/export", async (
         Guid id,
         IQueryHandler<GetCandidateExportQuery, CandidateExportDto> handler,
