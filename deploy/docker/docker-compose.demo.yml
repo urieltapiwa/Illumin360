@@ -1,0 +1,49 @@
+# Illumin360 — live-learned-ranking demo overlay.
+#
+# Turns the learned ranker ON for the recruitment API and seeds a ready-made scenario (one requisition,
+# six in-pipeline applicants, a labelled training set) so the "Live learned ranking" admin panel visibly
+# re-orders candidates by predicted hire-likelihood instead of raw match score.
+#
+# Run (on top of the base infra + apps overlays):
+#   docker compose -f deploy/docker/docker-compose.yml \
+#                  -f deploy/docker/docker-compose.apps.yml \
+#                  -f deploy/docker/docker-compose.demo.yml up -d --build
+#
+# Then open the business portal (http://localhost:5180), sign in as an admin, go to the recruitment
+# pipeline for "Senior Software Engineer", and click "Rank applicants" under Live learned ranking.
+name: illumin360
+
+services:
+  # Enable the flag (Production reads env vars; the base overlay leaves it off).
+  recruitment-api:
+    environment:
+      Matching__LearnedRankingEnabled: "true"
+
+  # One-shot seeder: waits for the recruitment-api startup migration to create the service-owned tables,
+  # then applies the idempotent demo seed. Exits 0 when done; re-running the stack is a no-op.
+  demo-seed:
+    image: postgres:17-alpine
+    container_name: illumin360-demo-seed
+    restart: "no"
+    depends_on:
+      postgres: { condition: service_healthy }
+      recruitment-api: { condition: service_started }
+    environment:
+      PGHOST: postgres
+      PGPORT: "5432"
+      PGUSER: ${POSTGRES_USER:-illumin}
+      PGPASSWORD: ${POSTGRES_PASSWORD:-illumin_dev_pw}
+      PGDATABASE: illumin360_recruitment
+    volumes:
+      - ./demo:/demo:ro
+    entrypoint:
+      - sh
+      - -c
+      - |
+        echo "Waiting for recruitment-api to apply its migrations…"
+        until psql -tAc "SELECT to_regclass('recruitment.match_outcomes'), to_regclass('recruitment.requisition_details')" | grep -q "recruitment.match_outcomes|recruitment.requisition_details"; do
+          sleep 3
+        done
+        echo "Recruitment schema ready — seeding demo data."
+        psql -v ON_ERROR_STOP=1 -f /demo/seed-recruitment-demo.sql
+    networks: [illumin360]
