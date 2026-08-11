@@ -151,6 +151,13 @@ public static class DependencyInjection
         services.AddScoped<
             IQueryHandler<GetRediscoveryQuery, IReadOnlyList<RediscoveredCandidateDto>>,
             GetRediscoveryQueryHandler>();
+        services.AddScoped<ICommandHandler<CreateNurtureSequenceCommand, NurtureSequenceDto>, CreateNurtureSequenceCommandHandler>();
+        services.AddScoped<ICommandHandler<AddNurtureStepCommand, NurtureStepDto>, AddNurtureStepCommandHandler>();
+        services.AddScoped<ICommandHandler<EnrollRecipientCommand, NurtureEnrollmentDto>, EnrollRecipientCommandHandler>();
+        services.AddScoped<ICommandHandler<StopEnrollmentCommand, NurtureEnrollmentDto>, StopEnrollmentCommandHandler>();
+        services.AddScoped<IQueryHandler<ListNurtureSequencesQuery, IReadOnlyList<NurtureSequenceDto>>, ListNurtureSequencesQueryHandler>();
+        services.AddScoped<IQueryHandler<GetNurtureSequenceQuery, NurtureSequenceDetailDto>, GetNurtureSequenceQueryHandler>();
+        services.AddScoped<NurtureRunner>();
         services.AddScoped<
             IQueryHandler<GetApplicationThreadQuery, IReadOnlyList<MessageDto>>,
             GetApplicationThreadQueryHandler>();
