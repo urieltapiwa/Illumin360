@@ -184,7 +184,7 @@ flip the status to ✅ (add the commit/PR ref).
 - Feature-matrix rows: 64 — **63 ✅ have, 1 ⬜ missing** (mobile app, out of scope)
 - Build checklist: **48 / 48 delivered**; deep-audit backlog **fully engineering-complete — Tier 1 9/9 (+ both #1 sub-items) and Tier 2 7/7 (incl. semantic-matching v1 and the full LTR capture→train→evaluate→serve loop)**. 0 in progress, 0 unchecked.
 - Residual (non-engineering — production data or a governance/scope decision): promote the learned ranker into live scoring once it beats the heuristic on real data; add apply-time talent-side features; enable a real embedding model (data-egress sign-off); native mobile app (out of scope).
-- **Final re-sweep (2026-08-11):** 9 unit-test suites green — **312 tests, 0 failures** (Recruitment 145, Candidates 54, Matching 31, Professionals 23, Students 18, Employers 16, Admin 11, Resume 10, Email 4); business-portal build clean; all arc endpoints (incl. `metrics/outcomes`, `metrics/outcomes/export.csv`, `metrics/outcomes/model`, `semantic-similar`) + all 9 EF migrations confirmed present; `main` clean
+- **Final re-sweep (2026-08-11):** 9 unit-test suites green — **313 tests, 0 failures** (Recruitment 146, Candidates 54, Matching 31, Professionals 23, Students 18, Employers 16, Admin 11, Resume 10, Email 4); business-portal build clean; apply-time talent-features + all outcome/model endpoints confirmed; all 9 arc EF migrations in Recruitment (through `TalentSideFeatures`) + Candidates `CandidateCustomFields` present; `main` clean. LTR now trains on a 9-feature vector (score + pipeline + talent-side signals)
 
 **Changelog of ticks**
 - Admin portal tickets + accounts panels — completed the ticket Assign action (2026-08-10).
