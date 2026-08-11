@@ -13,6 +13,7 @@ const fade = { initial: { opacity: 0, y: 14 }, animate: { opacity: 1, y: 0 } };
 interface TalentApp { id: string; roleTitle: string; city: string; status: string; appliedAt: string; decidedAt: string | null; }
 interface Offer { id: string; applicationId: string; title: string; salaryAmount: number; currency: string; startDate: string; status: string; notes: string | null; signedByName: string | null; signedAt: string | null; }
 interface Message { id: string; sender: string; senderName: string; body: string; sentAt: string; read: boolean; }
+interface BookSlot { id: string; applicationId: string; proposedAt: string; durationMinutes: number; location: string; status: string; }
 
 const statusChip = (status: string) =>
   status === "hired" || status === "accepted" ? "!text-brand-bright !border-brand/30"
@@ -29,6 +30,7 @@ export default function TalentApplications({ talentId, senderName, live }: { tal
   const [threads, setThreads] = useState<Record<string, Message[]>>({});
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [signNames, setSignNames] = useState<Record<string, string>>({});
+  const [slots, setSlots] = useState<Record<string, BookSlot[]>>({});
   const [busy, setBusy] = useState<string | null>(null);
 
   useEffect(() => {
@@ -41,10 +43,12 @@ export default function TalentApplications({ talentId, senderName, live }: { tal
 
   const loadDetail = useCallback(async (appId: string) => {
     try {
-      const [o, m] = await Promise.all([
+      const [o, m, s] = await Promise.all([
         fetch(`/api/recruitment/applications/${appId}/offers`, { credentials: "same-origin" }).then((r) => (r.ok ? r.json() : [])),
         fetch(`/api/recruitment/applications/${appId}/messages`, { credentials: "same-origin" }).then((r) => (r.ok ? r.json() : [])),
+        fetch(`/api/recruitment/applications/${appId}/booking-slots`, { credentials: "same-origin" }).then((r) => (r.ok ? r.json() : [])),
       ]);
+      if (Array.isArray(s)) setSlots((prev) => ({ ...prev, [appId]: s }));
       if (Array.isArray(o)) setOffers((prev) => ({ ...prev, [appId]: o }));
       if (Array.isArray(m)) {
         setThreads((prev) => ({ ...prev, [appId]: m }));
@@ -86,6 +90,16 @@ export default function TalentApplications({ talentId, senderName, live }: { tal
         const updated: Offer = await r.json();
         setOffers((prev) => ({ ...prev, [appId]: (prev[appId] ?? []).map((o) => (o.id === offerId ? updated : o)) }));
         setApps((prev) => (prev ? prev.map((a) => (a.id === appId ? { ...a, status: "hired" } : a)) : prev));
+      }
+    } finally { setBusy(null); }
+  };
+  const bookSlot = async (appId: string, slotId: string) => {
+    setBusy(slotId + "book");
+    try {
+      const r = await fetch(`/api/recruitment/booking-slots/${slotId}/book`, { method: "POST", credentials: "same-origin" });
+      if (r.ok) {
+        const booked: BookSlot = await r.json();
+        setSlots((prev) => ({ ...prev, [appId]: (prev[appId] ?? []).map((s) => (s.id === slotId ? booked : s.status === "Offered" ? { ...s, status: "Expired" } : s)) }));
       }
     } finally { setBusy(null); }
   };
@@ -165,6 +179,24 @@ export default function TalentApplications({ talentId, senderName, live }: { tal
                                   </>
                                 )}
                               </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Self-schedule interview slots */}
+                    {(slots[a.id] ?? []).length > 0 && (
+                      <div>
+                        <div className="eyebrow mb-2">{t("talent.slots.title", "Pick an interview time")}</div>
+                        <div className="space-y-1.5">
+                          {(slots[a.id] ?? []).map((sl) => (
+                            <div key={sl.id} className="flex items-center justify-between gap-2 rounded-lg border border-line/60 bg-base/40 px-3 py-2">
+                              <div className="min-w-0"><div className="text-[12px] text-ink-hi">{new Date(sl.proposedAt).toLocaleString()}</div><div className="text-[10px] text-ink-lo">{sl.durationMinutes} min · {sl.location}</div></div>
+                              {sl.status === "Offered"
+                                ? (live ? <button onClick={() => bookSlot(a.id, sl.id)} disabled={!!busy} className="shrink-0 rounded-lg bg-brand/15 px-2.5 py-1 text-[11px] font-semibold text-brand-bright hover:bg-brand/25 transition disabled:opacity-50">{busy === sl.id + "book" ? t("talent.slots.booking", "Booking…") : t("talent.slots.book", "Book")}</button>
+                                   : <span className="chip !text-[10px] !text-gold !border-gold/30 shrink-0">{t("talent.slots.available", "Available")}</span>)
+                                : <span className={`chip !text-[10px] shrink-0 ${sl.status === "Booked" ? "!text-brand-bright !border-brand/30" : "!text-ink-lo"}`}>{sl.status === "Booked" ? t("talent.slots.booked", "Booked") : t("talent.slots.gone", "Taken")}</span>}
                             </div>
                           ))}
                         </div>

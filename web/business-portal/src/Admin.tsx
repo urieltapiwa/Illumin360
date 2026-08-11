@@ -230,6 +230,18 @@ export default function Admin({ session }: { session: Session }) {
   const [seqDetail, setSeqDetail] = useState<NurtureDetail | null>(null);
   const [stepDraft, setStepDraft] = useState({ delayDays: 0, subject: "", body: "" });
   const [enrollDraft, setEnrollDraft] = useState({ email: "", name: "" });
+  // Interview kits (reusable question banks).
+  type Kit = { id: string; name: string; questionCount: number; createdAt: string };
+  type KitQ = { id: string; questionOrder: number; text: string; skill: string | null };
+  type KitDetail = { kit: Kit; questions: KitQ[] };
+  const [kits, setKits] = useState<Kit[] | null>(null);
+  const [newKit, setNewKit] = useState("");
+  const [kitDetail, setKitDetail] = useState<KitDetail | null>(null);
+  const [qDraft, setQDraft] = useState({ text: "", skill: "" });
+  // Self-schedule booking slots for the drawer application.
+  type Slot = { id: string; applicationId: string; proposedAt: string; durationMinutes: number; location: string; status: string };
+  const [slots, setSlots] = useState<Slot[] | null>(null);
+  const [slotDraft, setSlotDraft] = useState({ proposedAt: "", durationMinutes: 45, location: "Video call" });
   // Audit trail.
   type AuditEntry = { id: string; actor: string; action: string; entityType: string; entityId: string | null; summary: string; occurredAt: string };
   const [audit, setAudit] = useState<AuditEntry[] | null>(null);
@@ -372,6 +384,14 @@ export default function Admin({ session }: { session: Session }) {
       .catch(() => { /* offline / unauthorised */ });
   }, []);
 
+  // Interview kits.
+  useEffect(() => {
+    fetch("/api/recruitment/interview-kits", { credentials: "same-origin" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((v) => { if (Array.isArray(v)) setKits(v); })
+      .catch(() => { /* offline / unauthorised */ });
+  }, []);
+
   // Job templates.
   useEffect(() => {
     fetch("/api/recruitment/templates")
@@ -446,7 +466,11 @@ export default function Admin({ session }: { session: Session }) {
 
   // Offers + onboarding + interviews for the application selected on a pipeline card.
   useEffect(() => {
-    if (!offerAppId) { setOffers(null); setOnboarding(null); setMessages([]); setInterviews([]); setIvOpen(null); setAppAnswers([]); setAppSource("direct"); return; }
+    if (!offerAppId) { setOffers(null); setOnboarding(null); setMessages([]); setInterviews([]); setIvOpen(null); setAppAnswers([]); setAppSource("direct"); setSlots(null); return; }
+    fetch(`/api/recruitment/applications/${offerAppId}/booking-slots`, { credentials: "same-origin" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((v) => { if (Array.isArray(v)) setSlots(v); })
+      .catch(() => { /* keep empty */ });
     fetch(`/api/recruitment/applications/${offerAppId}/answers`, { credentials: "same-origin" })
       .then((r) => (r.ok ? r.json() : null))
       .then((v) => { if (Array.isArray(v)) setAppAnswers(v); })
@@ -881,6 +905,33 @@ export default function Admin({ session }: { session: Session }) {
   const stopEnroll = async (seqId: string, enrollmentId: string) => {
     const r = await fetch(`/api/recruitment/nurture/enrollments/${enrollmentId}/stop`, { method: "POST", credentials: "same-origin" });
     if (r.ok) await refreshSequence(seqId);
+  };
+  // Interview kits.
+  const createKit = async () => {
+    if (!newKit.trim()) return;
+    const r = await fetch("/api/recruitment/interview-kits", { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: JSON.stringify({ name: newKit.trim() }) });
+    if (r.ok) { const k: Kit = await r.json(); setKits((xs) => [k, ...(xs ?? [])]); setNewKit(""); }
+  };
+  const openKit = async (id: string) => {
+    if (kitDetail?.kit.id === id) { setKitDetail(null); return; }
+    const r = await fetch(`/api/recruitment/interview-kits/${id}`, { credentials: "same-origin" });
+    if (r.ok) setKitDetail(await r.json());
+  };
+  const addQuestion = async (id: string) => {
+    if (!qDraft.text.trim()) return;
+    const r = await fetch(`/api/recruitment/interview-kits/${id}/questions`, { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: JSON.stringify({ text: qDraft.text.trim(), skill: qDraft.skill.trim() || null }) });
+    if (r.ok) {
+      setQDraft({ text: "", skill: "" });
+      const d = await (await fetch(`/api/recruitment/interview-kits/${id}`, { credentials: "same-origin" })).json();
+      setKitDetail(d); setKits((xs) => xs?.map((k) => (k.id === id ? d.kit : k)) ?? xs);
+    }
+  };
+  // Self-schedule booking slots.
+  const offerSlot = async () => {
+    if (!offerAppId || !slotDraft.proposedAt || !slotDraft.location.trim()) return;
+    const iso = new Date(slotDraft.proposedAt).toISOString();
+    const r = await fetch(`/api/recruitment/applications/${offerAppId}/booking-slots`, { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: JSON.stringify({ proposedAt: iso, durationMinutes: slotDraft.durationMinutes, location: slotDraft.location.trim() }) });
+    if (r.ok) { const s: Slot = await r.json(); setSlots((xs) => [...(xs ?? []), s].sort((a, b) => a.proposedAt.localeCompare(b.proposedAt))); setSlotDraft({ proposedAt: "", durationMinutes: 45, location: "Video call" }); }
   };
   const createTemplate = async () => {
     if (!newTemplate.name.trim() || !newTemplate.title.trim()) return;
@@ -1429,6 +1480,25 @@ export default function Admin({ session }: { session: Session }) {
                         </div>
                       </div>
                     )}
+                    <div className="mt-3 border-t border-line/40 pt-2.5">
+                      <div className="eyebrow mb-1.5">{t("admin.slots.title", "Self-schedule slots")}</div>
+                      <p className="text-[10px] text-ink-lo mb-2">{t("admin.slots.sub", "Offer times the candidate can pick from their portal; booking one schedules the interview and expires the rest.")}</p>
+                      <div className="space-y-1 mb-2">
+                        {(slots ?? []).map((sl) => (
+                          <div key={sl.id} className="flex items-center justify-between gap-2 text-[12px]">
+                            <span className="text-ink-mid">{new Date(sl.proposedAt).toLocaleString()} · {sl.durationMinutes}m · {sl.location}</span>
+                            <span className={`chip !text-[10px] ${sl.status === "Booked" ? "!text-brand-bright !border-brand/30" : sl.status === "Offered" ? "!text-gold !border-gold/30" : "!text-ink-lo"}`}>{sl.status}</span>
+                          </div>
+                        ))}
+                        {(slots ?? []).length === 0 && <div className="text-[11px] text-ink-lo">{t("admin.slots.none", "No slots offered.")}</div>}
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <input type="datetime-local" value={slotDraft.proposedAt} onChange={(e) => setSlotDraft((f) => ({ ...f, proposedAt: e.target.value }))} className="rounded-lg border border-line/70 bg-panel2/50 px-2 py-1 text-[12px] text-ink-hi focus:border-brand/50 focus:outline-none" />
+                        <input type="number" min={5} step={15} value={slotDraft.durationMinutes} onChange={(e) => setSlotDraft((f) => ({ ...f, durationMinutes: Number(e.target.value) }))} title={t("admin.slots.duration", "Duration (min)")} className="w-20 rounded-lg border border-line/70 bg-panel2/50 px-2 py-1 text-[12px] text-ink-hi focus:border-brand/50 focus:outline-none" />
+                        <input value={slotDraft.location} onChange={(e) => setSlotDraft((f) => ({ ...f, location: e.target.value }))} placeholder={t("admin.slots.location", "Location / link")} className="flex-1 min-w-[120px] rounded-lg border border-line/70 bg-panel2/50 px-2.5 py-1 text-[12px] text-ink-hi placeholder:text-ink-lo focus:border-brand/50 focus:outline-none" />
+                        <button onClick={offerSlot} disabled={!slotDraft.proposedAt || !slotDraft.location.trim()} className="rounded-lg bg-brand/15 px-3 py-1 text-[11px] font-semibold text-brand-bright hover:bg-brand/25 transition disabled:opacity-50">{t("admin.slots.offer", "Offer slot")}</button>
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}
@@ -1759,6 +1829,46 @@ export default function Admin({ session }: { session: Session }) {
               <div className="mt-3 border-t border-line/40 pt-3 flex gap-2">
                 <input value={newSeq} onChange={(e) => setNewSeq(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") createSequence(); }} placeholder={t("admin.nurture.newName", "New sequence name")} className="flex-1 rounded-lg border border-line/70 bg-panel2/50 px-2.5 py-1.5 text-[12px] text-ink-hi placeholder:text-ink-lo focus:border-brand/50 focus:outline-none" />
                 <button onClick={createSequence} disabled={!newSeq.trim()} className="rounded-lg bg-brand/15 px-3 py-1.5 text-[11px] font-semibold text-brand-bright hover:bg-brand/25 transition disabled:opacity-50">{t("admin.nurture.create", "Create")}</button>
+              </div>
+            </motion.section>
+          )}
+
+          {kits && (
+            <motion.section variants={fade} className="card p-5">
+              <div className="flex items-center justify-between mb-3 gap-3 flex-wrap">
+                <div><h3 className="font-display text-[15px] font-bold text-ink-hi">{t("admin.kits.title", "Interview kits")}</h3><p className="text-[11px] text-ink-lo mt-0.5">{t("admin.kits.sub", "Reusable question banks; tag each question with the skill it assesses.")}</p></div>
+                <span className="chip !text-[10px]">{kits.length}</span>
+              </div>
+              <div className="space-y-2">
+                {kits.map((k) => (
+                  <div key={k.id} className="rounded-xl border border-line/60 bg-panel2/40 p-3.5">
+                    <button onClick={() => openKit(k.id)} className="w-full flex items-center justify-between gap-2 text-left">
+                      <div className="min-w-0"><div className="text-sm font-semibold text-ink-hi truncate">{k.name}</div><div className="text-[11px] text-ink-lo">{t("admin.kits.qCount", "{{n}} question(s)", { n: k.questionCount })}</div></div>
+                      <span className="text-ink-lo text-xs">{kitDetail?.kit.id === k.id ? "▲" : "▼"}</span>
+                    </button>
+                    {kitDetail?.kit.id === k.id && (
+                      <div className="mt-3 border-t border-line/40 pt-3 space-y-2">
+                        {kitDetail.questions.map((q) => (
+                          <div key={q.id} className="flex items-start gap-2 text-[12px]">
+                            <span className="chip !text-[10px] shrink-0">{q.questionOrder}</span>
+                            <div className="min-w-0"><div className="text-ink-hi">{q.text}</div>{q.skill && <span className="chip !text-[10px] !text-brand-bright !border-brand/30 mt-0.5 inline-block">{q.skill}</span>}</div>
+                          </div>
+                        ))}
+                        {kitDetail.questions.length === 0 && <div className="text-[11px] text-ink-lo">{t("admin.kits.noQ", "No questions yet.")}</div>}
+                        <div className="grid gap-1.5 sm:grid-cols-[1fr_auto]">
+                          <input value={qDraft.text} onChange={(e) => setQDraft((f) => ({ ...f, text: e.target.value }))} placeholder={t("admin.kits.qText", "Question")} className="rounded-lg border border-line/70 bg-panel2/50 px-2.5 py-1 text-[12px] text-ink-hi placeholder:text-ink-lo focus:border-brand/50 focus:outline-none" />
+                          <input value={qDraft.skill} onChange={(e) => setQDraft((f) => ({ ...f, skill: e.target.value }))} placeholder={t("admin.kits.qSkill", "Skill (optional)")} className="w-full sm:w-40 rounded-lg border border-line/70 bg-panel2/50 px-2.5 py-1 text-[12px] text-ink-hi placeholder:text-ink-lo focus:border-brand/50 focus:outline-none" />
+                        </div>
+                        <button onClick={() => addQuestion(k.id)} disabled={!qDraft.text.trim()} className="rounded-lg bg-panel2/70 px-2.5 py-1 text-[11px] font-semibold text-ink-mid hover:text-ink-hi transition disabled:opacity-50">{t("admin.kits.addQ", "Add question")}</button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+                {kits.length === 0 && <div className="py-3 text-center text-[12px] text-ink-lo">{t("admin.kits.empty", "No kits yet.")}</div>}
+              </div>
+              <div className="mt-3 border-t border-line/40 pt-3 flex gap-2">
+                <input value={newKit} onChange={(e) => setNewKit(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") createKit(); }} placeholder={t("admin.kits.newName", "New kit name")} className="flex-1 rounded-lg border border-line/70 bg-panel2/50 px-2.5 py-1.5 text-[12px] text-ink-hi placeholder:text-ink-lo focus:border-brand/50 focus:outline-none" />
+                <button onClick={createKit} disabled={!newKit.trim()} className="rounded-lg bg-brand/15 px-3 py-1.5 text-[11px] font-semibold text-brand-bright hover:bg-brand/25 transition disabled:opacity-50">{t("admin.kits.create", "Create")}</button>
               </div>
             </motion.section>
           )}

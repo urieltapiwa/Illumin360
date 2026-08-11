@@ -100,6 +100,15 @@ public sealed class RecruitmentDbContext(DbContextOptions<RecruitmentDbContext> 
     /// <summary>Nurture sequence enrolments.</summary>
     public DbSet<NurtureEnrollment> NurtureEnrollments => Set<NurtureEnrollment>();
 
+    /// <summary>Reusable interview kits.</summary>
+    public DbSet<InterviewKit> InterviewKits => Set<InterviewKit>();
+
+    /// <summary>Interview kit questions.</summary>
+    public DbSet<InterviewKitQuestion> InterviewKitQuestions => Set<InterviewKitQuestion>();
+
+    /// <summary>Self-schedule interview booking slots.</summary>
+    public DbSet<InterviewBookingSlot> InterviewBookingSlots => Set<InterviewBookingSlot>();
+
     /// <inheritdoc />
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -589,6 +598,50 @@ public sealed class RecruitmentDbContext(DbContextOptions<RecruitmentDbContext> 
             b.HasIndex(e => new { e.SequenceId, e.Email }).IsUnique();
             b.HasIndex(e => new { e.Status, e.NextSendAt });
             b.Ignore(e => e.DomainEvents);
+        });
+
+        modelBuilder.Entity<InterviewKit>(b =>
+        {
+            b.ToTable("interview_kits");
+            b.HasKey(k => k.Id);
+            b.Property(k => k.Id).HasColumnName("id");
+            b.Property(k => k.Name).HasColumnName("name").HasMaxLength(160);
+            b.Property(k => k.CreatedAt).HasColumnName("created_at");
+            b.Ignore(k => k.DomainEvents);
+        });
+
+        modelBuilder.Entity<InterviewKitQuestion>(b =>
+        {
+            b.ToTable("interview_kit_questions");
+            b.HasKey(q => q.Id);
+            b.Property(q => q.Id).HasColumnName("id");
+            b.Property(q => q.KitId).HasColumnName("kit_id");
+            b.Property(q => q.QuestionOrder).HasColumnName("question_order");
+            b.Property(q => q.Text).HasColumnName("text").HasMaxLength(500);
+            b.Property(q => q.Skill).HasColumnName("skill").HasMaxLength(80);
+            b.Property(q => q.CreatedAt).HasColumnName("created_at");
+            b.HasIndex(q => q.KitId);
+            b.Ignore(q => q.DomainEvents);
+        });
+
+        var slotStatusConverter = new ValueConverter<BookingSlotStatus, string>(
+            v => v.ToString(),
+            v => Enum.Parse<BookingSlotStatus>(v));
+
+        modelBuilder.Entity<InterviewBookingSlot>(b =>
+        {
+            b.ToTable("interview_booking_slots");
+            b.HasKey(s => s.Id);
+            b.Property(s => s.Id).HasColumnName("id");
+            b.Property(s => s.ApplicationId).HasColumnName("application_id");
+            b.Property(s => s.ProposedAt).HasColumnName("proposed_at");
+            b.Property(s => s.DurationMinutes).HasColumnName("duration_minutes");
+            b.Property(s => s.Location).HasColumnName("location").HasMaxLength(200);
+            b.Property(s => s.Status).HasColumnName("status").HasConversion(slotStatusConverter).HasMaxLength(20);
+            b.Property(s => s.CreatedAt).HasColumnName("created_at");
+            b.Property(s => s.BookedAt).HasColumnName("booked_at");
+            b.HasIndex(s => new { s.ApplicationId, s.Status });
+            b.Ignore(s => s.DomainEvents);
         });
 
         modelBuilder.Entity<ApplicationRejection>(b =>
