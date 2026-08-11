@@ -44,10 +44,13 @@ public sealed class ScoreRolesQueryHandler(IProfessionalRepository repository)
         }
 
         var p = dashboard.Professional;
-        var talent = new TalentProfile(p.City, p.Role, [.. dashboard.Skills.Select(s => s.Name)]);
+
+        // Derive the talent's seniority from their headline/role so it factors into the score; the role's
+        // seniority comes from its title. Both are best-effort text parsing (no new profile fields).
+        var talent = new TalentProfile(p.City, p.Role, [.. dashboard.Skills.Select(s => s.Name)], SalaryExpectation: null, Seniority: p.Role);
 
         return query.Roles
-            .Select(r => new RoleScoreDto(r.Id, MatchScorer.Score(talent, new RoleListing(r.Title, r.City, r.Industry ?? string.Empty))))
+            .Select(r => new RoleScoreDto(r.Id, MatchScorer.Score(talent, new RoleListing(r.Title, r.City, r.Industry ?? string.Empty, SalaryMin: null, SalaryMax: null, Seniority: r.Title))))
             .ToList();
     }
 }
