@@ -133,6 +133,14 @@ export default function Admin({ session }: { session: Session }) {
   // Duplicate-candidate detection.
   type DupGroup = { name: string; count: number; candidates: SearchCandidate[] };
   const [dupes, setDupes] = useState<DupGroup[] | null>(null);
+  // Talent pools / shortlists (recruiter).
+  type Pool = { id: string; name: string; memberCount: number };
+  type PoolMember = { candidateId: string; name: string; city: string };
+  const [pools, setPools] = useState<Pool[] | null>(null);
+  const [newPoolName, setNewPoolName] = useState("");
+  const [poolOpen, setPoolOpen] = useState<string | null>(null);
+  const [poolMembers, setPoolMembers] = useState<PoolMember[]>([]);
+  const [poolBusy, setPoolBusy] = useState(false);
   // Requisition enrichment (salary/type/remote/tags) for the selected pipeline role.
   type ReqDetail = { salaryMin: number | null; salaryMax: number | null; currency: string; employmentType: string; remote: boolean; tags: string[] };
   const [reqDetail, setReqDetail] = useState<ReqDetail | null>(null);
@@ -288,6 +296,23 @@ export default function Admin({ session }: { session: Session }) {
       .then((v) => { if (Array.isArray(v)) setDupes(v); })
       .catch(() => { /* offline */ });
   }, []);
+
+  // Talent pools (recruiter shortlists).
+  useEffect(() => {
+    fetch("/api/candidates/pools")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((v) => { if (Array.isArray(v)) setPools(v); })
+      .catch(() => { /* offline */ });
+  }, []);
+
+  // Members of the expanded pool.
+  useEffect(() => {
+    if (!poolOpen) { setPoolMembers([]); return; }
+    fetch(`/api/candidates/pools/${poolOpen}/members`)
+      .then((r) => (r.ok ? r.json() : []))
+      .then((v) => { if (Array.isArray(v)) setPoolMembers(v); })
+      .catch(() => { /* offline */ });
+  }, [poolOpen]);
 
   // Notes + tags for the candidate expanded in search results.
   useEffect(() => {
@@ -459,6 +484,34 @@ export default function Admin({ session }: { session: Session }) {
   const removeCandTag = async (label: string) => {
     const r = await fetch(`/api/candidates/${csOpen}/tags/${encodeURIComponent(label)}`, { method: "DELETE", credentials: "same-origin" });
     if (r.ok) setCsTags(await r.json());
+  };
+  // Talent pools (recruiter shortlists).
+  const createPool = async () => {
+    const name = newPoolName.trim();
+    if (!name) return;
+    setPoolBusy(true);
+    try {
+      const r = await fetch("/api/candidates/pools", { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: JSON.stringify({ name }) });
+      if (r.ok) { const p: Pool = await r.json(); setPools((ps) => [...(ps ?? []), p]); setNewPoolName(""); }
+    } finally { setPoolBusy(false); }
+  };
+  const addToPool = async (poolId: string, candidateId: string) => {
+    const r = await fetch(`/api/candidates/pools/${poolId}/members/${candidateId}`, { method: "POST", credentials: "same-origin" });
+    // 200 = added, 409 = already a member; both mean "in the pool" for our count purposes.
+    if (r.ok) {
+      setPools((ps) => (ps ? ps.map((p) => (p.id === poolId ? { ...p, memberCount: p.memberCount + 1 } : p)) : ps));
+      if (poolOpen === poolId) {
+        const c = csResult?.items.find((x) => x.id === candidateId);
+        if (c && !poolMembers.some((m) => m.candidateId === candidateId)) setPoolMembers((ms) => [...ms, { candidateId, name: `${c.firstName} ${c.lastName}`, city: c.city }]);
+      }
+    }
+  };
+  const removeFromPool = async (poolId: string, candidateId: string) => {
+    const r = await fetch(`/api/candidates/pools/${poolId}/members/${candidateId}`, { method: "DELETE", credentials: "same-origin" });
+    if (r.ok) {
+      setPoolMembers((ms) => ms.filter((m) => m.candidateId !== candidateId));
+      setPools((ps) => (ps ? ps.map((p) => (p.id === poolId ? { ...p, memberCount: Math.max(0, p.memberCount - 1) } : p)) : ps));
+    }
   };
   const toggleAppSelect = (id: string) => setSelectedApps((prev) => {
     const next = new Set(prev);
@@ -1088,6 +1141,45 @@ export default function Admin({ session }: { session: Session }) {
             </motion.section>
           )}
 
+          {pools && (
+            <motion.section variants={fade} className="card p-5">
+              <div className="flex items-center justify-between mb-3 gap-3 flex-wrap">
+                <div><h3 className="font-display text-[15px] font-bold text-ink-hi">{t("admin.pools.title", "Talent pools")}</h3><p className="text-[11px] text-ink-lo mt-0.5">{t("admin.pools.sub", "Named shortlists of candidates. Add members from candidate search.")}</p></div>
+                <span className="chip !text-[10px]">{t("admin.pools.count", "{{n}} pool(s)", { n: pools.length })}</span>
+              </div>
+              <div className="flex flex-wrap gap-2 mb-3">
+                <input value={newPoolName} onChange={(e) => setNewPoolName(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") createPool(); }} placeholder={t("admin.pools.name", "New pool name…")} className="flex-1 min-w-[180px] rounded-lg border border-line/70 bg-panel2/50 px-3 py-1.5 text-[12px] text-ink-hi placeholder:text-ink-lo focus:border-brand/50 focus:outline-none" />
+                <button onClick={createPool} disabled={poolBusy || !newPoolName.trim()} className="rounded-lg bg-brand/15 px-3 py-1.5 text-[12px] font-semibold text-brand-bright hover:bg-brand/25 transition disabled:opacity-50">{t("admin.pools.create", "Create")}</button>
+              </div>
+              {pools.length === 0 ? (
+                <div className="py-4 text-center text-[12px] text-ink-lo">{t("admin.pools.none", "No pools yet — create one, then add candidates from search.")}</div>
+              ) : (
+                <div className="space-y-2">
+                  {pools.map((p) => (
+                    <div key={p.id} className="rounded-xl border border-line/60 bg-panel2/40">
+                      <button onClick={() => setPoolOpen(poolOpen === p.id ? null : p.id)} className="flex w-full items-center gap-3 px-3.5 py-2.5 text-left">
+                        <div className="min-w-0 flex-1"><div className="text-sm font-semibold text-ink-hi truncate">{p.name}</div></div>
+                        <span className="chip !text-[10px] !text-brand-bright !border-brand/30">{t("admin.pools.members", "{{n}} member(s)", { n: p.memberCount })}</span>
+                        <span className="text-ink-lo text-[11px]">{poolOpen === p.id ? "▲" : "▼"}</span>
+                      </button>
+                      {poolOpen === p.id && (
+                        <div className="border-t border-line/40 px-3.5 py-3 space-y-1.5">
+                          {poolMembers.map((m) => (
+                            <div key={m.candidateId} className="flex items-center gap-2 rounded-lg border border-line/50 bg-panel/40 px-2.5 py-1.5">
+                              <div className="min-w-0 flex-1"><div className="text-[12px] text-ink-hi truncate">{m.name}</div><div className="text-[10px] text-ink-lo truncate">{m.city}</div></div>
+                              <button onClick={() => removeFromPool(p.id, m.candidateId)} className="text-ink-lo hover:text-pink text-[11px]" title={t("admin.pools.remove", "Remove")}>✕</button>
+                            </div>
+                          ))}
+                          {poolMembers.length === 0 && <div className="text-[11px] text-ink-lo">{t("admin.pools.empty", "No members yet. Add candidates from search results below.")}</div>}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </motion.section>
+          )}
+
           {csResult && (
             <motion.section variants={fade} className="card p-5">
               <div className="flex items-center justify-between mb-3 gap-3 flex-wrap">
@@ -1126,6 +1218,16 @@ export default function Admin({ session }: { session: Session }) {
                               <button onClick={addCandTag} disabled={!csTagDraft.trim()} className="rounded-lg bg-brand/15 px-2.5 py-1 text-[11px] font-semibold text-brand-bright hover:bg-brand/25 transition disabled:opacity-50">{t("admin.notes.tag", "Tag")}</button>
                             </div>
                           </div>
+                          {pools && pools.length > 0 && (
+                            <div>
+                              <div className="eyebrow mb-1.5">{t("admin.pools.addTo", "Add to shortlist")}</div>
+                              <div className="flex flex-wrap gap-1.5">
+                                {pools.map((p) => (
+                                  <button key={p.id} onClick={() => addToPool(p.id, c.id)} className="rounded-lg bg-panel2/60 px-2.5 py-1 text-[11px] font-semibold text-ink-mid hover:text-brand-bright hover:bg-brand/10 transition">+ {p.name}</button>
+                                ))}
+                              </div>
+                            </div>
+                          )}
                           <div>
                             <div className="flex items-center justify-between mb-1.5">
                             <span className="eyebrow">{t("admin.notes.title", "Recruiter notes")}</span>
