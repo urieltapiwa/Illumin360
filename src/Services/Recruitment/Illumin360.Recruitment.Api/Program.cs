@@ -478,7 +478,7 @@ v1.MapPost("/applications/{applicationId:guid}/interviews", async (
         CancellationToken ct) =>
     {
         var result = await handler.HandleAsync(
-            new ScheduleInterviewCommand(applicationId, body.ScheduledAt, body.DurationMinutes, body.Location), ct);
+            new ScheduleInterviewCommand(applicationId, body.ScheduledAt, body.DurationMinutes, body.Location, body.Round, body.RequiredSkills), ct);
         return result.ToHttpResult();
     })
     .RequireAuthorization(AuthenticationExtensions.AdminWritePolicy)
@@ -600,6 +600,51 @@ v1.MapDelete("/interviews/attendees/{attendeeId:guid}", async (
     .ProducesProblem(StatusCodes.Status401Unauthorized)
     .ProducesProblem(StatusCodes.Status403Forbidden)
     .ProducesProblem(StatusCodes.Status404NotFound);
+
+// --- Multi-round interviews: per-skill ratings + an application-wide summary ---
+v1.MapGet("/interviews/{id:guid}/skill-ratings", async (
+        Guid id,
+        IQueryHandler<GetSkillRatingsQuery, IReadOnlyList<SkillRatingDto>> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new GetSkillRatingsQuery(id), ct);
+        return result.ToHttpResult();
+    })
+    .WithName("GetInterviewSkillRatings")
+    .WithSummary("List an interview round's per-skill ratings.")
+    .Produces<IReadOnlyList<SkillRatingDto>>(StatusCodes.Status200OK);
+
+v1.MapPost("/interviews/{id:guid}/skill-ratings", async (
+        Guid id,
+        SkillRatingsBody body,
+        ICommandHandler<RecordSkillRatingsCommand, IReadOnlyList<SkillRatingDto>> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new RecordSkillRatingsCommand(id, body.Ratings ?? []), ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminWritePolicy)
+    .WithName("RecordInterviewSkillRatings")
+    .WithSummary("Record (replace) an interview round's per-skill ratings (1–5). Requires an admin (write) role.")
+    .Produces<IReadOnlyList<SkillRatingDto>>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status400BadRequest)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden)
+    .ProducesProblem(StatusCodes.Status404NotFound);
+
+v1.MapGet("/applications/{id:guid}/interview-summary", async (
+        Guid id,
+        IQueryHandler<GetInterviewSummaryQuery, InterviewSummaryDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new GetInterviewSummaryQuery(id), ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization()
+    .WithName("GetInterviewSummary")
+    .WithSummary("Aggregated interview rounds + per-skill averages for an application. Requires a signed-in user.")
+    .Produces<InterviewSummaryDto>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status401Unauthorized);
 
 // --- Application forms: configurable per-requisition screening questions + candidate answers ---
 v1.MapGet("/requests/{id:guid}/form", async (
@@ -1621,12 +1666,18 @@ internal sealed record ToggleAlertsBody(bool Enabled);
 /// <param name="ScheduledAt">Start time (UTC).</param>
 /// <param name="DurationMinutes">Duration in minutes.</param>
 /// <param name="Location">Location or mode.</param>
-internal sealed record ScheduleInterviewBody(DateTimeOffset ScheduledAt, int DurationMinutes, string Location);
+/// <param name="Round">Optional round label (e.g. Phone screen, Technical).</param>
+/// <param name="RequiredSkills">Optional skills this round assesses.</param>
+internal sealed record ScheduleInterviewBody(DateTimeOffset ScheduledAt, int DurationMinutes, string Location, string? Round = null, IReadOnlyList<string>? RequiredSkills = null);
 
 /// <summary>Request body for recording interview feedback.</summary>
 /// <param name="Rating">Scorecard rating (1–5).</param>
 /// <param name="Comment">Optional comment.</param>
 internal sealed record InterviewFeedbackBody(int Rating, string? Comment);
+
+/// <summary>Request body for recording per-skill interview ratings.</summary>
+/// <param name="Ratings">The per-skill scores ({skill, rating}).</param>
+internal sealed record SkillRatingsBody(IReadOnlyList<SkillRatingInput>? Ratings);
 
 /// <summary>Exposed so integration tests can use <c>WebApplicationFactory</c> (charter Part 14).</summary>
 public partial class Program;

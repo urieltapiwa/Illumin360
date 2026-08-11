@@ -116,14 +116,18 @@ export default function Admin({ session }: { session: Session }) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [msgDraft, setMsgDraft] = useState("");
   // Interviews + panel attendees (per selected application).
-  type Interview = { id: string; applicationId: string; scheduledAt: string; durationMinutes: number; location: string; status: string; feedbackRating: number | null; feedbackComment: string | null };
+  type Interview = { id: string; applicationId: string; scheduledAt: string; durationMinutes: number; location: string; status: string; feedbackRating: number | null; feedbackComment: string | null; round: string | null; requiredSkills: string[] };
   type Attendee = { id: string; name: string; email: string | null; role: string };
   const [interviews, setInterviews] = useState<Interview[]>([]);
-  const [newInterview, setNewInterview] = useState({ scheduledAt: "", durationMinutes: 45, location: "" });
+  const [newInterview, setNewInterview] = useState({ scheduledAt: "", durationMinutes: 45, location: "", round: "", skills: "" });
   const [ivOpen, setIvOpen] = useState<string | null>(null);
   const [attendees, setAttendees] = useState<Attendee[]>([]);
   const [newAttendee, setNewAttendee] = useState({ name: "", email: "", role: "interviewer" });
   const [ivBusy, setIvBusy] = useState(false);
+  // Per-round skill ratings (for the expanded interview) + the application-wide aggregated summary.
+  const [skillRatings, setSkillRatings] = useState<Record<string, number>>({});
+  type IvSummary = { rounds: { interviewId: string; round: string | null; scheduledAt: string; status: string; overallRating: number | null }[]; skillAverages: { skill: string; average: number; count: number }[] };
+  const [ivSummary, setIvSummary] = useState<IvSummary | null>(null);
   // Faceted candidate search.
   type SearchCandidate = { id: string; firstName: string; lastName: string; city: string; availability: string; publicHeadline: string | null };
   type FacetCount = { label: string; count: number };
@@ -393,14 +397,22 @@ export default function Admin({ session }: { session: Session }) {
       .then((r) => (r.ok ? r.json() : null))
       .then((v) => { if (Array.isArray(v)) setInterviews(v); })
       .catch(() => { /* keep empty */ });
+    fetch(`/api/recruitment/applications/${offerAppId}/interview-summary`, { credentials: "same-origin" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((v) => { if (v?.skillAverages) setIvSummary(v); })
+      .catch(() => { /* keep empty */ });
   }, [offerAppId]);
 
-  // Panel attendees for the expanded interview.
+  // Panel attendees + per-skill ratings for the expanded interview.
   useEffect(() => {
-    if (!ivOpen) { setAttendees([]); return; }
+    if (!ivOpen) { setAttendees([]); setSkillRatings({}); return; }
     fetch(`/api/recruitment/interviews/${ivOpen}/attendees`)
       .then((r) => (r.ok ? r.json() : []))
       .then((v) => { if (Array.isArray(v)) setAttendees(v); })
+      .catch(() => { /* offline */ });
+    fetch(`/api/recruitment/interviews/${ivOpen}/skill-ratings`)
+      .then((r) => (r.ok ? r.json() : []))
+      .then((v) => { if (Array.isArray(v)) setSkillRatings(Object.fromEntries(v.map((x: { skill: string; rating: number }) => [x.skill, x.rating]))); })
       .catch(() => { /* offline */ });
   }, [ivOpen]);
   if (!d) return <div className="grid place-items-center h-screen text-ink-mid font-mono text-sm animate-pulse">{t("admin.loading")}</div>;
@@ -526,8 +538,9 @@ export default function Admin({ session }: { session: Session }) {
     setIvBusy(true);
     try {
       // datetime-local yields "yyyy-MM-ddTHH:mm" (no zone); send as an ISO instant.
-      const r = await fetch(`/api/recruitment/applications/${offerAppId}/interviews`, { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: JSON.stringify({ scheduledAt: new Date(newInterview.scheduledAt).toISOString(), durationMinutes: Number(newInterview.durationMinutes) || 45, location: newInterview.location.trim() }) });
-      if (r.ok) { const iv: Interview = await r.json(); setInterviews((xs) => [...xs, iv]); setNewInterview({ scheduledAt: "", durationMinutes: 45, location: "" }); }
+      const skills = newInterview.skills.split(",").map((s) => s.trim()).filter(Boolean);
+      const r = await fetch(`/api/recruitment/applications/${offerAppId}/interviews`, { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: JSON.stringify({ scheduledAt: new Date(newInterview.scheduledAt).toISOString(), durationMinutes: Number(newInterview.durationMinutes) || 45, location: newInterview.location.trim(), round: newInterview.round.trim() || null, requiredSkills: skills.length ? skills : null }) });
+      if (r.ok) { const iv: Interview = await r.json(); setInterviews((xs) => [...xs, iv]); setNewInterview({ scheduledAt: "", durationMinutes: 45, location: "", round: "", skills: "" }); }
     } finally { setIvBusy(false); }
   };
   const cancelInterview = async (id: string) => {
@@ -543,6 +556,15 @@ export default function Admin({ session }: { session: Session }) {
   const removeAttendee = async (attendeeId: string) => {
     const r = await fetch(`/api/recruitment/interviews/attendees/${attendeeId}`, { method: "DELETE", credentials: "same-origin" });
     if (r.ok || r.status === 204) setAttendees((as) => as.filter((a) => a.id !== attendeeId));
+  };
+  // Save (replace) the expanded interview's per-skill ratings, then refresh the application summary.
+  const saveSkillRatings = async (interviewId: string) => {
+    const ratings = Object.entries(skillRatings).filter(([, v]) => v >= 1 && v <= 5).map(([skill, rating]) => ({ skill, rating }));
+    const r = await fetch(`/api/recruitment/interviews/${interviewId}/skill-ratings`, { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: JSON.stringify({ ratings }) });
+    if (r.ok && offerAppId) {
+      const s = await fetch(`/api/recruitment/applications/${offerAppId}/interview-summary`, { credentials: "same-origin" });
+      if (s.ok) setIvSummary(await s.json());
+    }
   };
   const startOnboarding = async (roleTitle: string) => {
     if (!offerAppId) return;
@@ -1171,6 +1193,8 @@ export default function Admin({ session }: { session: Session }) {
                       <input type="datetime-local" value={newInterview.scheduledAt} onChange={(e) => setNewInterview((f) => ({ ...f, scheduledAt: e.target.value }))} className="rounded-lg border border-line/70 bg-panel2/50 px-2.5 py-1.5 text-[12px] text-ink-hi focus:border-brand/50 focus:outline-none" />
                       <input type="number" min={15} step={15} value={newInterview.durationMinutes} onChange={(e) => setNewInterview((f) => ({ ...f, durationMinutes: Number(e.target.value) }))} title={t("admin.iv.duration", "Duration (min)")} className="w-20 rounded-lg border border-line/70 bg-panel2/50 px-2 py-1.5 text-[12px] text-ink-hi focus:border-brand/50 focus:outline-none" />
                       <input value={newInterview.location} onChange={(e) => setNewInterview((f) => ({ ...f, location: e.target.value }))} placeholder={t("admin.iv.location", "Location / link")} className="flex-1 min-w-[140px] rounded-lg border border-line/70 bg-panel2/50 px-2.5 py-1.5 text-[12px] text-ink-hi placeholder:text-ink-lo focus:border-brand/50 focus:outline-none" />
+                      <input value={newInterview.round} onChange={(e) => setNewInterview((f) => ({ ...f, round: e.target.value }))} placeholder={t("admin.iv.round", "Round (e.g. Technical)")} className="w-40 rounded-lg border border-line/70 bg-panel2/50 px-2.5 py-1.5 text-[12px] text-ink-hi placeholder:text-ink-lo focus:border-brand/50 focus:outline-none" />
+                      <input value={newInterview.skills} onChange={(e) => setNewInterview((f) => ({ ...f, skills: e.target.value }))} placeholder={t("admin.iv.skills", "Skills to assess (comma-sep)")} className="flex-1 min-w-[140px] rounded-lg border border-line/70 bg-panel2/50 px-2.5 py-1.5 text-[12px] text-ink-hi placeholder:text-ink-lo focus:border-brand/50 focus:outline-none" />
                       <button onClick={scheduleInterview} disabled={ivBusy || !newInterview.scheduledAt || !newInterview.location.trim()} className="rounded-lg bg-brand/15 px-3 py-1.5 text-[11px] font-semibold text-brand-bright hover:bg-brand/25 transition disabled:opacity-50">{t("admin.iv.schedule", "Schedule")}</button>
                     </div>
                     <div className="space-y-2">
@@ -1178,8 +1202,8 @@ export default function Admin({ session }: { session: Session }) {
                         <div key={iv.id} className="rounded-lg border border-line/50 bg-panel2/40">
                           <div className="flex items-center gap-3 px-3 py-2">
                             <button onClick={() => setIvOpen(ivOpen === iv.id ? null : iv.id)} className="min-w-0 flex-1 text-left">
-                              <div className="text-[12px] text-ink-hi truncate">{new Date(iv.scheduledAt).toLocaleString()} · {iv.durationMinutes}m</div>
-                              <div className="text-[10px] text-ink-lo truncate">{iv.location}</div>
+                              <div className="text-[12px] text-ink-hi truncate">{iv.round ? <span className="text-brand-bright">{iv.round} · </span> : null}{new Date(iv.scheduledAt).toLocaleString()} · {iv.durationMinutes}m</div>
+                              <div className="text-[10px] text-ink-lo truncate">{iv.location}{iv.requiredSkills.length > 0 ? ` · ${iv.requiredSkills.join(", ")}` : ""}</div>
                             </button>
                             <span className={`chip !text-[10px] capitalize ${iv.status === "cancelled" ? "!text-pink !border-pink/30" : iv.status === "completed" ? "!text-brand-bright !border-brand/30" : "!text-gold !border-gold/30"}`}>{iv.status}</span>
                             <a href={`/api/recruitment/interviews/${iv.id}/ics`} target="_blank" rel="noreferrer" className="text-[10px] font-semibold text-ink-lo hover:text-brand-bright transition">{t("admin.iv.ics", ".ics")}</a>
@@ -1204,12 +1228,48 @@ export default function Admin({ session }: { session: Session }) {
                                 <input value={newAttendee.role} onChange={(e) => setNewAttendee((f) => ({ ...f, role: e.target.value }))} placeholder={t("admin.iv.attRole", "Role")} className="w-28 rounded-lg border border-line/70 bg-panel2/50 px-2.5 py-1 text-[12px] text-ink-hi placeholder:text-ink-lo focus:border-brand/50 focus:outline-none" />
                                 <button onClick={() => addAttendee(iv.id)} disabled={!newAttendee.name.trim()} className="rounded-lg bg-brand/15 px-3 py-1 text-[11px] font-semibold text-brand-bright hover:bg-brand/25 transition disabled:opacity-50">{t("admin.iv.addAttendee", "Add")}</button>
                               </div>
+                              {(() => {
+                                const skills = Array.from(new Set([...iv.requiredSkills, ...Object.keys(skillRatings)]));
+                                return (
+                                  <div className="mt-3 border-t border-line/40 pt-2.5">
+                                    <div className="eyebrow mb-1.5">{t("admin.iv.skillRatings", "Skill ratings (1–5)")}</div>
+                                    {skills.length === 0 ? (
+                                      <div className="text-[11px] text-ink-lo">{t("admin.iv.noSkills", "No skills set for this round — add them when scheduling.")}</div>
+                                    ) : (
+                                      <div className="space-y-1.5">
+                                        {skills.map((sk) => (
+                                          <div key={sk} className="flex items-center gap-2">
+                                            <span className="text-[12px] text-ink-hi capitalize flex-1">{sk}</span>
+                                            {[1, 2, 3, 4, 5].map((n) => (
+                                              <button key={n} onClick={() => setSkillRatings((m) => ({ ...m, [sk]: n }))} className={`h-6 w-6 rounded text-[11px] font-semibold transition ${(skillRatings[sk] ?? 0) >= n ? "bg-brand/25 text-brand-bright" : "bg-panel2/60 text-ink-lo hover:text-ink-hi"}`}>{n}</button>
+                                            ))}
+                                          </div>
+                                        ))}
+                                        <button onClick={() => saveSkillRatings(iv.id)} className="mt-1 rounded-lg bg-brand/15 px-3 py-1 text-[11px] font-semibold text-brand-bright hover:bg-brand/25 transition">{t("admin.iv.saveRatings", "Save ratings")}</button>
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })()}
                             </div>
                           )}
                         </div>
                       ))}
                       {interviews.length === 0 && <div className="text-[12px] text-ink-lo">{t("admin.iv.none", "No interviews scheduled.")}</div>}
                     </div>
+                    {ivSummary && ivSummary.skillAverages.length > 0 && (
+                      <div className="mt-3 border-t border-line/40 pt-2.5">
+                        <div className="eyebrow mb-1.5">{t("admin.iv.summary", "Skill averages across rounds")}</div>
+                        <div className="space-y-1.5">
+                          {ivSummary.skillAverages.map((s) => (
+                            <div key={s.skill}>
+                              <div className="flex justify-between text-xs mb-1"><span className="text-ink-hi font-medium capitalize">{s.skill}</span><span className="num text-[11px] text-ink-mid">{s.average.toFixed(1)} / 5 · {s.count}×</span></div>
+                              <div className="h-2 rounded-full bg-panel2/70 overflow-hidden"><div className="h-full rounded-full bg-gradient-to-r from-brand-deep to-brand-bright" style={{ width: Math.round((s.average / 5) * 100) + "%" }} /></div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}

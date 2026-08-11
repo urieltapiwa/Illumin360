@@ -379,6 +379,29 @@ public interface IRecruitmentRepository
     /// <param name="cancellationToken">Cancellation token.</param>
     Task<IReadOnlyList<SourceMetric>> GetChannelBreakdownAsync(CancellationToken cancellationToken);
 
+    /// <summary>Stages a new interview skill rating for insertion.</summary>
+    /// <param name="rating">The rating to add.</param>
+    void AddSkillRating(InterviewSkillRating rating);
+
+    /// <summary>Removes an interview skill rating.</summary>
+    /// <param name="rating">The rating to remove.</param>
+    void RemoveSkillRating(InterviewSkillRating rating);
+
+    /// <summary>Lists an interview's per-skill ratings (no-tracking).</summary>
+    /// <param name="interviewId">The interview id.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<IReadOnlyList<InterviewSkillRating>> ListSkillRatingsAsync(Guid interviewId, CancellationToken cancellationToken);
+
+    /// <summary>Lists an interview's per-skill ratings (tracked, for replace-on-resubmit).</summary>
+    /// <param name="interviewId">The interview id.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<IReadOnlyList<InterviewSkillRating>> ListSkillRatingsTrackedAsync(Guid interviewId, CancellationToken cancellationToken);
+
+    /// <summary>Lists skill ratings across a set of interviews (for the application summary).</summary>
+    /// <param name="interviewIds">The interview ids.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<IReadOnlyList<InterviewSkillRating>> ListSkillRatingsForInterviewsAsync(IReadOnlyList<Guid> interviewIds, CancellationToken cancellationToken);
+
     /// <summary>Stages a new job template for insertion.</summary>
     /// <param name="template">The template to add.</param>
     void AddJobTemplate(JobTemplate template);

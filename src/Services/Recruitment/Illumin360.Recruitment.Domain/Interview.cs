@@ -23,6 +23,16 @@ public sealed class Interview : Entity<InterviewId>
     /// <summary>Location or mode (e.g. "Video call", an address).</summary>
     public string Location { get; private set; } = string.Empty;
 
+    /// <summary>Optional round label (e.g. "Phone screen", "Technical", "Final").</summary>
+    public string? Round { get; private set; }
+
+    /// <summary>Skills this round is expected to assess, stored pipe-joined ("go|sql"). Empty if none.</summary>
+    public string RequiredSkillsCsv { get; private set; } = string.Empty;
+
+    /// <summary>The skills this round assesses (empty if none set).</summary>
+    public IReadOnlyList<string> RequiredSkills =>
+        string.IsNullOrEmpty(RequiredSkillsCsv) ? [] : RequiredSkillsCsv.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
     /// <summary>Lifecycle: <c>scheduled</c> / <c>completed</c> / <c>cancelled</c>.</summary>
     public string Status { get; private set; } = "scheduled";
 
@@ -41,8 +51,10 @@ public sealed class Interview : Entity<InterviewId>
     /// <param name="durationMinutes">Duration (1–480).</param>
     /// <param name="location">Location/mode (required).</param>
     /// <param name="createdAt">Creation timestamp (UTC).</param>
+    /// <param name="round">Optional round label.</param>
+    /// <param name="requiredSkills">Optional skills this round assesses.</param>
     /// <returns>The interview, or a validation error.</returns>
-    public static Result<Interview> Schedule(Guid applicationId, DateTimeOffset scheduledAt, int durationMinutes, string location, DateTimeOffset createdAt)
+    public static Result<Interview> Schedule(Guid applicationId, DateTimeOffset scheduledAt, int durationMinutes, string location, DateTimeOffset createdAt, string? round = null, IReadOnlyList<string>? requiredSkills = null)
     {
         if (applicationId == Guid.Empty)
         {
@@ -64,12 +76,20 @@ public sealed class Interview : Entity<InterviewId>
             return Error.Validation("interview.location_required", "A location or mode is required.");
         }
 
+        var skills = (requiredSkills ?? [])
+            .Select(s => s.Trim().ToLowerInvariant())
+            .Where(s => s.Length > 0)
+            .Distinct()
+            .ToList();
+
         return new Interview(InterviewId.New())
         {
             ApplicationId = applicationId,
             ScheduledAt = scheduledAt,
             DurationMinutes = durationMinutes,
             Location = location.Trim(),
+            Round = string.IsNullOrWhiteSpace(round) ? null : round.Trim(),
+            RequiredSkillsCsv = string.Join('|', skills),
             Status = "scheduled",
             CreatedAt = createdAt,
         };
