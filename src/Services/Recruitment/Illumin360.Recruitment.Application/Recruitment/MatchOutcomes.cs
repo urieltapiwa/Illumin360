@@ -14,25 +14,39 @@ public static class OutcomeFeatures
     public static readonly IReadOnlyList<string> Names =
         ["matchScore", "remote", "interviewCount", "avgInterviewRating", "hadOffer", "daysToDecision", "citySignal", "roleSignal", "skillSignal"];
 
-    /// <summary>The numeric feature vector for an outcome (scaled to roughly 0–1 ranges).</summary>
+    /// <summary>The numeric feature vector for a captured outcome (scaled to roughly 0–1 ranges).</summary>
     /// <param name="o">The outcome.</param>
     /// <returns>The feature vector, ordered to match <see cref="Names"/>.</returns>
     public static double[] Vector(MatchOutcome o)
     {
         ArgumentNullException.ThrowIfNull(o);
-        return
-        [
-            (double)o.MatchScore / 100.0,
-            o.Remote ? 1.0 : 0.0,
-            Math.Min(o.InterviewCount, 10) / 10.0,
-            (double)(o.AvgInterviewRating ?? 0m) / 5.0,
-            o.HadOffer ? 1.0 : 0.0,
-            Math.Min(o.DaysToDecision, 60) / 60.0,
-            o.CitySignal / 100.0,
-            o.RoleSignal / 100.0,
-            o.SkillSignal / 100.0,
-        ];
+        return VectorOf(o.MatchScore, o.Remote, o.InterviewCount, o.AvgInterviewRating, o.HadOffer, o.DaysToDecision, o.CitySignal, o.RoleSignal, o.SkillSignal);
     }
+
+    /// <summary>Builds the feature vector from raw signals (shared by training + live scoring).</summary>
+    /// <param name="matchScore">Composite match score (0–100).</param>
+    /// <param name="remote">Whether the role is remote.</param>
+    /// <param name="interviewCount">Interviews so far.</param>
+    /// <param name="avgInterviewRating">Mean interview rating (1–5), if any.</param>
+    /// <param name="hadOffer">Whether an offer exists.</param>
+    /// <param name="daysElapsed">Days since apply (live) / to decision (training).</param>
+    /// <param name="citySignal">Talent-side city-fit (0–100).</param>
+    /// <param name="roleSignal">Talent-side role-affinity (0–100).</param>
+    /// <param name="skillSignal">Talent-side skill-fit (0–100).</param>
+    /// <returns>The feature vector, ordered to match <see cref="Names"/>.</returns>
+    public static double[] VectorOf(decimal matchScore, bool remote, int interviewCount, decimal? avgInterviewRating, bool hadOffer, int daysElapsed, int citySignal, int roleSignal, int skillSignal)
+        =>
+        [
+            (double)matchScore / 100.0,
+            remote ? 1.0 : 0.0,
+            Math.Min(interviewCount, 10) / 10.0,
+            (double)(avgInterviewRating ?? 0m) / 5.0,
+            hadOffer ? 1.0 : 0.0,
+            Math.Min(daysElapsed, 60) / 60.0,
+            citySignal / 100.0,
+            roleSignal / 100.0,
+            skillSignal / 100.0,
+        ];
 }
 
 /// <summary>

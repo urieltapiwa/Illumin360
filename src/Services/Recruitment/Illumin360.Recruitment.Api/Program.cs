@@ -1290,6 +1290,25 @@ v1.MapGet("/metrics/outcomes", async (
     .ProducesProblem(StatusCodes.Status401Unauthorized)
     .ProducesProblem(StatusCodes.Status403Forbidden);
 
+v1.MapGet("/requests/{id:guid}/applications/ranked", async (
+        Guid id,
+        IConfiguration config,
+        IQueryHandler<GetRankedApplicationsQuery, RankedApplicationsDto> handler,
+        CancellationToken ct) =>
+    {
+        // Learned live ranking is flag-gated (Matching:LearnedRankingEnabled, off by default). When off —
+        // or when the model can't be trusted yet — the handler falls back to the heuristic order.
+        var useModel = config.GetValue("Matching:LearnedRankingEnabled", false);
+        var result = await handler.HandleAsync(new GetRankedApplicationsQuery(id, useModel), ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminPolicy)
+    .WithName("GetRankedApplications")
+    .WithSummary("Rank a requisition's applicants by the learned model when enabled + it beats the heuristic (else heuristic order). Requires an admin role.")
+    .Produces<RankedApplicationsDto>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden);
+
 v1.MapGet("/metrics/outcomes/model", async (
         IQueryHandler<GetRankModelQuery, RankModelReportDto> handler,
         CancellationToken ct) =>
