@@ -28,6 +28,7 @@ public static class DependencyInjection
         services.AddScoped<IQueryHandler<GetCandidateStatsQuery, CandidateStatsDto>, GetCandidateStatsQueryHandler>();
         services.AddScoped<ICommandHandler<RegisterCandidateCommand, CandidateDto>, RegisterCandidateCommandHandler>();
         services.AddScoped<ICommandHandler<ImportCandidatesCommand, ImportResultDto>, ImportCandidatesCommandHandler>();
+        services.AddScoped<ICommandHandler<IngestEmailResumeCommand, EmailIntakeResultDto>, IngestEmailResumeCommandHandler>();
         services.AddScoped<ICommandHandler<UploadCandidateCvCommand, CvDto>, UploadCandidateCvCommandHandler>();
         services.AddScoped<IQueryHandler<GetCandidateCvMetadataQuery, CvDto>, GetCandidateCvMetadataQueryHandler>();
         services.AddScoped<IQueryHandler<DownloadCandidateCvQuery, CvContent>, DownloadCandidateCvQueryHandler>();
