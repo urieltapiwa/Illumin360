@@ -81,6 +81,22 @@ v1.MapGet("/search", async (
     .Produces<CandidateSearchResultDto>(StatusCodes.Status200OK)
     .ProducesProblem(StatusCodes.Status400BadRequest);
 
+v1.MapGet("/{id:guid}/export", async (
+        Guid id,
+        IQueryHandler<GetCandidateExportQuery, CandidateExportDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new GetCandidateExportQuery(id), ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminWritePolicy)
+    .WithName("ExportCandidateData")
+    .WithSummary("GDPR subject-access export of a candidate's data (profile, notes, tags, CV metadata). Requires an admin (write) role.")
+    .Produces<CandidateExportDto>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden)
+    .ProducesProblem(StatusCodes.Status404NotFound);
+
 v1.MapGet("/duplicates", async (
         bool? sameCityOnly,
         IQueryHandler<FindDuplicateCandidatesQuery, IReadOnlyList<DuplicateGroupDto>> handler,

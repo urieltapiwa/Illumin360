@@ -997,7 +997,10 @@ export default function Admin({ session }: { session: Session }) {
                             </div>
                           </div>
                           <div>
-                            <div className="eyebrow mb-1.5">{t("admin.notes.title", "Recruiter notes")}</div>
+                            <div className="flex items-center justify-between mb-1.5">
+                            <span className="eyebrow">{t("admin.notes.title", "Recruiter notes")}</span>
+                            <a href={`/api/candidates/${c.id}/export`} target="_blank" rel="noreferrer" className="text-[11px] text-ink-lo hover:text-brand-bright transition">{t("admin.gdpr.export", "Export data (GDPR)")}</a>
+                          </div>
                             <div className="space-y-1.5 mb-2">
                               {csNotes.map((n) => (
                                 <div key={n.id} className="flex items-start gap-2 rounded-lg border border-line/50 bg-panel/40 px-2.5 py-1.5">

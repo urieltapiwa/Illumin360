@@ -145,11 +145,12 @@ flip the status to ✅ (add the commit/PR ref).
 | User account management (suspend/activate) | ✅ | Backend + Admin portal panel live (suspend/activate) |
 | Service-layer RBAC | ✅ | `Illumin360.Security` |
 | Audit trail (viewable) | ✅ | Append-only `audit_log` in the Admin service — verification decisions, ticket triage and account status changes record entries; `GET /v1/admin/audit` (paged, action filter) + admin audit-trail table |
-| GDPR data export / delete | ⬜ | |
+| GDPR data export / delete | 🟡 | Subject-access **export** done — `GET /v1/candidates/{id}/export` returns a JSON of profile + notes + tags + CV metadata; admin "Export data" link. Erase-me (delete) pending |
 
 - [x] Admin portal panels for tickets + accounts (wire to existing APIs) — panels were already wired; completed by adding the ticket **Assign** action + assignee display (`Admin.tsx`)
 - [x] Viewable audit trail — append-only `AuditEntry` + `audit_log` table in the Admin service; verification decide, ticket triage and account status handlers record entries (persisted in the same transaction); `GET /v1/admin/audit` (newest-first, action-prefix filter, paged) gated to admin readers; unit tests; audit-trail table in the admin portal
-- [ ] GDPR export / erase-me
+- [x] GDPR data export — `GetCandidateExportQuery` + `GET /v1/candidates/{id}/export` (admin-gated) returns a subject-access JSON of the candidate's profile, recruiter notes, tags and CV metadata (never the file bytes); unit tests; admin "Export data (GDPR)" link in the candidate drawer
+- [ ] GDPR erase-me (right to be forgotten / delete)
 
 ## J. Analytics & reporting
 | Feature | Status | Notes |
@@ -177,7 +178,7 @@ flip the status to ✅ (add the commit/PR ref).
 
 ### Progress
 - Total build items: 48
-- Done: 41
+- Done: 42
 - In progress: 0
 
 **Changelog of ticks**
