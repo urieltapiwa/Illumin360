@@ -28,6 +28,7 @@ public static class DependencyInjection
         services.AddScoped<IVerificationRepository, VerificationRepository>();
         services.AddScoped<ITicketRepository, TicketRepository>();
         services.AddScoped<IAccountRepository, AccountRepository>();
+        services.AddScoped<IAuditRepository, AuditRepository>();
 
         var rabbitConnectionString = configuration.GetConnectionString("rabbitmq")
             ?? "amqp://illumin:illumin@localhost:5672";

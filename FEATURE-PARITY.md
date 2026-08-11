@@ -144,11 +144,11 @@ flip the status to ✅ (add the commit/PR ref).
 | Support tickets (assign/resolve) | ✅ | Backend + Admin portal panel live (assign + resolve) |
 | User account management (suspend/activate) | ✅ | Backend + Admin portal panel live (suspend/activate) |
 | Service-layer RBAC | ✅ | `Illumin360.Security` |
-| Audit trail (viewable) | 🟡 | Outbox events exist; no audit UI |
+| Audit trail (viewable) | ✅ | Append-only `audit_log` in the Admin service — verification decisions, ticket triage and account status changes record entries; `GET /v1/admin/audit` (paged, action filter) + admin audit-trail table |
 | GDPR data export / delete | ⬜ | |
 
 - [x] Admin portal panels for tickets + accounts (wire to existing APIs) — panels were already wired; completed by adding the ticket **Assign** action + assignee display (`Admin.tsx`)
-- [ ] Viewable audit trail
+- [x] Viewable audit trail — append-only `AuditEntry` + `audit_log` table in the Admin service; verification decide, ticket triage and account status handlers record entries (persisted in the same transaction); `GET /v1/admin/audit` (newest-first, action-prefix filter, paged) gated to admin readers; unit tests; audit-trail table in the admin portal
 - [ ] GDPR export / erase-me
 
 ## J. Analytics & reporting
@@ -177,7 +177,7 @@ flip the status to ✅ (add the commit/PR ref).
 
 ### Progress
 - Total build items: 48
-- Done: 40
+- Done: 41
 - In progress: 0
 
 **Changelog of ticks**

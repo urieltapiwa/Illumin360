@@ -21,6 +21,9 @@ public sealed class AdminDbContext(DbContextOptions<AdminDbContext> options) : D
     /// <summary>The account-directory set.</summary>
     public DbSet<AdminAccount> Accounts => Set<AdminAccount>();
 
+    /// <summary>The administrative audit-trail set.</summary>
+    public DbSet<AuditEntry> AuditEntries => Set<AuditEntry>();
+
     /// <inheritdoc />
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -90,6 +93,21 @@ public sealed class AdminDbContext(DbContextOptions<AdminDbContext> options) : D
             b.Property(a => a.CreatedAt).HasColumnName("created_at");
             b.HasIndex(a => a.Status);
             b.Ignore(a => a.DomainEvents);
+        });
+
+        modelBuilder.Entity<AuditEntry>(b =>
+        {
+            b.ToTable("audit_log");
+            b.HasKey(e => e.Id);
+            b.Property(e => e.Id).HasColumnName("id");
+            b.Property(e => e.Actor).HasColumnName("actor").HasMaxLength(160);
+            b.Property(e => e.Action).HasColumnName("action").HasMaxLength(60);
+            b.Property(e => e.EntityType).HasColumnName("entity_type").HasMaxLength(40);
+            b.Property(e => e.EntityId).HasColumnName("entity_id").HasMaxLength(80);
+            b.Property(e => e.Summary).HasColumnName("summary").HasMaxLength(400);
+            b.Property(e => e.OccurredAt).HasColumnName("occurred_at");
+            b.HasIndex(e => e.OccurredAt);
+            b.Ignore(e => e.DomainEvents);
         });
     }
 }

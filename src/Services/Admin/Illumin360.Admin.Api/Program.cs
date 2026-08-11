@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Illumin360.Admin.Application;
 using Illumin360.Admin.Application.Abstractions;
 using Illumin360.Admin.Application.Accounts;
+using Illumin360.Admin.Application.Audit;
 using Illumin360.Admin.Application.Tickets;
 using Illumin360.Admin.Application.Verifications;
 using Illumin360.Admin.Infrastructure;
@@ -51,6 +52,21 @@ app.MapProjectHealthChecks();
 
 // --- API v1 endpoints (all admin-tier; charter Part 7 — admin.read to view, admin.write to act) ---
 var v1 = app.MapGroup("/v1/admin").WithTags("Admin");
+
+v1.MapGet("/audit", async (
+        string? action,
+        int? page,
+        int? pageSize,
+        IQueryHandler<GetAuditLogQuery, IReadOnlyList<AuditEntryDto>> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new GetAuditLogQuery(action, page ?? 1, pageSize ?? 50), ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminPolicy)
+    .WithName("GetAuditLog")
+    .WithSummary("View the administrative audit trail (newest first, optional action filter). Requires an admin role.")
+    .Produces<IReadOnlyList<AuditEntryDto>>(StatusCodes.Status200OK);
 
 v1.MapGet("/verifications", async (
         string? status,
