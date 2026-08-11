@@ -1142,6 +1142,8 @@ const string careersBrand = "Illumin360";
 const string careersBasePath = "/careers";
 
 v1.MapGet("/careers", async (
+        string? q,
+        bool? remote,
         IQueryHandler<GetRecruitmentRequestsQuery, IReadOnlyList<RecruitmentRequestDto>> handler,
         IRecruitmentRepository repository,
         CancellationToken ct) =>
@@ -1151,8 +1153,25 @@ v1.MapGet("/careers", async (
 
         // Hide internal-only roles from the public careers site.
         var internalIds = (await repository.ListInternalRequestIdsAsync(ct)).ToHashSet();
-        var publicRoles = roles.Where(r => !internalIds.Contains(r.Id)).ToList();
-        return Results.Content(CareersHtml.RenderIndex(publicRoles, careersBrand, careersBasePath), "text/html; charset=utf-8");
+        var remoteIds = (await repository.ListRemoteRequestIdsAsync(ct)).ToHashSet();
+        var publicRoles = roles.Where(r => !internalIds.Contains(r.Id));
+
+        // Faceted filtering: keyword (title/city) + remote-only.
+        var keyword = q?.Trim();
+        if (!string.IsNullOrEmpty(keyword))
+        {
+            publicRoles = publicRoles.Where(r =>
+                r.Title.Contains(keyword, StringComparison.OrdinalIgnoreCase)
+                || r.City.Contains(keyword, StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (remote == true)
+        {
+            publicRoles = publicRoles.Where(r => remoteIds.Contains(r.Id));
+        }
+
+        var filter = new CareersHtml.CareersFilter(keyword, remote == true, remoteIds);
+        return Results.Content(CareersHtml.RenderIndex(publicRoles.ToList(), careersBrand, careersBasePath, filter), "text/html; charset=utf-8");
     })
     .WithName("CareersIndex")
     .WithSummary("Public branded careers landing page listing open roles (HTML).")
@@ -1161,6 +1180,7 @@ v1.MapGet("/careers", async (
 v1.MapGet("/careers/{id:guid}", async (
         Guid id,
         IQueryHandler<GetRecruitmentRequestByIdQuery, RecruitmentRequestDto> handler,
+        ICommandHandler<RecordCareerViewCommand, bool> viewHandler,
         IRecruitmentRepository repository,
         CancellationToken ct) =>
     {
@@ -1173,6 +1193,8 @@ v1.MapGet("/careers/{id:guid}", async (
                 CareersHtml.RenderIndex([], careersBrand, careersBasePath), "text/html; charset=utf-8", statusCode: StatusCodes.Status404NotFound);
         }
 
+        // Count this detail-page view (per-job analytics).
+        await viewHandler.HandleAsync(new RecordCareerViewCommand(id), ct);
         return Results.Content(CareersHtml.RenderJob(result.Value!, careersBrand, careersBasePath), "text/html; charset=utf-8");
     })
     .WithName("CareersJob")
@@ -1233,6 +1255,20 @@ v1.MapGet("/careers/feed.json", async (
     .WithName("CareersJsonFeed")
     .WithSummary("Public JSON feed of open roles for embedding/aggregation (internal roles excluded).")
     .Produces(StatusCodes.Status200OK, contentType: "application/json");
+
+v1.MapGet("/metrics/careers-views", async (
+        IQueryHandler<GetCareerViewsQuery, IReadOnlyList<CareerViewDto>> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new GetCareerViewsQuery(), ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminPolicy)
+    .WithName("GetCareersViews")
+    .WithSummary("Per-role careers-page view counts (descending). Requires an admin role.")
+    .Produces<IReadOnlyList<CareerViewDto>>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden);
 
 // --- Bulk email campaigns ---
 v1.MapGet("/campaigns", async (

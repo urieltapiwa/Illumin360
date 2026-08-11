@@ -13,12 +13,19 @@ namespace Illumin360.Recruitment.Application.Recruitment;
 /// </summary>
 public static class CareersHtml
 {
+    /// <summary>The active careers-search filter (for pre-filling the form + badging remote roles).</summary>
+    /// <param name="Q">Keyword filter.</param>
+    /// <param name="RemoteOnly">Whether the remote-only filter is on.</param>
+    /// <param name="RemoteIds">Request ids currently flagged remote (for card badges).</param>
+    public sealed record CareersFilter(string? Q, bool RemoteOnly, IReadOnlySet<Guid> RemoteIds);
+
     /// <summary>Renders the careers landing page listing the open roles.</summary>
     /// <param name="roles">The open roles to list.</param>
     /// <param name="brand">The brand/site name shown in the header and titles.</param>
     /// <param name="basePath">The public base path for links (e.g. <c>/careers</c>).</param>
+    /// <param name="filter">The active search filter, if any (renders a filter form + remote badges).</param>
     /// <returns>A complete HTML document.</returns>
-    public static string RenderIndex(IReadOnlyList<RecruitmentRequestDto> roles, string brand, string basePath)
+    public static string RenderIndex(IReadOnlyList<RecruitmentRequestDto> roles, string brand, string basePath, CareersFilter? filter = null)
     {
         ArgumentNullException.ThrowIfNull(roles);
         var b = Enc(brand);
@@ -49,6 +56,12 @@ public static class CareersHtml
         sb.Append("<body><main class=\"wrap\">");
         sb.Append(CultureInfo.InvariantCulture, $"<header class=\"hero\"><p class=\"eyebrow\">{b} Careers</p><h1>Open roles</h1><p class=\"lede\">{Enc(description)}</p></header>");
 
+        if (filter is not null)
+        {
+            var qv = Enc(filter.Q);
+            sb.Append(CultureInfo.InvariantCulture, $"<form class=\"filter\" method=\"get\" action=\"{bp}\"><input type=\"text\" name=\"q\" value=\"{qv}\" placeholder=\"Search role or city\" aria-label=\"Search\"><label class=\"remote\"><input type=\"checkbox\" name=\"remote\" value=\"true\"{(filter.RemoteOnly ? " checked" : string.Empty)}> Remote only</label><button type=\"submit\">Search</button></form>");
+        }
+
         if (count == 0)
         {
             sb.Append("<p class=\"empty\">No open roles right now — please check back soon.</p>");
@@ -58,7 +71,8 @@ public static class CareersHtml
             sb.Append("<ul class=\"roles\">");
             foreach (var r in roles)
             {
-                sb.Append(CultureInfo.InvariantCulture, $"<li class=\"role\"><a href=\"{bp}/{r.Id}\"><span class=\"title\">{Enc(r.Title)}</span><span class=\"meta\">{Enc(r.City)} · {r.Positions} position{(r.Positions == 1 ? string.Empty : "s")} · posted {r.CreatedAt.UtcDateTime.ToString("d MMM yyyy", CultureInfo.InvariantCulture)}</span></a></li>");
+                var remoteBadge = filter is not null && filter.RemoteIds.Contains(r.Id) ? "<span class=\"badge\">Remote</span>" : string.Empty;
+                sb.Append(CultureInfo.InvariantCulture, $"<li class=\"role\"><a href=\"{bp}/{r.Id}\"><span class=\"title\">{Enc(r.Title)}{remoteBadge}</span><span class=\"meta\">{Enc(r.City)} · {r.Positions} position{(r.Positions == 1 ? string.Empty : "s")} · posted {r.CreatedAt.UtcDateTime.ToString("d MMM yyyy", CultureInfo.InvariantCulture)}</span></a></li>");
             }
 
             sb.Append("</ul>");
@@ -135,6 +149,9 @@ public static class CareersHtml
         sb.Append(".role a:hover{border-color:#2fd39a}.title{font-weight:600;font-size:17px}.meta{color:#9fb3aa;font-size:13px}");
         sb.Append(".empty{color:#9fb3aa}.back a{color:#2fd39a;text-decoration:none;font-size:14px}.body{margin-top:24px}");
         sb.Append(".apply{display:inline-block;margin-top:12px;background:#1fb283;color:#04120c;font-weight:700;padding:10px 18px;border-radius:10px;text-decoration:none}");
+        sb.Append(".filter{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:0 0 20px}.filter input[type=text]{flex:1;min-width:180px;padding:9px 12px;border:1px solid #1c3329;border-radius:10px;background:#0f1c17;color:#e8f2ec}");
+        sb.Append(".filter .remote{color:#9fb3aa;font-size:13px;display:flex;align-items:center;gap:6px}.filter button{background:#1fb283;color:#04120c;font-weight:700;border:0;padding:9px 16px;border-radius:10px;cursor:pointer}");
+        sb.Append(".badge{display:inline-block;margin-left:8px;padding:1px 7px;border:1px solid #2fd39a;border-radius:999px;color:#2fd39a;font-size:11px;font-weight:600;vertical-align:middle}");
         sb.Append(".share{margin-top:24px;font-size:14px;color:#9fb3aa}.share a{color:#2fd39a;text-decoration:none;margin:0 6px}.share a:hover{text-decoration:underline}");
         sb.Append(".foot{margin-top:48px;padding-top:16px;border-top:1px solid #1c3329;color:#6f8479;font-size:13px}");
         sb.Append("</style></head>");
