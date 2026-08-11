@@ -181,9 +181,10 @@ flip the status to ✅ (add the commit/PR ref).
 ---
 
 ### Progress
-- Total build items: 48
-- Done: 50
+- Feature-matrix rows: 64 — **63 ✅ have, 1 ⬜ missing** (mobile app, out of scope)
+- Build checklist: **48 / 48 delivered** (several planned items shipped as multiple deliverables, hence 50 dated changelog entries)
 - In progress: 0
+- Verification (2026-08-11 sweep): 9 unit-test suites green (236 tests, 0 failures); business-portal build clean; all cited endpoints, gateway routes, building blocks, and the Employers compose service confirmed present
 
 **Changelog of ticks**
 - Admin portal tickets + accounts panels — completed the ticket Assign action (2026-08-10).
