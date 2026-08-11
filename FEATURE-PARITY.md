@@ -231,6 +231,7 @@ flip the status to ✅ (add the commit/PR ref).
 - Richer careers search + per-job analytics (Tier 1 #8) — careers index `?q=`/`?remote=` filtering with an on-page form + Remote badges; `career_views` counter incremented per detail view + `GET /metrics/careers-views` + admin "Careers page views" panel; migration `CareerViews`; 3 unit tests (2026-08-11).
 - Featured/paid job listings (Tier 1 #9) — `featured_until` promotion on `RequisitionDetail` via `PUT /requests/{id}/feature`; featured roles float to the top of the public careers site with a badge; admin Feature 7d/30d/Unfeature control; migration `FeaturedListings`; 3 unit tests. Closes the last core Tier 1 gap (2026-08-11).
 - Candidate custom fields (Tier 1 #1 sub-task) — Candidates `custom_field_definitions` + `candidate_custom_values`; define/list/remove fields + get/set per-candidate values; migration `CandidateCustomFields`; admin definition panel + per-candidate editor; 4 unit tests. **All Tier 1 items now delivered** (2026-08-11).
+- Skill-gap analysis (Tier 2) — pure `SkillGapAnalyzer` in `Illumin360.Matching` + Professionals `POST /me/skill-gap`; professional-portal "Skill gap for a role" tool (coverage % + matched/missing chips); 4 unit tests, no migration (2026-08-11).
 
 _Update this file as items are ticked; link the commit/PR that delivered each._
 
@@ -263,7 +264,7 @@ richest ATS features are paid-edition, so its free OSS core is thinner than its 
 Our engine today is a weighted heuristic (city + role + skills). The modern-matcher benchmark adds:
 - [ ] **Semantic / embedding matching** — encode résumé + JD to vectors (Sentence-BERT / pgvector-style), score by cosine similarity to catch implicit/paraphrased skills keyword-matching misses
 - [ ] **Similar candidates ("more like this")** — vector k-NN off a seed candidate
-- [ ] **Skill-gap analysis** — which required skills a candidate lacks (drives upskilling/learning suggestions)
+- [x] **Skill-gap analysis** — pure `SkillGapAnalyzer` in `Illumin360.Matching` (matched / missing / extra + coverage %, case-insensitive, required-order preserved); Professionals `POST /me/skill-gap` compares the profile's skills to a role's required skills; professional-portal "Skill gap for a role" tool (coverage bar + matched ✓ chips + "to learn" chips); 4 unit tests (drives upskilling suggestions)
 - [ ] **Salary-expectation & seniority scoring** — add candidate expectation-vs-band and experience-level signals to the composite score (currently city + role + skills only)
 - [ ] **Explainable "why this match"** — per-signal contribution breakdown + matched/missing evidence. *No OSS peer does this well — a real differentiator.*
 - [ ] **Feedback-loop learning** — feed recruiter accept/reject + hire outcomes back as ranking signal (learning-to-rank)

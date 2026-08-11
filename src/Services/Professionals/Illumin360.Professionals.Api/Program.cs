@@ -202,6 +202,18 @@ v1.MapPost("/me/role-scores", async (
     .WithSummary("Score a set of marketplace roles against the current profile (recommendations).")
     .Produces<IReadOnlyList<RoleScoreDto>>(StatusCodes.Status200OK);
 
+v1.MapPost("/me/skill-gap", async (
+        List<string> requiredSkills,
+        IQueryHandler<GetSkillGapQuery, SkillGapDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new GetSkillGapQuery(requiredSkills ?? []), ct);
+        return result.ToHttpResult();
+    })
+    .WithName("GetSkillGap")
+    .WithSummary("Analyse the current profile's skills against a role's required skills (matched / missing / coverage).")
+    .Produces<SkillGapDto>(StatusCodes.Status200OK);
+
 v1.MapPost("/me/cv/parse", async (
         IQueryHandler<ParseCvSkillsQuery, CvSkillsDto> handler,
         CancellationToken ct) =>
