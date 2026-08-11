@@ -312,6 +312,42 @@ public interface IRecruitmentRepository
     /// <param name="cancellationToken">Cancellation token.</param>
     Task<IReadOnlyList<InterviewAttendee>> ListInterviewAttendeesAsync(Guid interviewId, CancellationToken cancellationToken);
 
+    /// <summary>Stages a new application-form question for insertion.</summary>
+    /// <param name="question">The question to add.</param>
+    void AddFormQuestion(ApplicationFormQuestion question);
+
+    /// <summary>Removes an application-form question.</summary>
+    /// <param name="question">The question to remove.</param>
+    void RemoveFormQuestion(ApplicationFormQuestion question);
+
+    /// <summary>Loads a form question by id, or null if not present.</summary>
+    /// <param name="id">The question id.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<ApplicationFormQuestion?> GetFormQuestionAsync(Guid id, CancellationToken cancellationToken);
+
+    /// <summary>Lists a requisition's application-form questions, ascending sort order.</summary>
+    /// <param name="requestId">The requisition id.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<IReadOnlyList<ApplicationFormQuestion>> ListFormQuestionsAsync(Guid requestId, CancellationToken cancellationToken);
+
+    /// <summary>Stages a new application answer for insertion.</summary>
+    /// <param name="answer">The answer to add.</param>
+    void AddApplicationAnswer(ApplicationAnswer answer);
+
+    /// <summary>Removes an application answer.</summary>
+    /// <param name="answer">The answer to remove.</param>
+    void RemoveApplicationAnswer(ApplicationAnswer answer);
+
+    /// <summary>Lists an application's answers (no-tracking, for read).</summary>
+    /// <param name="applicationId">The application id.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<IReadOnlyList<ApplicationAnswer>> ListApplicationAnswersAsync(Guid applicationId, CancellationToken cancellationToken);
+
+    /// <summary>Lists an application's answers (tracked, for replace-on-resubmit).</summary>
+    /// <param name="applicationId">The application id.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<IReadOnlyList<ApplicationAnswer>> ListApplicationAnswersTrackedAsync(Guid applicationId, CancellationToken cancellationToken);
+
     /// <summary>Stages a new job template for insertion.</summary>
     /// <param name="template">The template to add.</param>
     void AddJobTemplate(JobTemplate template);
