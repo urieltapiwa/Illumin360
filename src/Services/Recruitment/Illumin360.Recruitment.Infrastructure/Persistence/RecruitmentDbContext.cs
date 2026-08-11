@@ -52,6 +52,9 @@ public sealed class RecruitmentDbContext(DbContextOptions<RecruitmentDbContext> 
     /// <summary>Reusable job-template set.</summary>
     public DbSet<JobTemplate> JobTemplates => Set<JobTemplate>();
 
+    /// <summary>Interview panel attendees set.</summary>
+    public DbSet<InterviewAttendee> InterviewAttendees => Set<InterviewAttendee>();
+
     /// <inheritdoc />
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -292,6 +295,20 @@ public sealed class RecruitmentDbContext(DbContextOptions<RecruitmentDbContext> 
             b.Ignore(t => t.Tags);
             b.HasIndex(t => t.Name).IsUnique();
             b.Ignore(t => t.DomainEvents);
+        });
+
+        modelBuilder.Entity<InterviewAttendee>(b =>
+        {
+            b.ToTable("interview_attendees");
+            b.HasKey(a => a.Id);
+            b.Property(a => a.Id).HasColumnName("id");
+            b.Property(a => a.InterviewId).HasColumnName("interview_id");
+            b.Property(a => a.Name).HasColumnName("name").HasMaxLength(160);
+            b.Property(a => a.Email).HasColumnName("email").HasMaxLength(200);
+            b.Property(a => a.Role).HasColumnName("role").HasMaxLength(40);
+            b.Property(a => a.CreatedAt).HasColumnName("created_at");
+            b.HasIndex(a => a.InterviewId);
+            b.Ignore(a => a.DomainEvents);
         });
 
         modelBuilder.Entity<RecruitmentApplication>(b =>

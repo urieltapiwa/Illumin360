@@ -448,8 +448,55 @@ v1.MapGet("/interviews/{id:guid}/ics", async (
             : result.ToHttpResult();
     })
     .WithName("GetInterviewIcs")
-    .WithSummary("Download an interview's calendar (.ics) invite.")
+    .WithSummary("Download an interview's calendar (.ics) invite (lists the panel as ATTENDEEs).")
     .Produces(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status404NotFound);
+
+// --- Panel interviews: interview attendees ---
+v1.MapGet("/interviews/{id:guid}/attendees", async (
+        Guid id,
+        IQueryHandler<GetInterviewAttendeesQuery, IReadOnlyList<InterviewAttendeeDto>> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new GetInterviewAttendeesQuery(id), ct);
+        return result.ToHttpResult();
+    })
+    .WithName("GetInterviewAttendees")
+    .WithSummary("List an interview's panel attendees.")
+    .Produces<IReadOnlyList<InterviewAttendeeDto>>(StatusCodes.Status200OK);
+
+v1.MapPost("/interviews/{id:guid}/attendees", async (
+        Guid id,
+        AttendeeBody body,
+        ICommandHandler<AddInterviewAttendeeCommand, InterviewAttendeeDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new AddInterviewAttendeeCommand(id, body.Name, body.Email, body.Role), ct);
+        return result.ToCreatedResult(dto => $"/v1/recruitment/interviews/{id}/attendees/{dto.Id}");
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminWritePolicy)
+    .WithName("AddInterviewAttendee")
+    .WithSummary("Add a panel attendee to an interview. Requires an admin (write) role.")
+    .Produces<InterviewAttendeeDto>(StatusCodes.Status201Created)
+    .ProducesProblem(StatusCodes.Status400BadRequest)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden)
+    .ProducesProblem(StatusCodes.Status404NotFound);
+
+v1.MapDelete("/interviews/attendees/{attendeeId:guid}", async (
+        Guid attendeeId,
+        ICommandHandler<RemoveInterviewAttendeeCommand, bool> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new RemoveInterviewAttendeeCommand(attendeeId), ct);
+        return result.IsSuccess ? Results.NoContent() : result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminWritePolicy)
+    .WithName("RemoveInterviewAttendee")
+    .WithSummary("Remove a panel attendee. Requires an admin (write) role.")
+    .Produces(StatusCodes.Status204NoContent)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden)
     .ProducesProblem(StatusCodes.Status404NotFound);
 
 // --- Recruiter pipeline transitions on an application (admin/recruiter) ---
@@ -981,6 +1028,12 @@ internal sealed record JobTemplateBody(string Name, string Title, string? City, 
 /// <summary>Request body for applying a template.</summary>
 /// <param name="CompanyId">Hiring company id.</param>
 internal sealed record UseTemplateBody(Guid CompanyId);
+
+/// <summary>Request body for adding an interview attendee.</summary>
+/// <param name="Name">Attendee name.</param>
+/// <param name="Email">Attendee email.</param>
+/// <param name="Role">Panel role.</param>
+internal sealed record AttendeeBody(string Name, string? Email, string? Role);
 
 /// <summary>Request body for a bulk pipeline action.</summary>
 /// <param name="ApplicationIds">The applications to transition.</param>
