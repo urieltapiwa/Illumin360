@@ -393,6 +393,15 @@ public interface IRecruitmentRepository
     /// <param name="cancellationToken">Cancellation token.</param>
     Task<IReadOnlyList<MatchOutcome>> ListMatchOutcomesAsync(CancellationToken cancellationToken);
 
+    /// <summary>
+    /// The rediscovery pool for a target requisition: past <b>not-hired</b> applications to <b>other</b>
+    /// requisitions that advanced beyond "applied" (reviewed/shortlisted/rejected), each joined to its
+    /// role's title/city and enriched with interview-count/offer signals from the captured outcome.
+    /// </summary>
+    /// <param name="targetRequestId">The target requisition (excluded from the pool).</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<IReadOnlyList<RediscoveryPoolRow>> ListRediscoveryPoolAsync(RequestId targetRequestId, CancellationToken cancellationToken);
+
     /// <summary>Gathers the Recruitment-owned feature snapshot for an application (source, remote, interviews, offer + talent-side signals).</summary>
     /// <param name="applicationId">The application id.</param>
     /// <param name="requestId">The requisition id.</param>

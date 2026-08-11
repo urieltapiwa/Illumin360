@@ -391,7 +391,7 @@ Tracked as GitHub milestone **v0.3.0** with one issue per item.
 ### Proposed v0.3.0 backlog (tiered)
 
 **Tier 1 — headliners (high fit; build largely on what we have).** Ordered by fit×leverage:
-- [ ] **Talent rediscovery / silver-medalists** — re-evaluate past applicants (incl. rejected) against a new requisition using the existing matching engine + `match_outcomes` + talent pools. *Pure engineering, no external dep — highest-fit item.*
+- [x] **Talent rediscovery / silver-medalists** — Recruitment `GET /requests/{id}/rediscovery` surfaces past **not-hired** applicants to *other* requisitions (reviewed/shortlisted/rejected), re-ranked for the target role by a pure `RediscoveryScorer` (title-similarity 0.45 / same-city 0.15 / prior match 0.20 / advancement — offer>interview>applied 0.20); excludes anyone already in the target pipeline, keeps each talent's strongest prior application, with a human "why". Admin pipeline **"Rediscover talent"** panel. All data Recruitment-owned (no cross-service call, no migration); 9 unit tests (Matching 36, Recruitment 153) + 1 real-repo integration test. **First v0.3.0 item shipped** (#108).
 - [ ] **Nurture sequences / drip campaigns** — extend one-shot `email_campaigns` into multi-step, triggered sequences (delays, stage/segment triggers, stop-on-reply). *Engineering.*
 - [ ] **Self-schedule interview booking** — candidate self-booking links over interviewer availability windows (timezone-aware), reusing interviews/attendees. *Engineering.*
 - [ ] **Reusable interview kits / question banks** — per-role kits mapping questions → the skills already scored per round. *Engineering (flagged follow-up in v0.2).*

@@ -477,6 +477,60 @@ public sealed class RecruitmentRepository(RecruitmentDbContext db) : IRecruitmen
         => await _db.MatchOutcomes.AsNoTracking().OrderByDescending(o => o.DecidedAt).ToListAsync(cancellationToken).ConfigureAwait(false);
 
     /// <inheritdoc />
+    public async Task<IReadOnlyList<RediscoveryPoolRow>> ListRediscoveryPoolAsync(RequestId targetRequestId, CancellationToken cancellationToken)
+    {
+        // Past not-hired applications that advanced beyond "applied", to *other* requisitions.
+        var pastApps = await _db.Applications.AsNoTracking()
+            .Where(a => !a.IsHire
+                && a.RequestId != targetRequestId
+                && (a.Status == "reviewed" || a.Status == "shortlisted" || a.Status == "rejected"))
+            .Select(a => new { AppId = a.Id, a.TalentId, a.TalentType, a.RequestId, a.Status, a.MatchScore })
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+
+        if (pastApps.Count == 0)
+        {
+            return [];
+        }
+
+        // Materialise the small lookup sides, then join in memory (external tables + strongly-typed keys make
+        // a translated join across value converters brittle — same approach as GetChannelBreakdownAsync).
+        var requests = await _db.Requests.AsNoTracking()
+            .Select(r => new { r.Id, r.Title, r.City })
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+        var titles = requests.ToDictionary(r => r.Id.Value, r => (r.Title, r.City));
+
+        var outcomes = await _db.MatchOutcomes.AsNoTracking()
+            .Select(o => new { o.ApplicationId, o.InterviewCount, o.HadOffer })
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+        var outcomeByApp = outcomes
+            .GroupBy(o => o.ApplicationId)
+            .ToDictionary(g => g.Key, g => g.First());
+
+        var rows = new List<RediscoveryPoolRow>(pastApps.Count);
+        foreach (var a in pastApps)
+        {
+            if (!titles.TryGetValue(a.RequestId.Value, out var role))
+            {
+                continue;
+            }
+
+            outcomeByApp.TryGetValue(a.AppId.Value, out var o);
+            rows.Add(new RediscoveryPoolRow(
+                a.TalentId,
+                a.TalentType,
+                a.RequestId.Value,
+                role.Title,
+                role.City,
+                a.Status,
+                a.MatchScore,
+                o?.InterviewCount ?? 0,
+                o?.HadOffer ?? false));
+        }
+
+        return rows;
+    }
+
+    /// <inheritdoc />
     public async Task<OutcomeFeatureSnapshot> GetOutcomeFeaturesAsync(Guid applicationId, Guid requestId, CancellationToken cancellationToken)
     {
         var source = await _db.ApplicationSources.AsNoTracking()
