@@ -197,6 +197,10 @@ export default function Admin({ session }: { session: Session }) {
   // Hiring-outcome training set (unlocks future learning-to-rank).
   type OutcomeSummary = { total: number; hired: number; rejected: number; avgScoreHired: number; avgScoreRejected: number };
   const [outcomes, setOutcomes] = useState<OutcomeSummary | null>(null);
+  // Learned ranking model (train/eval on demand from the captured outcomes).
+  type RankModel = { trained: boolean; message: string; sampleCount: number; modelAuc: number; baselineAuc: number; accuracy: number; logLoss: number; betterThanBaseline: boolean; weights: { feature: string; weight: number }[] };
+  const [rankModel, setRankModel] = useState<RankModel | null>(null);
+  const [rankBusy, setRankBusy] = useState(false);
   const SOURCE_CHANNELS = ["direct", "careers", "referral", "campaign", "board", "agency", "walk-in"];
   // Job templates.
   type JobTemplate = { id: string; name: string; title: string; city: string | null; positions: number; employmentType: string; remote: boolean; tags: string[] };
@@ -751,6 +755,14 @@ export default function Admin({ session }: { session: Session }) {
     setReqDetail((d) => (d ? { ...d, internal: value } : d));
     const r = await fetch(`/api/recruitment/requests/${pipelineReqId}/internal`, { method: "PUT", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: JSON.stringify({ internal: value }) });
     if (r.ok) setReqDetail(await r.json());
+  };
+  // Train + evaluate the learning-to-rank model on demand from the captured outcomes.
+  const trainRankModel = async () => {
+    setRankBusy(true);
+    try {
+      const r = await fetch("/api/recruitment/metrics/outcomes/model", { credentials: "same-origin" });
+      if (r.ok) setRankModel(await r.json());
+    } finally { setRankBusy(false); }
   };
   // Feature (promote) the selected role for N days, or clear with 0.
   const setFeatured = async (days: number) => {
@@ -1453,6 +1465,32 @@ export default function Admin({ session }: { session: Session }) {
               <div className="grid grid-cols-2 gap-4">
                 <div><span className="eyebrow">{t("admin.outcomes.avgHired", "Avg score · hired")}</span><div className="num text-[20px] font-bold text-brand-bright leading-none mt-1.5">{outcomes.avgScoreHired}%</div></div>
                 <div><span className="eyebrow">{t("admin.outcomes.avgRejected", "Avg score · rejected")}</span><div className="num text-[20px] font-bold text-pink leading-none mt-1.5">{outcomes.avgScoreRejected}%</div></div>
+              </div>
+              <div className="mt-4 border-t border-line/40 pt-3">
+                <div className="flex items-center justify-between gap-3 flex-wrap">
+                  <div className="eyebrow">{t("admin.rank.title", "Learned ranking model")}</div>
+                  <button onClick={trainRankModel} disabled={rankBusy} className="rounded-lg bg-brand/15 px-3 py-1 text-[11px] font-semibold text-brand-bright hover:bg-brand/25 transition disabled:opacity-50">{rankBusy ? t("admin.rank.training", "Training…") : t("admin.rank.train", "Train & evaluate")}</button>
+                </div>
+                {rankModel && (
+                  <div className="mt-2">
+                    <div className={`text-[11px] ${rankModel.betterThanBaseline ? "text-brand-bright" : "text-ink-mid"}`}>{rankModel.message}</div>
+                    {rankModel.trained && (
+                      <>
+                        <div className="mt-2 grid grid-cols-3 gap-4">
+                          <div><span className="eyebrow">{t("admin.rank.modelAuc", "Model AUC")}</span><div className="num text-[18px] font-bold text-brand-bright leading-none mt-1">{rankModel.modelAuc}</div></div>
+                          <div><span className="eyebrow">{t("admin.rank.baseAuc", "Heuristic AUC")}</span><div className="num text-[18px] font-bold text-ink-hi leading-none mt-1">{rankModel.baselineAuc}</div></div>
+                          <div><span className="eyebrow">{t("admin.rank.acc", "Accuracy")}</span><div className="num text-[18px] font-bold text-ink-hi leading-none mt-1">{Math.round(rankModel.accuracy * 100)}%</div></div>
+                        </div>
+                        <div className="eyebrow mt-3 mb-1.5">{t("admin.rank.weights", "Learned feature weights")}</div>
+                        <div className="space-y-1">
+                          {rankModel.weights.map((w) => (
+                            <div key={w.feature} className="flex items-center gap-2 text-[11px]"><span className="text-ink-mid flex-1 capitalize">{w.feature}</span><span className={`num ${w.weight >= 0 ? "text-brand-bright" : "text-pink"}`}>{w.weight >= 0 ? "+" : ""}{w.weight}</span></div>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
               </div>
             </motion.section>
           )}

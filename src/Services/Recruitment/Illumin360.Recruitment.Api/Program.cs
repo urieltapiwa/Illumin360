@@ -1290,6 +1290,20 @@ v1.MapGet("/metrics/outcomes", async (
     .ProducesProblem(StatusCodes.Status401Unauthorized)
     .ProducesProblem(StatusCodes.Status403Forbidden);
 
+v1.MapGet("/metrics/outcomes/model", async (
+        IQueryHandler<GetRankModelQuery, RankModelReportDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new GetRankModelQuery(), ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminPolicy)
+    .WithName("GetRankModel")
+    .WithSummary("Train + evaluate a learning-to-rank model on the captured outcomes and return its hold-out metrics vs the current heuristic + learned weights. Requires an admin role.")
+    .Produces<RankModelReportDto>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden);
+
 v1.MapGet("/metrics/outcomes/export.csv", async (
         IQueryHandler<GetOutcomesCsvQuery, string> handler,
         CancellationToken ct) =>

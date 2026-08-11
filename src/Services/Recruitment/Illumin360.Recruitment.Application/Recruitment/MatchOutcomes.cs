@@ -1,10 +1,36 @@
 using System.Globalization;
 using System.Text;
+using Illumin360.Matching;
 using Illumin360.Recruitment.Application.Abstractions;
 using Illumin360.Recruitment.Domain;
 using Illumin360.SharedKernel;
 
 namespace Illumin360.Recruitment.Application.Recruitment;
+
+/// <summary>Maps a captured outcome to the LTR feature vector (shared by training + serving).</summary>
+public static class OutcomeFeatures
+{
+    /// <summary>Ordered feature names (must line up with <see cref="Vector"/>).</summary>
+    public static readonly IReadOnlyList<string> Names =
+        ["matchScore", "remote", "interviewCount", "avgInterviewRating", "hadOffer", "daysToDecision"];
+
+    /// <summary>The numeric feature vector for an outcome (scaled to roughly 0–1 ranges).</summary>
+    /// <param name="o">The outcome.</param>
+    /// <returns>The feature vector, ordered to match <see cref="Names"/>.</returns>
+    public static double[] Vector(MatchOutcome o)
+    {
+        ArgumentNullException.ThrowIfNull(o);
+        return
+        [
+            (double)o.MatchScore / 100.0,
+            o.Remote ? 1.0 : 0.0,
+            Math.Min(o.InterviewCount, 10) / 10.0,
+            (double)(o.AvgInterviewRating ?? 0m) / 5.0,
+            o.HadOffer ? 1.0 : 0.0,
+            Math.Min(o.DaysToDecision, 60) / 60.0,
+        ];
+    }
+}
 
 /// <summary>
 /// Aggregate view of captured hiring outcomes — the labelled dataset that a future learning-to-rank model
@@ -31,6 +57,43 @@ public sealed record GetMatchOutcomesQuery : IQuery<MatchOutcomeSummaryDto>;
 
 /// <summary>Exports the captured hiring outcomes as a feature CSV (the LTR training set).</summary>
 public sealed record GetOutcomesCsvQuery : IQuery<string>;
+
+/// <summary>A learned feature weight (interpretability).</summary>
+/// <param name="Feature">Feature name.</param>
+/// <param name="Weight">Standardised-space weight (sign = direction, magnitude = influence).</param>
+public sealed record RankWeightDto(string Feature, double Weight);
+
+/// <summary>
+/// The trained learning-to-rank model report: whether a model could be trained (needs enough labelled
+/// decisions of both classes), its hold-out metrics vs the current match-score heuristic, and the learned
+/// per-feature weights. Train + evaluate + serve, on demand from the captured outcomes.
+/// </summary>
+/// <param name="Trained">Whether a model was trained + evaluated.</param>
+/// <param name="Message">Human-readable status (e.g. why not trained).</param>
+/// <param name="SampleCount">Total labelled samples.</param>
+/// <param name="Hired">Positive labels.</param>
+/// <param name="Rejected">Negative labels.</param>
+/// <param name="ModelAuc">Learned-model AUC on held-out data.</param>
+/// <param name="BaselineAuc">Current heuristic AUC on the same held-out data.</param>
+/// <param name="Accuracy">Model accuracy at a 0.5 threshold.</param>
+/// <param name="LogLoss">Model log-loss.</param>
+/// <param name="BetterThanBaseline">Whether the learned model out-ranks the heuristic.</param>
+/// <param name="Weights">Learned per-feature weights.</param>
+public sealed record RankModelReportDto(
+    bool Trained,
+    string Message,
+    int SampleCount,
+    int Hired,
+    int Rejected,
+    double ModelAuc,
+    double BaselineAuc,
+    double Accuracy,
+    double LogLoss,
+    bool BetterThanBaseline,
+    IReadOnlyList<RankWeightDto> Weights);
+
+/// <summary>Trains + evaluates a learning-to-rank model on the captured outcomes (on demand).</summary>
+public sealed record GetRankModelQuery : IQuery<RankModelReportDto>;
 
 /// <summary>Pure CSV renderer for the labelled outcome feature rows (one header + one row per decision).</summary>
 public static class OutcomesCsv
@@ -79,6 +142,69 @@ public sealed class GetMatchOutcomesQueryHandler(IRecruitmentRepository reposito
             rejected.Count,
             Avg(hired.Select(o => o.MatchScore).ToList()),
             Avg(rejected.Select(o => o.MatchScore).ToList()));
+    }
+}
+
+/// <summary>Handles <see cref="GetRankModelQuery"/> — trains + evaluates a ranker on the captured outcomes.</summary>
+/// <param name="repository">The recruitment repository.</param>
+public sealed class GetRankModelQueryHandler(IRecruitmentRepository repository)
+    : IQueryHandler<GetRankModelQuery, RankModelReportDto>
+{
+    // Below this many labelled decisions (of both classes) a learned model isn't trustworthy.
+    private const int MinSamples = 20;
+
+    private readonly IRecruitmentRepository _repository = repository;
+
+    /// <inheritdoc />
+    public async Task<Result<RankModelReportDto>> HandleAsync(GetRankModelQuery query, CancellationToken cancellationToken)
+    {
+        var outcomes = await _repository.ListMatchOutcomesAsync(cancellationToken).ConfigureAwait(false);
+        var hired = outcomes.Count(o => o.IsHire);
+        var rejected = outcomes.Count - hired;
+
+        RankModelReportDto NotTrained(string message) =>
+            new(false, message, outcomes.Count, hired, rejected, 0, 0, 0, 0, false, []);
+
+        if (outcomes.Count < MinSamples)
+        {
+            return NotTrained($"Need at least {MinSamples} decisions to train (have {outcomes.Count}).");
+        }
+
+        if (hired == 0 || rejected == 0)
+        {
+            return NotTrained("Need both hires and rejections to train a ranker.");
+        }
+
+        var samples = outcomes.Select(o => new RankSample(OutcomeFeatures.Vector(o), o.IsHire ? 1 : 0)).ToList();
+
+        // Baseline = the current heuristic (match score is feature 0).
+        var evaluation = RankEvaluator.Evaluate(samples, f => f[0]);
+        if (evaluation is null)
+        {
+            return NotTrained("Not enough class variety in the hold-out split yet.");
+        }
+
+        var model = LogisticRegressionTrainer.Train(samples);
+        var weights = OutcomeFeatures.Names
+            .Select((name, i) => new RankWeightDto(name, Math.Round(i < model.Weights.Length ? model.Weights[i] : 0, 3)))
+            .ToList();
+
+        var message = evaluation.BetterThanBaseline
+            ? $"Learned ranker out-ranks the heuristic (AUC {evaluation.ModelAuc} vs {evaluation.BaselineAuc})."
+            : $"Heuristic still competitive (model AUC {evaluation.ModelAuc} vs {evaluation.BaselineAuc}); keep collecting data.";
+
+        return new RankModelReportDto(
+            true,
+            message,
+            outcomes.Count,
+            hired,
+            rejected,
+            evaluation.ModelAuc,
+            evaluation.BaselineAuc,
+            evaluation.Accuracy,
+            evaluation.LogLoss,
+            evaluation.BetterThanBaseline,
+            weights);
     }
 }
 

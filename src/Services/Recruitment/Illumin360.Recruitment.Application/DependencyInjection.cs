@@ -143,6 +143,9 @@ public static class DependencyInjection
             IQueryHandler<GetOutcomesCsvQuery, string>,
             GetOutcomesCsvQueryHandler>();
         services.AddScoped<
+            IQueryHandler<GetRankModelQuery, RankModelReportDto>,
+            GetRankModelQueryHandler>();
+        services.AddScoped<
             IQueryHandler<GetApplicationThreadQuery, IReadOnlyList<MessageDto>>,
             GetApplicationThreadQueryHandler>();
         services.AddScoped<
