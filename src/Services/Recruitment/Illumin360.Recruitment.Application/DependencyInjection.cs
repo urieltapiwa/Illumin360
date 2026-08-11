@@ -137,6 +137,9 @@ public static class DependencyInjection
             IQueryHandler<GetCareerViewsQuery, IReadOnlyList<CareerViewDto>>,
             GetCareerViewsQueryHandler>();
         services.AddScoped<
+            IQueryHandler<GetMatchOutcomesQuery, MatchOutcomeSummaryDto>,
+            GetMatchOutcomesQueryHandler>();
+        services.AddScoped<
             IQueryHandler<GetApplicationThreadQuery, IReadOnlyList<MessageDto>>,
             GetApplicationThreadQueryHandler>();
         services.AddScoped<

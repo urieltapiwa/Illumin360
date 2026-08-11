@@ -194,6 +194,9 @@ export default function Admin({ session }: { session: Session }) {
   // Per-role careers-page view analytics.
   type CareerView = { requestId: string; title: string; city: string; views: number; lastViewedAt: string | null };
   const [careerViews, setCareerViews] = useState<CareerView[] | null>(null);
+  // Hiring-outcome training set (unlocks future learning-to-rank).
+  type OutcomeSummary = { total: number; hired: number; rejected: number; avgScoreHired: number; avgScoreRejected: number };
+  const [outcomes, setOutcomes] = useState<OutcomeSummary | null>(null);
   const SOURCE_CHANNELS = ["direct", "careers", "referral", "campaign", "board", "agency", "walk-in"];
   // Job templates.
   type JobTemplate = { id: string; name: string; title: string; city: string | null; positions: number; employmentType: string; remote: boolean; tags: string[] };
@@ -375,6 +378,10 @@ export default function Admin({ session }: { session: Session }) {
     fetch("/api/recruitment/metrics/careers-views", { credentials: "same-origin" })
       .then((r) => (r.ok ? r.json() : null))
       .then((v) => { if (Array.isArray(v)) setCareerViews(v); })
+      .catch(() => { /* offline */ });
+    fetch("/api/recruitment/metrics/outcomes", { credentials: "same-origin" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((v) => { if (v && typeof v.total === "number") setOutcomes(v); })
       .catch(() => { /* offline */ });
   }, []);
 
@@ -1428,6 +1435,21 @@ export default function Admin({ session }: { session: Session }) {
                     </div>
                   ));
                 })()}
+              </div>
+            </motion.section>
+          )}
+
+          {outcomes && outcomes.total > 0 && (
+            <motion.section variants={fade} className="card p-5">
+              <div className="mb-3"><h3 className="font-display text-[15px] font-bold text-ink-hi">{t("admin.outcomes.title", "Hiring outcomes")}</h3><p className="text-[11px] text-ink-lo mt-0.5">{t("admin.outcomes.sub", "Captured decisions — the labelled dataset that will train smarter ranking. A higher avg score for hires than rejections means the current ranker is separating well.")}</p></div>
+              <div className="grid grid-cols-3 gap-4 mb-3">
+                {[[t("admin.outcomes.total", "Decisions"), `${outcomes.total}`], [t("admin.outcomes.hired", "Hired"), `${outcomes.hired}`], [t("admin.outcomes.rejected", "Rejected"), `${outcomes.rejected}`]].map(([label, val], i) => (
+                  <div key={i}><span className="eyebrow">{label as string}</span><div className="num text-[26px] font-bold text-ink-hi leading-none mt-1.5">{val as string}</div></div>
+                ))}
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div><span className="eyebrow">{t("admin.outcomes.avgHired", "Avg score · hired")}</span><div className="num text-[20px] font-bold text-brand-bright leading-none mt-1.5">{outcomes.avgScoreHired}%</div></div>
+                <div><span className="eyebrow">{t("admin.outcomes.avgRejected", "Avg score · rejected")}</span><div className="num text-[20px] font-bold text-pink leading-none mt-1.5">{outcomes.avgScoreRejected}%</div></div>
               </div>
             </motion.section>
           )}
