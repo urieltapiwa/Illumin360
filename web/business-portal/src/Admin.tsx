@@ -151,6 +151,9 @@ export default function Admin({ session }: { session: Session }) {
   // Hiring metrics (time-to-hire + source-of-hire).
   type HiringMetrics = { hires: number; avgTimeToHireDays: number; medianTimeToHireDays: number; bySource: { source: string; applications: number; hires: number }[] };
   const [hiring, setHiring] = useState<HiringMetrics | null>(null);
+  // Diversity / EEO report.
+  type Diversity = { total: number; byNationality: { label: string; count: number }[]; byCity: { label: string; count: number }[] };
+  const [diversity, setDiversity] = useState<Diversity | null>(null);
   useEffect(() => { fetch(import.meta.env.BASE_URL + "admin.json").then((r) => r.json()).then(setD); }, []);
   // Live platform signals from the microservices (via BFF → gateway). Talent count and talent-by-city are
   // real (Candidates service); finance/ops tiles (MRR, subscriptions, tickets, verifications) have no backing
@@ -234,6 +237,14 @@ export default function Admin({ session }: { session: Session }) {
     }, 250);
     return () => clearTimeout(id);
   }, [csQuery, csCity, csAvailability]);
+
+  // Diversity / EEO report.
+  useEffect(() => {
+    fetch("/api/candidates/diversity", { credentials: "same-origin" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((v) => { if (v) setDiversity(v); })
+      .catch(() => { /* offline / unauthorised */ });
+  }, []);
 
   // Hiring metrics.
   useEffect(() => {
@@ -862,6 +873,30 @@ export default function Admin({ session }: { session: Session }) {
                   </div>
                 </div>
               )}
+            </motion.section>
+          )}
+
+          {diversity && (
+            <motion.section variants={fade} className="card p-5">
+              <div className="mb-3"><h3 className="font-display text-[15px] font-bold text-ink-hi">{t("admin.div.title", "Diversity report")}</h3><p className="text-[11px] text-ink-lo mt-0.5">{t("admin.div.sub", "Anonymised candidate-pool breakdown ({{n}} total).", { n: diversity.total })}</p></div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                {([["admin.div.nationality", "By nationality", diversity.byNationality], ["admin.div.city", "By city", diversity.byCity]] as const).map(([key, label, rows]) => (
+                  <div key={key}>
+                    <div className="eyebrow mb-2">{t(key, label)}</div>
+                    <div className="space-y-2">
+                      {rows.slice(0, 8).map((r) => {
+                        const pct = diversity.total > 0 ? Math.round((r.count / diversity.total) * 100) : 0;
+                        return (
+                          <div key={r.label}>
+                            <div className="flex justify-between text-xs mb-1"><span className="text-ink-hi font-medium">{r.label}</span><span className="num text-[11px] text-ink-mid">{r.count} · {pct}%</span></div>
+                            <div className="h-2 rounded-full bg-panel2/70 overflow-hidden"><div className="h-full rounded-full bg-gradient-to-r from-brand-deep to-brand-bright" style={{ width: pct + "%" }} /></div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </motion.section>
           )}
 
