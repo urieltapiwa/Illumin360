@@ -195,6 +195,40 @@ public sealed class CandidateRepository(CandidatesDbContext db) : ICandidateRepo
         => await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
     /// <inheritdoc />
+    public void AddCustomField(CustomFieldDefinition field) => _db.CustomFieldDefinitions.Add(field);
+
+    /// <inheritdoc />
+    public void RemoveCustomField(CustomFieldDefinition field) => _db.CustomFieldDefinitions.Remove(field);
+
+    /// <inheritdoc />
+    public async Task<CustomFieldDefinition?> GetCustomFieldAsync(Guid id, CancellationToken cancellationToken)
+        => await _db.CustomFieldDefinitions.FirstOrDefaultAsync(f => f.Id == id, cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<CustomFieldDefinition>> ListCustomFieldsAsync(CancellationToken cancellationToken)
+        => await _db.CustomFieldDefinitions.AsNoTracking()
+            .OrderBy(f => f.SortOrder)
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
+    public void AddCandidateValue(CandidateCustomValue value) => _db.CandidateCustomValues.Add(value);
+
+    /// <inheritdoc />
+    public void RemoveCandidateValue(CandidateCustomValue value) => _db.CandidateCustomValues.Remove(value);
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<CandidateCustomValue>> ListCandidateValuesAsync(Guid candidateId, CancellationToken cancellationToken)
+        => await _db.CandidateCustomValues.AsNoTracking()
+            .Where(v => v.CandidateId == candidateId)
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<CandidateCustomValue>> ListCandidateValuesTrackedAsync(Guid candidateId, CancellationToken cancellationToken)
+        => await _db.CandidateCustomValues
+            .Where(v => v.CandidateId == candidateId)
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
     public async Task<DiversityReportDto> GetDiversityReportAsync(CancellationToken cancellationToken)
     {
         var set = _db.Candidates.AsNoTracking();

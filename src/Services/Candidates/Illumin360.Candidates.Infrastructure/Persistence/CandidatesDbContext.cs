@@ -25,6 +25,12 @@ public sealed class CandidatesDbContext(DbContextOptions<CandidatesDbContext> op
     /// <summary>Tags / labels on candidates.</summary>
     public DbSet<CandidateTag> CandidateTags => Set<CandidateTag>();
 
+    /// <summary>Admin-defined custom-field definitions.</summary>
+    public DbSet<CustomFieldDefinition> CustomFieldDefinitions => Set<CustomFieldDefinition>();
+
+    /// <summary>Per-candidate custom-field values.</summary>
+    public DbSet<CandidateCustomValue> CandidateCustomValues => Set<CandidateCustomValue>();
+
     /// <inheritdoc />
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -93,6 +99,39 @@ public sealed class CandidatesDbContext(DbContextOptions<CandidatesDbContext> op
             b.Property(t => t.CreatedAt).HasColumnName("created_at");
             b.HasIndex(t => new { t.CandidateId, t.Label }).IsUnique();
             b.Ignore(t => t.DomainEvents);
+        });
+
+        var customKindConverter = new Microsoft.EntityFrameworkCore.Storage.ValueConversion.ValueConverter<CustomFieldKind, string>(
+            v => v.ToString(),
+            v => Enum.Parse<CustomFieldKind>(v));
+
+        modelBuilder.Entity<CustomFieldDefinition>(b =>
+        {
+            b.ToTable("custom_field_definitions");
+            b.HasKey(f => f.Id);
+            b.Property(f => f.Id).HasColumnName("id");
+            b.Property(f => f.Key).HasColumnName("key").HasMaxLength(100);
+            b.Property(f => f.Label).HasColumnName("label").HasMaxLength(80);
+            b.Property(f => f.Kind).HasColumnName("kind").HasConversion(customKindConverter).HasMaxLength(20);
+            b.Property(f => f.OptionsCsv).HasColumnName("options").HasMaxLength(1000);
+            b.Property(f => f.SortOrder).HasColumnName("sort_order");
+            b.Property(f => f.CreatedAt).HasColumnName("created_at");
+            b.Ignore(f => f.Options);
+            b.HasIndex(f => f.Key).IsUnique();
+            b.Ignore(f => f.DomainEvents);
+        });
+
+        modelBuilder.Entity<CandidateCustomValue>(b =>
+        {
+            b.ToTable("candidate_custom_values");
+            b.HasKey(v => v.Id);
+            b.Property(v => v.Id).HasColumnName("id");
+            b.Property(v => v.CandidateId).HasColumnName("candidate_id");
+            b.Property(v => v.DefinitionId).HasColumnName("definition_id");
+            b.Property(v => v.Value).HasColumnName("value").HasMaxLength(2000);
+            b.Property(v => v.CreatedAt).HasColumnName("created_at");
+            b.HasIndex(v => v.CandidateId);
+            b.Ignore(v => v.DomainEvents);
         });
 
         modelBuilder.Entity<TalentPoolMember>(b =>
