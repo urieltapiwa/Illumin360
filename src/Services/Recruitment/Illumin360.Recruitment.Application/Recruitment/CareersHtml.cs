@@ -17,7 +17,8 @@ public static class CareersHtml
     /// <param name="Q">Keyword filter.</param>
     /// <param name="RemoteOnly">Whether the remote-only filter is on.</param>
     /// <param name="RemoteIds">Request ids currently flagged remote (for card badges).</param>
-    public sealed record CareersFilter(string? Q, bool RemoteOnly, IReadOnlySet<Guid> RemoteIds);
+    /// <param name="FeaturedIds">Request ids currently featured/promoted (for card badges).</param>
+    public sealed record CareersFilter(string? Q, bool RemoteOnly, IReadOnlySet<Guid> RemoteIds, IReadOnlySet<Guid> FeaturedIds);
 
     /// <summary>Renders the careers landing page listing the open roles.</summary>
     /// <param name="roles">The open roles to list.</param>
@@ -71,8 +72,10 @@ public static class CareersHtml
             sb.Append("<ul class=\"roles\">");
             foreach (var r in roles)
             {
+                var featuredBadge = filter is not null && filter.FeaturedIds.Contains(r.Id) ? "<span class=\"badge featured\">Featured</span>" : string.Empty;
                 var remoteBadge = filter is not null && filter.RemoteIds.Contains(r.Id) ? "<span class=\"badge\">Remote</span>" : string.Empty;
-                sb.Append(CultureInfo.InvariantCulture, $"<li class=\"role\"><a href=\"{bp}/{r.Id}\"><span class=\"title\">{Enc(r.Title)}{remoteBadge}</span><span class=\"meta\">{Enc(r.City)} · {r.Positions} position{(r.Positions == 1 ? string.Empty : "s")} · posted {r.CreatedAt.UtcDateTime.ToString("d MMM yyyy", CultureInfo.InvariantCulture)}</span></a></li>");
+                var featuredClass = filter is not null && filter.FeaturedIds.Contains(r.Id) ? " is-featured" : string.Empty;
+                sb.Append(CultureInfo.InvariantCulture, $"<li class=\"role{featuredClass}\"><a href=\"{bp}/{r.Id}\"><span class=\"title\">{Enc(r.Title)}{featuredBadge}{remoteBadge}</span><span class=\"meta\">{Enc(r.City)} · {r.Positions} position{(r.Positions == 1 ? string.Empty : "s")} · posted {r.CreatedAt.UtcDateTime.ToString("d MMM yyyy", CultureInfo.InvariantCulture)}</span></a></li>");
             }
 
             sb.Append("</ul>");
@@ -152,6 +155,7 @@ public static class CareersHtml
         sb.Append(".filter{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:0 0 20px}.filter input[type=text]{flex:1;min-width:180px;padding:9px 12px;border:1px solid #1c3329;border-radius:10px;background:#0f1c17;color:#e8f2ec}");
         sb.Append(".filter .remote{color:#9fb3aa;font-size:13px;display:flex;align-items:center;gap:6px}.filter button{background:#1fb283;color:#04120c;font-weight:700;border:0;padding:9px 16px;border-radius:10px;cursor:pointer}");
         sb.Append(".badge{display:inline-block;margin-left:8px;padding:1px 7px;border:1px solid #2fd39a;border-radius:999px;color:#2fd39a;font-size:11px;font-weight:600;vertical-align:middle}");
+        sb.Append(".badge.featured{border-color:#e8b14c;color:#e8b14c}.role.is-featured a{border-color:#e8b14c66;background:#15130c}");
         sb.Append(".share{margin-top:24px;font-size:14px;color:#9fb3aa}.share a{color:#2fd39a;text-decoration:none;margin:0 6px}.share a:hover{text-decoration:underline}");
         sb.Append(".foot{margin-top:48px;padding-top:16px;border-top:1px solid #1c3329;color:#6f8479;font-size:13px}");
         sb.Append("</style></head>");

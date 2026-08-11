@@ -159,7 +159,7 @@ export default function Admin({ session }: { session: Session }) {
   const [importBusy, setImportBusy] = useState(false);
   const [importResult, setImportResult] = useState<{ created: number; skipped: number; errors: string[] } | null>(null);
   // Requisition enrichment (salary/type/remote/tags) for the selected pipeline role.
-  type ReqDetail = { salaryMin: number | null; salaryMax: number | null; currency: string; employmentType: string; remote: boolean; internal: boolean; tags: string[] };
+  type ReqDetail = { salaryMin: number | null; salaryMax: number | null; currency: string; employmentType: string; remote: boolean; internal: boolean; featuredUntil: string | null; tags: string[] };
   const [reqDetail, setReqDetail] = useState<ReqDetail | null>(null);
   const [reqTagDraft, setReqTagDraft] = useState("");
   // Employee referrals for the selected role.
@@ -700,6 +700,12 @@ export default function Admin({ session }: { session: Session }) {
     const r = await fetch(`/api/recruitment/requests/${pipelineReqId}/internal`, { method: "PUT", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: JSON.stringify({ internal: value }) });
     if (r.ok) setReqDetail(await r.json());
   };
+  // Feature (promote) the selected role for N days, or clear with 0.
+  const setFeatured = async (days: number) => {
+    if (!pipelineReqId) return;
+    const r = await fetch(`/api/recruitment/requests/${pipelineReqId}/feature`, { method: "PUT", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: JSON.stringify({ days }) });
+    if (r.ok) setReqDetail(await r.json());
+  };
   // Employee referrals.
   const submitReferral = async () => {
     if (!pipelineReqId || !newReferral.referrerName.trim() || !newReferral.candidateName.trim() || !newReferral.candidateEmail.trim()) return;
@@ -998,6 +1004,14 @@ export default function Admin({ session }: { session: Session }) {
                     </label>
                     <label className="flex items-center gap-2 text-[11px] text-ink-mid"><input type="checkbox" checked={reqDetail.remote} onChange={(e) => saveReqDetail({ remote: e.target.checked })} />{t("admin.req.remote", "Remote")}</label>
                     <label className="flex items-center gap-2 text-[11px] text-ink-mid" title={t("admin.req.internalHint", "Hidden from the public careers site; open to referrals only.")}><input type="checkbox" checked={reqDetail.internal} onChange={(e) => setInternal(e.target.checked)} />{t("admin.req.internal", "Internal only")}</label>
+                    <div className="flex items-center gap-1.5" title={t("admin.req.featureHint", "Promote this role to the top of the public careers site (payment handled out-of-band).")}>
+                      {reqDetail.featuredUntil && new Date(reqDetail.featuredUntil) > new Date()
+                        ? <span className="chip !text-[10px] !text-gold !border-gold/30">★ {t("admin.req.featuredUntil", "Featured to {{date}}", { date: new Date(reqDetail.featuredUntil).toLocaleDateString() })}</span>
+                        : <span className="text-[11px] text-ink-lo">{t("admin.req.notFeatured", "Not featured")}</span>}
+                      <button onClick={() => setFeatured(7)} className="rounded bg-gold/15 px-2 py-0.5 text-[10px] font-semibold text-gold hover:bg-gold/25 transition">{t("admin.req.feature7", "Feature 7d")}</button>
+                      <button onClick={() => setFeatured(30)} className="rounded bg-gold/15 px-2 py-0.5 text-[10px] font-semibold text-gold hover:bg-gold/25 transition">{t("admin.req.feature30", "30d")}</button>
+                      {reqDetail.featuredUntil && new Date(reqDetail.featuredUntil) > new Date() && <button onClick={() => setFeatured(0)} className="rounded px-2 py-0.5 text-[10px] font-semibold text-ink-lo hover:text-pink transition">{t("admin.req.unfeature", "Unfeature")}</button>}
+                    </div>
                   </div>
                   <div className="mt-3 flex flex-wrap items-center gap-1.5">
                     {reqDetail.tags.map((tag) => (

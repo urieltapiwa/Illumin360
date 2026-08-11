@@ -25,15 +25,17 @@ public class CareerViewsAndFilterTests
     [Fact]
     public void RenderIndex_shows_filter_form_and_remote_badge()
     {
-        var roles = new[] { Role(RemoteRole, "Backend Engineer", "Windhoek"), Role(Guid.NewGuid(), "Analyst", "Swakopmund") };
-        var filter = new CareersHtml.CareersFilter("eng", true, new HashSet<Guid> { RemoteRole });
+        var featured = Guid.Parse("33333333-3333-3333-3333-333333333333");
+        var roles = new[] { Role(featured, "Backend Engineer", "Windhoek"), Role(RemoteRole, "Analyst", "Swakopmund") };
+        var filter = new CareersHtml.CareersFilter("eng", true, new HashSet<Guid> { RemoteRole }, new HashSet<Guid> { featured });
 
         var html = CareersHtml.RenderIndex(roles, "Illumin360", "/careers", filter);
 
         html.Should().Contain("<form class=\"filter\"");
-        html.Should().Contain("value=\"eng\"");        // keyword pre-filled
-        html.Should().Contain("checked");               // remote-only pre-checked
-        html.Should().Contain("class=\"badge\">Remote"); // remote role badged
+        html.Should().Contain("value=\"eng\"");           // keyword pre-filled
+        html.Should().Contain("checked");                  // remote-only pre-checked
+        html.Should().Contain("class=\"badge\">Remote");    // remote role badged
+        html.Should().Contain("class=\"badge featured\">Featured"); // featured role badged
     }
 
     [Fact]

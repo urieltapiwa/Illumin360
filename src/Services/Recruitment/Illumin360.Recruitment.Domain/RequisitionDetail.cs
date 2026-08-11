@@ -72,8 +72,19 @@ public sealed class RequisitionDetail : Entity<Guid>
     /// </summary>
     public bool Internal { get; private set; }
 
+    /// <summary>
+    /// When a paid/featured promotion runs until (UTC), if any. A role is "featured" while this is in the
+    /// future — floated to the top of the public careers site with a badge. Null = not promoted.
+    /// </summary>
+    public DateTimeOffset? FeaturedUntil { get; private set; }
+
     /// <summary>When the detail was created (UTC).</summary>
     public DateTimeOffset CreatedAt { get; private set; }
+
+    /// <summary>Whether the role is currently featured (promotion still active at <paramref name="now"/>).</summary>
+    /// <param name="now">The reference time (UTC).</param>
+    /// <returns>True if a promotion is active.</returns>
+    public bool IsFeatured(DateTimeOffset now) => FeaturedUntil is { } until && until > now;
 
     /// <summary>Sets the internal-only visibility flag.</summary>
     /// <param name="value">True to make the role internal-only (hidden from public careers).</param>
@@ -81,6 +92,15 @@ public sealed class RequisitionDetail : Entity<Guid>
     public RequisitionDetail SetInternal(bool value)
     {
         Internal = value;
+        return this;
+    }
+
+    /// <summary>Sets (or clears) the featured-promotion expiry.</summary>
+    /// <param name="until">When the promotion runs until (UTC), or null to clear.</param>
+    /// <returns>This detail.</returns>
+    public RequisitionDetail SetFeaturedUntil(DateTimeOffset? until)
+    {
+        FeaturedUntil = until;
         return this;
     }
 

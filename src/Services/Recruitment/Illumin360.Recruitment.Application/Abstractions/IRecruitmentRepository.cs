@@ -365,6 +365,11 @@ public interface IRecruitmentRepository
     /// <param name="cancellationToken">Cancellation token.</param>
     Task<IReadOnlyList<Guid>> ListRemoteRequestIdsAsync(CancellationToken cancellationToken);
 
+    /// <summary>Lists the request ids with an active featured promotion at <paramref name="now"/>.</summary>
+    /// <param name="now">The reference time (UTC).</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<IReadOnlyList<Guid>> ListFeaturedRequestIdsAsync(DateTimeOffset now, CancellationToken cancellationToken);
+
     /// <summary>Upserts + increments the careers view counter for a role.</summary>
     /// <param name="requestId">The requisition id.</param>
     /// <param name="viewedAt">The view timestamp (UTC).</param>
