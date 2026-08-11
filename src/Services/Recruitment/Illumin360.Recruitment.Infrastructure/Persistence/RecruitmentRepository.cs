@@ -466,6 +466,17 @@ public sealed class RecruitmentRepository(RecruitmentDbContext db) : IRecruitmen
     }
 
     /// <inheritdoc />
+    public void AddMatchOutcome(MatchOutcome outcome) => _db.MatchOutcomes.Add(outcome);
+
+    /// <inheritdoc />
+    public async Task<MatchOutcome?> GetMatchOutcomeAsync(Guid applicationId, CancellationToken cancellationToken)
+        => await _db.MatchOutcomes.AsNoTracking().FirstOrDefaultAsync(o => o.ApplicationId == applicationId, cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<MatchOutcome>> ListMatchOutcomesAsync(CancellationToken cancellationToken)
+        => await _db.MatchOutcomes.AsNoTracking().OrderByDescending(o => o.DecidedAt).ToListAsync(cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
     public void AddApplicationSource(ApplicationSource source) => _db.ApplicationSources.Add(source);
 
     /// <inheritdoc />

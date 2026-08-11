@@ -1276,6 +1276,20 @@ v1.MapGet("/careers/feed.json", async (
     .WithSummary("Public JSON feed of open roles for embedding/aggregation (internal roles excluded).")
     .Produces(StatusCodes.Status200OK, contentType: "application/json");
 
+v1.MapGet("/metrics/outcomes", async (
+        IQueryHandler<GetMatchOutcomesQuery, MatchOutcomeSummaryDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new GetMatchOutcomesQuery(), ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminPolicy)
+    .WithName("GetMatchOutcomes")
+    .WithSummary("Captured hiring-outcome training set summary (hires vs rejections + avg match score by outcome). Requires an admin role.")
+    .Produces<MatchOutcomeSummaryDto>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden);
+
 v1.MapGet("/metrics/careers-views", async (
         IQueryHandler<GetCareerViewsQuery, IReadOnlyList<CareerViewDto>> handler,
         CancellationToken ct) =>

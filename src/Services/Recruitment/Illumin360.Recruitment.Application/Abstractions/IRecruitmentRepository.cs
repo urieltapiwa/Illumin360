@@ -380,6 +380,19 @@ public interface IRecruitmentRepository
     /// <param name="cancellationToken">Cancellation token.</param>
     Task<IReadOnlyList<CareerViewDto>> GetCareerViewsAsync(CancellationToken cancellationToken);
 
+    /// <summary>Stages a captured hiring outcome for insertion.</summary>
+    /// <param name="outcome">The outcome to add.</param>
+    void AddMatchOutcome(MatchOutcome outcome);
+
+    /// <summary>Loads a captured outcome by application id, or null (for dedupe).</summary>
+    /// <param name="applicationId">The application id.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<MatchOutcome?> GetMatchOutcomeAsync(Guid applicationId, CancellationToken cancellationToken);
+
+    /// <summary>Lists all captured hiring outcomes (the LTR training set).</summary>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<IReadOnlyList<MatchOutcome>> ListMatchOutcomesAsync(CancellationToken cancellationToken);
+
     /// <summary>Stages an application's arrival-channel source for insertion.</summary>
     /// <param name="source">The source to add.</param>
     void AddApplicationSource(ApplicationSource source);

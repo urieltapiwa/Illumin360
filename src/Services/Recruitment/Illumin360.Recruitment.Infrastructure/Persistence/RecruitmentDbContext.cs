@@ -73,6 +73,9 @@ public sealed class RecruitmentDbContext(DbContextOptions<RecruitmentDbContext> 
     /// <summary>Per-role careers-page view counters.</summary>
     public DbSet<CareerView> CareerViews => Set<CareerView>();
 
+    /// <summary>Captured hiring outcomes (labelled LTR training data).</summary>
+    public DbSet<MatchOutcome> MatchOutcomes => Set<MatchOutcome>();
+
     /// <summary>Application conversation messages set.</summary>
     public DbSet<ApplicationMessage> ApplicationMessages => Set<ApplicationMessage>();
 
@@ -420,6 +423,23 @@ public sealed class RecruitmentDbContext(DbContextOptions<RecruitmentDbContext> 
             b.Property(v => v.LastViewedAt).HasColumnName("last_viewed_at");
             b.HasIndex(v => v.RequestId).IsUnique();
             b.Ignore(v => v.DomainEvents);
+        });
+
+        modelBuilder.Entity<MatchOutcome>(b =>
+        {
+            b.ToTable("match_outcomes");
+            b.HasKey(o => o.Id);
+            b.Property(o => o.Id).HasColumnName("id");
+            b.Property(o => o.ApplicationId).HasColumnName("application_id");
+            b.Property(o => o.RequestId).HasColumnName("request_id");
+            b.Property(o => o.TalentId).HasColumnName("talent_id");
+            b.Property(o => o.TalentType).HasColumnName("talent_type").HasMaxLength(20);
+            b.Property(o => o.MatchScore).HasColumnName("match_score").HasPrecision(5, 2);
+            b.Property(o => o.Outcome).HasColumnName("outcome").HasMaxLength(20);
+            b.Property(o => o.DecidedAt).HasColumnName("decided_at");
+            b.Ignore(o => o.IsHire);
+            b.HasIndex(o => o.ApplicationId).IsUnique();
+            b.Ignore(o => o.DomainEvents);
         });
 
         modelBuilder.Entity<ApplicationSource>(b =>

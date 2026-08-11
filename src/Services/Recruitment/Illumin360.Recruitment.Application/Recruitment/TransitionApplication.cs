@@ -42,6 +42,16 @@ public sealed class AdvanceApplicationCommandHandler(IRecruitmentRepository repo
             return advanced.Error!;
         }
 
+        // Capture a labelled outcome when the advance results in a hire (LTR training data).
+        if (application.IsHire)
+        {
+            var outcome = MatchOutcome.Capture(application.Id.Value, application.RequestId.Value, application.TalentId, application.TalentType, application.MatchScore, hired: true, DateTimeOffset.UtcNow);
+            if (outcome.IsSuccess && await _repository.GetMatchOutcomeAsync(application.Id.Value, cancellationToken).ConfigureAwait(false) is null)
+            {
+                _repository.AddMatchOutcome(outcome.Value!);
+            }
+        }
+
         await _eventPublisher.PublishAsync(
             new IntegrationEvents.ApplicationStatusChanged(
                 application.Id.Value, application.TalentId, application.TalentType, application.Status, DateTimeOffset.UtcNow),
@@ -89,6 +99,13 @@ public sealed class RejectApplicationCommandHandler(IRecruitmentRepository repos
 
             _repository.AddApplicationRejection(creation.Value!);
             storedReason = creation.Value!.Reason;
+        }
+
+        // Capture a labelled outcome for the rejection (LTR training data).
+        var outcome = MatchOutcome.Capture(application.Id.Value, application.RequestId.Value, application.TalentId, application.TalentType, application.MatchScore, hired: false, DateTimeOffset.UtcNow);
+        if (outcome.IsSuccess && await _repository.GetMatchOutcomeAsync(application.Id.Value, cancellationToken).ConfigureAwait(false) is null)
+        {
+            _repository.AddMatchOutcome(outcome.Value!);
         }
 
         await _eventPublisher.PublishAsync(
