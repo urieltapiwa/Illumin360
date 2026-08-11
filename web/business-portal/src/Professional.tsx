@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import * as echarts from "echarts";
 import { Chart, sparkOption, nf, C } from "@illumin360/ui";
@@ -6,6 +6,7 @@ import { logout, type Session } from "./auth";
 import { useTranslation } from "react-i18next";
 import { LanguageSwitcher, ThemeSwitcher } from "@illumin360/ui";
 import TalentApplications from "./TalentApplications";
+import { registerServiceWorker, pushPermission, enablePush, showPush } from "./push";
 
 interface Match { role: string; company: string; city: string; industry: string; match: number; salaryLo: number; salaryHi: number; posted: string; type: string; id?: string; status?: string; }
 interface Prof {
@@ -90,6 +91,10 @@ export default function Professional(_props: { session: Session }) {
   const [matchFilter, setMatchFilter] = useState<"all" | "saved" | "applied">("all");
   const [savedSearches, setSavedSearches] = useState<{ id: string; label: string; city: string | null; keyword: string | null; alertsEnabled: boolean }[] | null>(null);
   const [notifications, setNotifications] = useState<{ id: string; kind: string; text: string; isRead: boolean; createdAt: string }[] | null>(null);
+  // Push notifications: permission state + the set of notification ids already seen (so only genuinely
+  // new unread items raise an OS toast).
+  const [pushPerm, setPushPerm] = useState<NotificationPermission | "unsupported">("default");
+  const seenNotif = useRef<Set<string> | null>(null);
   const [ssForm, setSsForm] = useState({ label: "", city: "", keyword: "" });
   // Open-roles the professional has applied to this session (marketplace panel is otherwise stateless).
   const [appliedRoles, setAppliedRoles] = useState<Record<string, "pending" | "done" | "error">>({});
@@ -151,10 +156,32 @@ export default function Professional(_props: { session: Session }) {
       .then((r) => (r.ok ? r.json() : null))
       .then((v) => { if (Array.isArray(v)) setSavedSearches(v); })
       .catch(() => { /* recruitment unavailable */ });
-    fetch("/api/professionals/me/notifications")
-      .then((r) => (r.ok ? r.json() : null))
-      .then((v) => { if (Array.isArray(v)) setNotifications(v); })
-      .catch(() => { /* none */ });
+  }, [d?.id]);
+  // Register the service worker + read current push permission once.
+  useEffect(() => { registerServiceWorker(); setPushPerm(pushPermission()); }, []);
+  // Poll the in-app notification feed; raise an OS toast for each newly-arrived unread item. The first
+  // pass only seeds the "seen" set (so pre-existing notifications never toast on load).
+  useEffect(() => {
+    if (!d?.id) return;
+    let cancelled = false;
+    const poll = async () => {
+      try {
+        const r = await fetch("/api/professionals/me/notifications");
+        if (!r.ok) return;
+        const items = await r.json();
+        if (!Array.isArray(items) || cancelled) return;
+        setNotifications(items);
+        const ids = new Set<string>(items.map((n: { id: string }) => n.id));
+        if (seenNotif.current === null) { seenNotif.current = ids; return; }
+        for (const n of items as { id: string; text: string; isRead: boolean }[]) {
+          if (!seenNotif.current.has(n.id) && !n.isRead) showPush("Illumin360", n.text, n.id);
+        }
+        seenNotif.current = ids;
+      } catch { /* offline */ }
+    };
+    poll();
+    const iv = window.setInterval(poll, 30000);
+    return () => { cancelled = true; window.clearInterval(iv); };
   }, [d?.id]);
   const { t } = useTranslation();
   if (!d) return <div className="grid place-items-center h-screen text-ink-mid font-mono text-sm animate-pulse">{t("pro.loading")}</div>;
@@ -512,7 +539,14 @@ export default function Professional(_props: { session: Session }) {
                   <h3 className="font-display text-[15px] font-bold text-ink-hi">{t("pro.notif.title", "Notifications")}</h3>
                   {notifications.some((n) => !n.isRead) && <span className="chip !text-[10px] !text-brand-bright !border-brand/30">{notifications.filter((n) => !n.isRead).length} {t("pro.notif.new", "new")}</span>}
                 </div>
-                {live && notifications.some((n) => !n.isRead) && <button onClick={markAllNotificationsRead} className="text-[11px] text-ink-lo hover:text-ink-hi transition">{t("pro.notif.markAll", "Mark all read")}</button>}
+                <div className="flex items-center gap-3">
+                  {pushPerm !== "unsupported" && (pushPerm === "granted"
+                    ? <span className="chip !text-[10px] !text-brand-bright !border-brand/30" title={t("pro.push.onHint", "Desktop notifications are on.")}>🔔 {t("pro.push.on", "Push on")}</span>
+                    : pushPerm === "denied"
+                      ? <span className="chip !text-[10px] !text-ink-lo !border-line/70" title={t("pro.push.blockedHint", "Notifications are blocked in your browser settings.")}>{t("pro.push.blocked", "Push blocked")}</span>
+                      : <button onClick={async () => setPushPerm((await enablePush()) ? "granted" : pushPermission())} className="text-[11px] text-ink-lo hover:text-brand-bright transition">{t("pro.push.enable", "Enable push")}</button>)}
+                  {live && notifications.some((n) => !n.isRead) && <button onClick={markAllNotificationsRead} className="text-[11px] text-ink-lo hover:text-ink-hi transition">{t("pro.notif.markAll", "Mark all read")}</button>}
+                </div>
               </div>
               <div className="space-y-1.5">
                 {notifications.slice(0, 8).map((n) => (
