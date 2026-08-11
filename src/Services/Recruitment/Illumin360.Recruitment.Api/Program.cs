@@ -849,6 +849,54 @@ v1.MapGet("/careers/{id:guid}", async (
     .WithSummary("Public branded careers detail page for a single role (HTML + JobPosting JSON-LD).")
     .Produces(StatusCodes.Status200OK, contentType: "text/html");
 
+// --- In-app messaging: candidate ↔ employer conversation per application ---
+v1.MapGet("/applications/{id:guid}/messages", async (
+        Guid id,
+        IQueryHandler<GetApplicationThreadQuery, IReadOnlyList<MessageDto>> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new GetApplicationThreadQuery(id), ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization()
+    .WithName("GetApplicationThread")
+    .WithSummary("List an application's candidate↔employer conversation. Requires a signed-in user.")
+    .Produces<IReadOnlyList<MessageDto>>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status401Unauthorized);
+
+v1.MapPost("/applications/{id:guid}/messages", async (
+        Guid id,
+        SendMessageBody body,
+        ICommandHandler<SendApplicationMessageCommand, MessageDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new SendApplicationMessageCommand(id, body.Sender, body.SenderName, body.Body), ct);
+        return result.ToCreatedResult(dto => $"/v1/recruitment/applications/{id}/messages/{dto.Id}");
+    })
+    .RequireAuthorization()
+    .WithName("SendApplicationMessage")
+    .WithSummary("Post a message to an application conversation. Requires a signed-in user.")
+    .Produces<MessageDto>(StatusCodes.Status201Created)
+    .ProducesProblem(StatusCodes.Status400BadRequest)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status404NotFound);
+
+v1.MapPost("/applications/{id:guid}/messages/read", async (
+        Guid id,
+        MarkReadBody body,
+        ICommandHandler<MarkThreadReadCommand, int> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new MarkThreadReadCommand(id, body.Reader), ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization()
+    .WithName("MarkThreadRead")
+    .WithSummary("Mark the other side's messages in a conversation as read. Requires a signed-in user.")
+    .Produces<int>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status400BadRequest)
+    .ProducesProblem(StatusCodes.Status401Unauthorized);
+
 // --- Bulk pipeline actions (advance/reject many applications at once) ---
 v1.MapPost("/applications/bulk", async (
         BulkApplicationsBody body,
@@ -1028,6 +1076,16 @@ internal sealed record JobTemplateBody(string Name, string Title, string? City, 
 /// <summary>Request body for applying a template.</summary>
 /// <param name="CompanyId">Hiring company id.</param>
 internal sealed record UseTemplateBody(Guid CompanyId);
+
+/// <summary>Request body for sending an application message.</summary>
+/// <param name="Sender">Sender side (recruiter/talent).</param>
+/// <param name="SenderName">Sender display name.</param>
+/// <param name="Body">Message body.</param>
+internal sealed record SendMessageBody(string? Sender, string SenderName, string Body);
+
+/// <summary>Request body for marking a conversation read.</summary>
+/// <param name="Reader">The reading side (recruiter/talent).</param>
+internal sealed record MarkReadBody(string? Reader);
 
 /// <summary>Request body for adding an interview attendee.</summary>
 /// <param name="Name">Attendee name.</param>
