@@ -10,11 +10,17 @@ namespace Illumin360.Recruitment.Application.Recruitment;
 /// <param name="TalentId">The applying talent's id.</param>
 /// <param name="TalentType">Talent type (<c>student</c> or <c>professional</c>).</param>
 /// <param name="Source">Arrival channel (e.g. careers, referral, campaign, board); defaults to "direct".</param>
+/// <param name="CitySignal">Talent-side city-fit points (0–100), if the portal supplied them.</param>
+/// <param name="RoleSignal">Talent-side role-affinity points (0–100), if supplied.</param>
+/// <param name="SkillSignal">Talent-side skill-fit points (0–100), if supplied.</param>
 public sealed record ApplyToRequestCommand(
     Guid RequestId,
     Guid TalentId,
     string TalentType,
-    string? Source = null) : ICommand<ApplicationDto>;
+    string? Source = null,
+    int? CitySignal = null,
+    int? RoleSignal = null,
+    int? SkillSignal = null) : ICommand<ApplicationDto>;
 
 /// <summary>Handles <see cref="ApplyToRequestCommand"/> by recording a fresh application against the request.</summary>
 /// <param name="repository">The recruitment repository.</param>
@@ -61,6 +67,16 @@ public sealed class ApplyToRequestCommandHandler(IRecruitmentRepository reposito
         if (source.IsSuccess)
         {
             _repository.AddApplicationSource(source.Value!);
+        }
+
+        // Capture talent-side match signals if the portal supplied them (LTR features Recruitment can't compute).
+        if (command.CitySignal.HasValue || command.RoleSignal.HasValue || command.SkillSignal.HasValue)
+        {
+            var features = ApplicationFeatures.Create(application.Id.Value, command.CitySignal ?? 0, command.RoleSignal ?? 0, command.SkillSignal ?? 0, DateTimeOffset.UtcNow);
+            if (features.IsSuccess)
+            {
+                _repository.AddApplicationFeatures(features.Value!);
+            }
         }
 
         // Staged into the outbox in the same transaction as the application (transactional outbox).

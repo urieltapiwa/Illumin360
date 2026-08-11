@@ -494,8 +494,15 @@ public sealed class RecruitmentRepository(RecruitmentDbContext db) : IRecruitmen
 
         var rated = interviews.Where(r => r.HasValue).Select(r => r!.Value).ToList();
         decimal? avg = rated.Count == 0 ? null : Math.Round((decimal)rated.Average(), 2);
-        return new OutcomeFeatureSnapshot(source, remote, interviews.Count, avg, hadOffer);
+        var talent = await _db.ApplicationFeatures.AsNoTracking()
+            .Where(f => f.ApplicationId == applicationId)
+            .Select(f => new { f.CitySignal, f.RoleSignal, f.SkillSignal })
+            .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+        return new OutcomeFeatureSnapshot(source, remote, interviews.Count, avg, hadOffer, talent?.CitySignal ?? 0, talent?.RoleSignal ?? 0, talent?.SkillSignal ?? 0);
     }
+
+    /// <inheritdoc />
+    public void AddApplicationFeatures(ApplicationFeatures features) => _db.ApplicationFeatures.Add(features);
 
     /// <inheritdoc />
     public void AddApplicationSource(ApplicationSource source) => _db.ApplicationSources.Add(source);

@@ -12,7 +12,7 @@ public static class OutcomeFeatures
 {
     /// <summary>Ordered feature names (must line up with <see cref="Vector"/>).</summary>
     public static readonly IReadOnlyList<string> Names =
-        ["matchScore", "remote", "interviewCount", "avgInterviewRating", "hadOffer", "daysToDecision"];
+        ["matchScore", "remote", "interviewCount", "avgInterviewRating", "hadOffer", "daysToDecision", "citySignal", "roleSignal", "skillSignal"];
 
     /// <summary>The numeric feature vector for an outcome (scaled to roughly 0–1 ranges).</summary>
     /// <param name="o">The outcome.</param>
@@ -28,6 +28,9 @@ public static class OutcomeFeatures
             (double)(o.AvgInterviewRating ?? 0m) / 5.0,
             o.HadOffer ? 1.0 : 0.0,
             Math.Min(o.DaysToDecision, 60) / 60.0,
+            o.CitySignal / 100.0,
+            o.RoleSignal / 100.0,
+            o.SkillSignal / 100.0,
         ];
     }
 }
@@ -50,7 +53,10 @@ public sealed record MatchOutcomeSummaryDto(int Total, int Hired, int Rejected, 
 /// <param name="InterviewCount">Number of interviews.</param>
 /// <param name="AvgInterviewRating">Mean interview rating (1–5), if rated.</param>
 /// <param name="HadOffer">Whether an offer was created.</param>
-public sealed record OutcomeFeatureSnapshot(string Source, bool Remote, int InterviewCount, decimal? AvgInterviewRating, bool HadOffer);
+/// <param name="CitySignal">Talent-side city-fit signal captured at apply-time (0–100).</param>
+/// <param name="RoleSignal">Talent-side role-affinity signal (0–100).</param>
+/// <param name="SkillSignal">Talent-side skill-fit signal (0–100).</param>
+public sealed record OutcomeFeatureSnapshot(string Source, bool Remote, int InterviewCount, decimal? AvgInterviewRating, bool HadOffer, int CitySignal, int RoleSignal, int SkillSignal);
 
 /// <summary>Reads the captured hiring-outcome training set summary.</summary>
 public sealed record GetMatchOutcomesQuery : IQuery<MatchOutcomeSummaryDto>;
@@ -105,10 +111,10 @@ public static class OutcomesCsv
     {
         ArgumentNullException.ThrowIfNull(rows);
         var sb = new StringBuilder();
-        sb.Append("application_id,request_id,talent_type,match_score,source,remote,interview_count,avg_interview_rating,had_offer,days_to_decision,decided_at,hired\r\n");
+        sb.Append("application_id,request_id,talent_type,match_score,source,remote,interview_count,avg_interview_rating,had_offer,days_to_decision,city_signal,role_signal,skill_signal,decided_at,hired\r\n");
         foreach (var r in rows)
         {
-            sb.Append(CultureInfo.InvariantCulture, $"{r.ApplicationId},{r.RequestId},{Csv(r.TalentType)},{r.MatchScore},{Csv(r.Source)},{(r.Remote ? 1 : 0)},{r.InterviewCount},{r.AvgInterviewRating?.ToString(CultureInfo.InvariantCulture) ?? string.Empty},{(r.HadOffer ? 1 : 0)},{r.DaysToDecision},{r.DecidedAt.UtcDateTime.ToString("O", CultureInfo.InvariantCulture)},{(r.IsHire ? 1 : 0)}\r\n");
+            sb.Append(CultureInfo.InvariantCulture, $"{r.ApplicationId},{r.RequestId},{Csv(r.TalentType)},{r.MatchScore},{Csv(r.Source)},{(r.Remote ? 1 : 0)},{r.InterviewCount},{r.AvgInterviewRating?.ToString(CultureInfo.InvariantCulture) ?? string.Empty},{(r.HadOffer ? 1 : 0)},{r.DaysToDecision},{r.CitySignal},{r.RoleSignal},{r.SkillSignal},{r.DecidedAt.UtcDateTime.ToString("O", CultureInfo.InvariantCulture)},{(r.IsHire ? 1 : 0)}\r\n");
         }
 
         return sb.ToString();

@@ -11,6 +11,18 @@ namespace Illumin360.Recruitment.UnitTests;
 public class MatchOutcomeTests
 {
     [Fact]
+    public void ApplicationFeatures_clamps_signals_0_to_100()
+    {
+        var ok = ApplicationFeatures.Create(Guid.NewGuid(), citySignal: 140, roleSignal: -5, skillSignal: 60, DateTimeOffset.UnixEpoch);
+        ok.IsSuccess.Should().BeTrue();
+        ok.Value!.CitySignal.Should().Be(100);
+        ok.Value!.RoleSignal.Should().Be(0);
+        ok.Value!.SkillSignal.Should().Be(60);
+
+        ApplicationFeatures.Create(Guid.Empty, 1, 1, 1, DateTimeOffset.UnixEpoch).IsFailure.Should().BeTrue();
+    }
+
+    [Fact]
     public void Capture_labels_and_clamps()
     {
         var ok = MatchOutcome.Capture(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), "Professional", 140m, hired: true, DateTimeOffset.UnixEpoch);
@@ -44,13 +56,13 @@ public class MatchOutcomeTests
         repo.GetApplicationAsync(Arg.Any<ApplicationId>(), Arg.Any<CancellationToken>()).Returns(app);
         repo.GetMatchOutcomeAsync(app.Id.Value, Arg.Any<CancellationToken>()).Returns((MatchOutcome?)null);
         repo.GetOutcomeFeaturesAsync(app.Id.Value, Arg.Any<Guid>(), Arg.Any<CancellationToken>())
-            .Returns(new OutcomeFeatureSnapshot("careers", true, 2, 3.5m, true));
+            .Returns(new OutcomeFeatureSnapshot("careers", true, 2, 3.5m, true, 35, 40, 25));
         var handler = new RejectApplicationCommandHandler(repo, publisher);
 
         var result = await handler.HandleAsync(new RejectApplicationCommand(app.Id.Value, "Not a fit", "Recruiter"), CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();
-        repo.Received(1).AddMatchOutcome(Arg.Is<MatchOutcome>(o => o.Outcome == "rejected" && o.Source == "careers" && o.Remote && o.InterviewCount == 2 && o.HadOffer));
+        repo.Received(1).AddMatchOutcome(Arg.Is<MatchOutcome>(o => o.Outcome == "rejected" && o.Source == "careers" && o.Remote && o.InterviewCount == 2 && o.HadOffer && o.RoleSignal == 40 && o.SkillSignal == 25));
     }
 
     [Fact]

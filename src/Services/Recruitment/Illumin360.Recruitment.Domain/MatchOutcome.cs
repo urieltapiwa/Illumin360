@@ -56,6 +56,15 @@ public sealed class MatchOutcome : Entity<Guid>
     /// <summary>Days from application to decision.</summary>
     public int DaysToDecision { get; private set; }
 
+    /// <summary>Talent-side city-fit signal captured at apply-time (0–100).</summary>
+    public int CitySignal { get; private set; }
+
+    /// <summary>Talent-side role-affinity signal captured at apply-time (0–100).</summary>
+    public int RoleSignal { get; private set; }
+
+    /// <summary>Talent-side skill-fit signal captured at apply-time (0–100).</summary>
+    public int SkillSignal { get; private set; }
+
     /// <summary>Whether this is a positive (hire) label.</summary>
     public bool IsHire => string.Equals(Outcome, "hired", StringComparison.OrdinalIgnoreCase);
 
@@ -73,6 +82,9 @@ public sealed class MatchOutcome : Entity<Guid>
     /// <param name="avgInterviewRating">Mean interview rating (1–5), if rated.</param>
     /// <param name="hadOffer">Whether an offer was created.</param>
     /// <param name="daysToDecision">Days from application to decision (clamped ≥ 0).</param>
+    /// <param name="citySignal">Talent-side city-fit signal (0–100).</param>
+    /// <param name="roleSignal">Talent-side role-affinity signal (0–100).</param>
+    /// <param name="skillSignal">Talent-side skill-fit signal (0–100).</param>
     /// <returns>The outcome, or a validation error.</returns>
     public static Result<MatchOutcome> Capture(
         Guid applicationId,
@@ -87,7 +99,10 @@ public sealed class MatchOutcome : Entity<Guid>
         int interviewCount = 0,
         decimal? avgInterviewRating = null,
         bool hadOffer = false,
-        int daysToDecision = 0)
+        int daysToDecision = 0,
+        int citySignal = 0,
+        int roleSignal = 0,
+        int skillSignal = 0)
     {
         if (applicationId == Guid.Empty)
         {
@@ -109,6 +124,9 @@ public sealed class MatchOutcome : Entity<Guid>
             AvgInterviewRating = avgInterviewRating,
             HadOffer = hadOffer,
             DaysToDecision = Math.Max(0, daysToDecision),
+            CitySignal = Math.Clamp(citySignal, 0, 100),
+            RoleSignal = Math.Clamp(roleSignal, 0, 100),
+            SkillSignal = Math.Clamp(skillSignal, 0, 100),
         };
     }
 }
