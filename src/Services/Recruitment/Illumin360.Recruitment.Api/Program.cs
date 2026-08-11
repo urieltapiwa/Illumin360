@@ -124,6 +124,54 @@ v1.MapGet("/reports/funnel.csv", async (
     .WithSummary("Download the pipeline-funnel report as CSV. Requires an admin role.")
     .Produces(StatusCodes.Status200OK, contentType: "text/csv");
 
+v1.MapGet("/reports/source-of-hire.pdf", async (
+        IQueryHandler<GetHiringMetricsQuery, HiringMetricsDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new GetHiringMetricsQuery(), ct);
+        if (result.IsFailure)
+        {
+            return result.ToHttpResult();
+        }
+
+        var m = result.Value!;
+        var lines = new List<string>
+        {
+            $"Total hires: {m.Hires}    Avg time-to-hire: {m.AvgTimeToHireDays}d    Median: {m.MedianTimeToHireDays}d",
+            string.Empty,
+            "Source                Applications   Hires   Hire rate",
+        };
+        lines.AddRange(m.BySource.Select(s =>
+        {
+            var rate = s.Applications > 0 ? Math.Round(100.0 * s.Hires / s.Applications) : 0;
+            return $"{s.Source,-20}  {s.Applications,12}   {s.Hires,5}   {rate,7}%";
+        }));
+        return Results.Bytes(ReportsPdf.Render("Illumin360 — Source of Hire", lines), "application/pdf");
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminPolicy)
+    .WithName("SourceOfHirePdf")
+    .WithSummary("Download the source-of-hire report as PDF. Requires an admin role.")
+    .Produces(StatusCodes.Status200OK, contentType: "application/pdf");
+
+v1.MapGet("/reports/funnel.pdf", async (
+        IQueryHandler<GetRecruitmentStatsQuery, RecruitmentStatsDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new GetRecruitmentStatsQuery(), ct);
+        if (result.IsFailure)
+        {
+            return result.ToHttpResult();
+        }
+
+        var lines = new List<string> { "Stage                 Count", string.Empty };
+        lines.AddRange(result.Value!.Funnel.Select(f => $"{f.Label,-20}  {f.Count,6}"));
+        return Results.Bytes(ReportsPdf.Render("Illumin360 — Pipeline Funnel", lines), "application/pdf");
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminPolicy)
+    .WithName("FunnelPdf")
+    .WithSummary("Download the pipeline-funnel report as PDF. Requires an admin role.")
+    .Produces(StatusCodes.Status200OK, contentType: "application/pdf");
+
 v1.MapGet("/requests/{id:guid}", async (
         Guid id,
         IQueryHandler<GetRecruitmentRequestByIdQuery, RecruitmentRequestDto> handler,

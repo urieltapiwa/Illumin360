@@ -157,10 +157,10 @@ flip the status to ✅ (add the commit/PR ref).
 |---|---|---|
 | Recruitment stats / funnel / dashboards | ✅ | `/v1/recruitment/stats` + portal charts |
 | Time-to-hire / source metrics | ✅ | `GET /v1/recruitment/metrics/hiring` — avg/median days apply→hire + source-of-hire (applications/hires per talent type); admin hiring-metrics panel |
-| Custom reports / CSV-PDF export | 🟡 | CSV export done — `GET /v1/recruitment/reports/source-of-hire.csv` + `/funnel.csv` (RFC-4180, admin-gated); admin download links. PDF export pending |
+| Custom reports / CSV-PDF export | ✅ | Source-of-hire + funnel reports as **CSV** (`ReportsCsv`) and **PDF** (dependency-free `ReportsPdf`) — `GET /v1/recruitment/reports/{name}.{csv\|pdf}` (admin-gated); admin download links |
 | Diversity / EEO reporting | ✅ | `GET /v1/candidates/diversity` — anonymised aggregate counts by nationality / city / availability (no individual records); admin diversity-report panel |
 
-- [x] Export reports to CSV — pure `ReportsCsv` renderer (RFC-4180 quoting) + `GET /v1/recruitment/reports/source-of-hire.csv` and `/funnel.csv` (admin-gated), reusing the metrics/stats handlers; unit tests; admin download links on the hiring-metrics panel. PDF export is a follow-up
+- [x] Export reports to CSV + PDF — pure `ReportsCsv` (RFC-4180) and dependency-free `ReportsPdf` (minimal valid PDF 1.4 writer — catalog/page/Helvetica/content-stream, ASCII-sanitised + escaped) renderers; `GET /v1/recruitment/reports/source-of-hire.{csv|pdf}` and `/funnel.{csv|pdf}` (admin-gated) reusing the metrics/stats handlers; unit tests (CSV quoting + PDF envelope/length/escape); admin CSV & PDF download links on the hiring-metrics panel
 - [x] Time-to-hire and source-of-hire metrics — `GetHiringMetricsQuery` + `GET /v1/recruitment/metrics/hiring` computes avg/median days from apply→hire-decision and applications/hires per source (talent type); pure `HiringMath` (avg/median) unit-tested; admin hiring-metrics panel (tiles + per-source conversion bars)
 - [x] Diversity / EEO reporting — `GetDiversityReportQuery` + `GET /v1/candidates/diversity` (admin-gated) returns anonymised aggregate counts by nationality / city / availability (no individual records); handler unit test; admin diversity-report panel with share bars
 
@@ -179,7 +179,7 @@ flip the status to ✅ (add the commit/PR ref).
 
 ### Progress
 - Total build items: 48
-- Done: 46
+- Done: 47
 - In progress: 0
 
 **Changelog of ticks**

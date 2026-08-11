@@ -906,7 +906,9 @@ export default function Admin({ session }: { session: Session }) {
                 <div><h3 className="font-display text-[15px] font-bold text-ink-hi">{t("admin.hire.title", "Hiring metrics")}</h3><p className="text-[11px] text-ink-lo mt-0.5">{t("admin.hire.sub", "Time-to-hire and source-of-hire.")}</p></div>
                 <div className="flex items-center gap-3">
                   <a href="/api/recruitment/reports/source-of-hire.csv" className="text-[11px] text-ink-lo hover:text-brand-bright transition">{t("admin.hire.csvSource", "Source CSV")}</a>
+                  <a href="/api/recruitment/reports/source-of-hire.pdf" className="text-[11px] text-ink-lo hover:text-brand-bright transition">{t("admin.hire.pdfSource", "Source PDF")}</a>
                   <a href="/api/recruitment/reports/funnel.csv" className="text-[11px] text-ink-lo hover:text-brand-bright transition">{t("admin.hire.csvFunnel", "Funnel CSV")}</a>
+                  <a href="/api/recruitment/reports/funnel.pdf" className="text-[11px] text-ink-lo hover:text-brand-bright transition">{t("admin.hire.pdfFunnel", "Funnel PDF")}</a>
                 </div>
               </div>
               <div className="grid grid-cols-3 gap-4 mb-4">
