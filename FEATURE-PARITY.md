@@ -182,9 +182,9 @@ flip the status to ✅ (add the commit/PR ref).
 
 ### Progress
 - Feature-matrix rows: 64 — **63 ✅ have, 1 ⬜ missing** (mobile app, out of scope)
-- Build checklist: **48 / 48 delivered** (several planned items shipped as multiple deliverables, hence 50 dated changelog entries)
+- Build checklist: **48 / 48 delivered**; deep-audit backlog **Tier 1 = 9/9 + both #1 sub-items**, **Tier 2 = 6/7** (only feedback-loop LTR open — needs captured hire-outcome data)
 - In progress: 0
-- Verification (2026-08-11 sweep): 9 unit-test suites green (236 tests, 0 failures); business-portal build clean; all cited endpoints, gateway routes, building blocks, and the Employers compose service confirmed present
+- **Final re-sweep (2026-08-11):** 9 unit-test suites green — **300 tests, 0 failures** (Recruitment 136, Candidates 54, Matching 28, Professionals 23, Students 18, Employers 16, Admin 11, Resume 10, Email 4); business-portal build clean; all 14 arc endpoints + all 7 EF migrations (ApplicationForms, ReferralsAndInternalRoles, ApplicationSources, MultiRoundInterviews, CareerViews, FeaturedListings, CandidateCustomFields) confirmed present; `main` clean
 
 **Changelog of ticks**
 - Admin portal tickets + accounts panels — completed the ticket Assign action (2026-08-10).
