@@ -867,7 +867,13 @@ export default function Admin({ session }: { session: Session }) {
 
           {hiring && (
             <motion.section variants={fade} className="card p-5">
-              <div className="mb-3"><h3 className="font-display text-[15px] font-bold text-ink-hi">{t("admin.hire.title", "Hiring metrics")}</h3><p className="text-[11px] text-ink-lo mt-0.5">{t("admin.hire.sub", "Time-to-hire and source-of-hire.")}</p></div>
+              <div className="flex items-center justify-between mb-3 gap-3 flex-wrap">
+                <div><h3 className="font-display text-[15px] font-bold text-ink-hi">{t("admin.hire.title", "Hiring metrics")}</h3><p className="text-[11px] text-ink-lo mt-0.5">{t("admin.hire.sub", "Time-to-hire and source-of-hire.")}</p></div>
+                <div className="flex items-center gap-3">
+                  <a href="/api/recruitment/reports/source-of-hire.csv" className="text-[11px] text-ink-lo hover:text-brand-bright transition">{t("admin.hire.csvSource", "Source CSV")}</a>
+                  <a href="/api/recruitment/reports/funnel.csv" className="text-[11px] text-ink-lo hover:text-brand-bright transition">{t("admin.hire.csvFunnel", "Funnel CSV")}</a>
+                </div>
+              </div>
               <div className="grid grid-cols-3 gap-4 mb-4">
                 {[[t("admin.hire.avg", "Avg time-to-hire"), `${hiring.avgTimeToHireDays}d`], [t("admin.hire.median", "Median"), `${hiring.medianTimeToHireDays}d`], [t("admin.hire.hires", "Hires"), `${hiring.hires}`]].map(([label, val], i) => (
                   <div key={i}><span className="eyebrow">{label as string}</span><div className="num text-[26px] font-bold text-ink-hi leading-none mt-1.5">{val as string}</div></div>

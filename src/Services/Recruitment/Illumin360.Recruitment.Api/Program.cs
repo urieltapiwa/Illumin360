@@ -95,6 +95,35 @@ v1.MapGet("/metrics/hiring", async (
     .WithSummary("Time-to-hire (avg/median days) and source-of-hire (by talent type).")
     .Produces<HiringMetricsDto>(StatusCodes.Status200OK);
 
+// --- Reports export (CSV) ---
+v1.MapGet("/reports/source-of-hire.csv", async (
+        IQueryHandler<GetHiringMetricsQuery, HiringMetricsDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new GetHiringMetricsQuery(), ct);
+        return result.IsSuccess
+            ? Results.Text(ReportsCsv.SourceOfHire(result.Value!), "text/csv")
+            : result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminPolicy)
+    .WithName("SourceOfHireCsv")
+    .WithSummary("Download the source-of-hire report as CSV. Requires an admin role.")
+    .Produces(StatusCodes.Status200OK, contentType: "text/csv");
+
+v1.MapGet("/reports/funnel.csv", async (
+        IQueryHandler<GetRecruitmentStatsQuery, RecruitmentStatsDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new GetRecruitmentStatsQuery(), ct);
+        return result.IsSuccess
+            ? Results.Text(ReportsCsv.Funnel(result.Value!), "text/csv")
+            : result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminPolicy)
+    .WithName("FunnelCsv")
+    .WithSummary("Download the pipeline-funnel report as CSV. Requires an admin role.")
+    .Produces(StatusCodes.Status200OK, contentType: "text/csv");
+
 v1.MapGet("/requests/{id:guid}", async (
         Guid id,
         IQueryHandler<GetRecruitmentRequestByIdQuery, RecruitmentRequestDto> handler,
