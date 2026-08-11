@@ -34,6 +34,7 @@ public static class DependencyInjection
         services.AddScoped<ICommandHandler<RemoveCustomFieldCommand, bool>, RemoveCustomFieldCommandHandler>();
         services.AddScoped<IQueryHandler<GetCandidateCustomValuesQuery, IReadOnlyList<CustomValueDto>>, GetCandidateCustomValuesQueryHandler>();
         services.AddScoped<ICommandHandler<SetCandidateCustomValuesCommand, int>, SetCandidateCustomValuesCommandHandler>();
+        services.AddScoped<IQueryHandler<GetSimilarCandidatesQuery, IReadOnlyList<SimilarCandidateDto>>, GetSimilarCandidatesQueryHandler>();
         services.AddScoped<ICommandHandler<UploadCandidateCvCommand, CvDto>, UploadCandidateCvCommandHandler>();
         services.AddScoped<IQueryHandler<GetCandidateCvMetadataQuery, CvDto>, GetCandidateCvMetadataQueryHandler>();
         services.AddScoped<IQueryHandler<DownloadCandidateCvQuery, CvContent>, DownloadCandidateCvQueryHandler>();

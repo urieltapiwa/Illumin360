@@ -143,6 +143,9 @@ export default function Admin({ session }: { session: Session }) {
   const [csTags, setCsTags] = useState<string[]>([]);
   const [csNoteDraft, setCsNoteDraft] = useState("");
   const [csTagDraft, setCsTagDraft] = useState("");
+  // "Similar candidates" for the expanded candidate.
+  type SimilarCandidate = { id: string; name: string; city: string; headline: string | null; availability: string; score: number };
+  const [csSimilar, setCsSimilar] = useState<SimilarCandidate[]>([]);
   // Duplicate-candidate detection.
   type DupGroup = { name: string; count: number; candidates: SearchCandidate[] };
   const [dupes, setDupes] = useState<DupGroup[] | null>(null);
@@ -382,7 +385,11 @@ export default function Admin({ session }: { session: Session }) {
 
   // Notes + tags for the candidate expanded in search results.
   useEffect(() => {
-    if (!csOpen) { setCsNotes([]); setCsTags([]); setCsCustomValues({}); return; }
+    if (!csOpen) { setCsNotes([]); setCsTags([]); setCsCustomValues({}); setCsSimilar([]); return; }
+    fetch(`/api/candidates/${csOpen}/similar?take=5`, { credentials: "same-origin" })
+      .then((r) => (r.ok ? r.json() : []))
+      .then((v) => { if (Array.isArray(v)) setCsSimilar(v); })
+      .catch(() => { /* offline */ });
     fetch(`/api/candidates/${csOpen}/notes`).then((r) => (r.ok ? r.json() : [])).then((v) => Array.isArray(v) && setCsNotes(v)).catch(() => { /* offline */ });
     fetch(`/api/candidates/${csOpen}/tags`).then((r) => (r.ok ? r.json() : [])).then((v) => Array.isArray(v) && setCsTags(v)).catch(() => { /* offline */ });
     fetch(`/api/candidates/${csOpen}/custom-values`, { credentials: "same-origin" })
@@ -1679,6 +1686,19 @@ export default function Admin({ session }: { session: Session }) {
                                   </div>
                                 ))}
                                 <button onClick={saveCustomValues} className="rounded-lg bg-brand/15 px-2.5 py-1 text-[11px] font-semibold text-brand-bright hover:bg-brand/25 transition">{t("admin.cf.save", "Save custom fields")}</button>
+                              </div>
+                            </div>
+                          )}
+                          {csSimilar.length > 0 && (
+                            <div>
+                              <div className="eyebrow mb-1.5">{t("admin.similar.title", "Similar candidates")}</div>
+                              <div className="space-y-1.5">
+                                {csSimilar.map((s) => (
+                                  <button key={s.id} onClick={() => setCsOpen(s.id)} className="flex w-full items-center gap-2 rounded-lg border border-line/50 bg-panel/40 px-2.5 py-1.5 text-left hover:border-brand/40 transition">
+                                    <div className="min-w-0 flex-1"><div className="text-[12px] text-ink-hi truncate">{s.name}</div><div className="text-[10px] text-ink-lo truncate">{s.headline || "—"} · {s.city}</div></div>
+                                    <span className="num text-[11px] text-brand-bright shrink-0">{s.score}%</span>
+                                  </button>
+                                ))}
                               </div>
                             </div>
                           )}
