@@ -414,6 +414,42 @@ public sealed class RecruitmentRepository(RecruitmentDbContext db) : IRecruitmen
             .ToListAsync(cancellationToken).ConfigureAwait(false);
 
     /// <inheritdoc />
+    public void AddApplicationSource(ApplicationSource source) => _db.ApplicationSources.Add(source);
+
+    /// <inheritdoc />
+    public async Task<ApplicationSource?> GetApplicationSourceAsync(Guid applicationId, CancellationToken cancellationToken)
+        => await _db.ApplicationSources.AsNoTracking()
+            .FirstOrDefaultAsync(s => s.ApplicationId == applicationId, cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
+    public async Task<ApplicationSource?> GetApplicationSourceTrackedAsync(Guid applicationId, CancellationToken cancellationToken)
+        => await _db.ApplicationSources
+            .FirstOrDefaultAsync(s => s.ApplicationId == applicationId, cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<SourceMetric>> GetChannelBreakdownAsync(CancellationToken cancellationToken)
+    {
+        // Materialise both sides, then join in memory (avoids value-converter subquery pitfalls).
+        var sources = await _db.ApplicationSources.AsNoTracking()
+            .Select(s => new { s.ApplicationId, s.Channel })
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+        var hireByApp = await _db.Applications.AsNoTracking()
+            .Select(a => new { a.Id, a.IsHire })
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+
+        var hires = hireByApp.ToDictionary(a => a.Id.Value, a => a.IsHire);
+        return sources
+            .GroupBy(s => s.Channel)
+            .Select(g => new SourceMetric(
+                g.Key,
+                g.Count(),
+                g.Count(s => hires.TryGetValue(s.ApplicationId, out var h) && h)))
+            .OrderByDescending(m => m.Applications)
+            .ThenBy(m => m.Source, StringComparer.Ordinal)
+            .ToList();
+    }
+
+    /// <inheritdoc />
     public void AddJobTemplate(JobTemplate template) => _db.JobTemplates.Add(template);
 
     /// <inheritdoc />

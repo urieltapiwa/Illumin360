@@ -270,7 +270,7 @@ export default function Professional(_props: { session: Session }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "same-origin",
-        body: JSON.stringify({ talentId: d.id, talentType: "professional" }),
+        body: JSON.stringify({ talentId: d.id, talentType: "professional", source: "careers" }),
       });
       // 409 (already applied) is a benign "already done" from our point of view.
       setAppliedRoles((prev) => ({ ...prev, [roleId]: r.ok || r.status === 409 ? "done" : "error" }));

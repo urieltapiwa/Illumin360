@@ -167,6 +167,11 @@ export default function Admin({ session }: { session: Session }) {
   // Candidate answers for the application open in the drawer.
   type Answer = { questionId: string; label: string; value: string };
   const [appAnswers, setAppAnswers] = useState<Answer[]>([]);
+  // Source / channel attribution: the drawer application's channel + the org-wide breakdown.
+  const [appSource, setAppSource] = useState<string>("direct");
+  type ChannelMetric = { source: string; applications: number; hires: number };
+  const [channels, setChannels] = useState<ChannelMetric[] | null>(null);
+  const SOURCE_CHANNELS = ["direct", "careers", "referral", "campaign", "board", "agency", "walk-in"];
   // Job templates.
   type JobTemplate = { id: string; name: string; title: string; city: string | null; positions: number; employmentType: string; remote: boolean; tags: string[] };
   const [templates, setTemplates] = useState<JobTemplate[] | null>(null);
@@ -333,6 +338,14 @@ export default function Admin({ session }: { session: Session }) {
       .catch(() => { /* offline */ });
   }, []);
 
+  // Source / channel breakdown (admin).
+  useEffect(() => {
+    fetch("/api/recruitment/metrics/channels", { credentials: "same-origin" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((v) => { if (Array.isArray(v)) setChannels(v); })
+      .catch(() => { /* offline */ });
+  }, []);
+
   // Members of the expanded pool.
   useEffect(() => {
     if (!poolOpen) { setPoolMembers([]); return; }
@@ -351,11 +364,15 @@ export default function Admin({ session }: { session: Session }) {
 
   // Offers + onboarding + interviews for the application selected on a pipeline card.
   useEffect(() => {
-    if (!offerAppId) { setOffers(null); setOnboarding(null); setMessages([]); setInterviews([]); setIvOpen(null); setAppAnswers([]); return; }
+    if (!offerAppId) { setOffers(null); setOnboarding(null); setMessages([]); setInterviews([]); setIvOpen(null); setAppAnswers([]); setAppSource("direct"); return; }
     fetch(`/api/recruitment/applications/${offerAppId}/answers`, { credentials: "same-origin" })
       .then((r) => (r.ok ? r.json() : null))
       .then((v) => { if (Array.isArray(v)) setAppAnswers(v); })
       .catch(() => { /* keep empty */ });
+    fetch(`/api/recruitment/applications/${offerAppId}/source`, { credentials: "same-origin" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((v) => { if (v?.channel) setAppSource(v.channel); })
+      .catch(() => { /* keep default */ });
     fetch(`/api/recruitment/applications/${offerAppId}/messages`, { credentials: "same-origin" })
       .then((r) => (r.ok ? r.json() : null))
       .then((v) => { if (Array.isArray(v)) setMessages(v); })
@@ -492,6 +509,12 @@ export default function Admin({ session }: { session: Session }) {
   const withdrawOffer = async (id: string) => {
     const r = await fetch(`/api/recruitment/offers/${id}/withdraw`, { method: "POST", credentials: "same-origin" });
     if (r.ok) { const u = await r.json().catch(() => null); setOffers((os) => os?.map((o) => (o.id === id ? { ...o, status: u?.status ?? "withdrawn" } : o)) ?? os); }
+  };
+  // Set/override the drawer application's arrival channel.
+  const setApplicationSource = async (channel: string) => {
+    if (!offerAppId) return;
+    setAppSource(channel);
+    await fetch(`/api/recruitment/applications/${offerAppId}/source`, { method: "PUT", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: JSON.stringify({ channel }) });
   };
   // Interviews + panel attendees.
   const scheduleInterview = async () => {
@@ -1047,9 +1070,15 @@ export default function Admin({ session }: { session: Session }) {
               </div>
               {offerAppId && (
                 <div className="mt-4 border-t border-line/40 pt-4">
-                  <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center justify-between mb-2 gap-3 flex-wrap">
                     <span className="eyebrow">{t("admin.offer.title", "Offers for selected applicant")}</span>
-                    <button onClick={() => setOfferAppId(null)} className="text-[11px] text-ink-lo hover:text-ink-hi transition">{t("admin.offer.close", "Close")}</button>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] text-ink-lo uppercase tracking-wide">{t("admin.source.label", "Source")}</span>
+                      <select value={SOURCE_CHANNELS.includes(appSource) ? appSource : "direct"} onChange={(e) => setApplicationSource(e.target.value)} className="rounded-lg border border-line/70 bg-panel2/50 px-2 py-1 text-[11px] text-ink-hi capitalize focus:border-brand/50 focus:outline-none">
+                        {SOURCE_CHANNELS.map((s) => <option key={s} value={s}>{s}</option>)}
+                      </select>
+                      <button onClick={() => setOfferAppId(null)} className="text-[11px] text-ink-lo hover:text-ink-hi transition">{t("admin.offer.close", "Close")}</button>
+                    </div>
                   </div>
                   <div className="space-y-2">
                     {(offers ?? []).map((o) => (
@@ -1224,6 +1253,23 @@ export default function Admin({ session }: { session: Session }) {
                   );
                 })}
                 {hiring.bySource.length === 0 && <div className="text-[12px] text-ink-lo">{t("admin.hire.none", "No application data.")}</div>}
+              </div>
+            </motion.section>
+          )}
+
+          {channels && channels.length > 0 && (
+            <motion.section variants={fade} className="card p-5">
+              <div className="mb-3"><h3 className="font-display text-[15px] font-bold text-ink-hi">{t("admin.channels.title", "Source of applications")}</h3><p className="text-[11px] text-ink-lo mt-0.5">{t("admin.channels.sub", "Applications and hires by arrival channel.")}</p></div>
+              <div className="space-y-2">
+                {(() => {
+                  const max = Math.max(...channels.map((c) => c.applications), 1);
+                  return channels.map((c) => (
+                    <div key={c.source}>
+                      <div className="flex justify-between text-xs mb-1"><span className="text-ink-hi font-medium capitalize">{c.source}</span><span className="num text-[11px] text-ink-mid">{c.applications} {t("admin.channels.apps", "apps")} · {c.hires} {t("admin.channels.hires", "hires")}</span></div>
+                      <div className="h-2 rounded-full bg-panel2/70 overflow-hidden"><div className="h-full rounded-full bg-gradient-to-r from-brand-deep to-brand-bright" style={{ width: Math.round((c.applications / max) * 100) + "%" }} /></div>
+                    </div>
+                  ));
+                })()}
               </div>
             </motion.section>
           )}

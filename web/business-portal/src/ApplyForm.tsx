@@ -42,7 +42,7 @@ export default function ApplyForm({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "same-origin",
-        body: JSON.stringify({ talentId, talentType }),
+        body: JSON.stringify({ talentId, talentType, source: "careers" }),
       });
       if (!r.ok && r.status !== 409) { setError(t("apply.failed", "Could not apply — please try again.")); return; }
       // On 409 (already applied) we have no fresh application id, so answers are skipped.

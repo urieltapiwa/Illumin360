@@ -356,7 +356,7 @@ v1.MapPost("/requests/{id:guid}/apply", async (
         CancellationToken ct) =>
     {
         var result = await handler.HandleAsync(
-            new ApplyToRequestCommand(id, body.TalentId, body.TalentType ?? "professional"), ct);
+            new ApplyToRequestCommand(id, body.TalentId, body.TalentType ?? "professional", body.Source), ct);
         return result.ToHttpResult();
     })
     .RequireAuthorization(AuthenticationExtensions.ProfessionalPolicy)
@@ -727,6 +727,53 @@ v1.MapPost("/requests/{id:guid}/referrals", async (
     .ProducesProblem(StatusCodes.Status400BadRequest)
     .ProducesProblem(StatusCodes.Status401Unauthorized)
     .ProducesProblem(StatusCodes.Status404NotFound);
+
+// --- Source / channel attribution ---
+v1.MapGet("/applications/{id:guid}/source", async (
+        Guid id,
+        IQueryHandler<GetApplicationSourceQuery, ApplicationSourceDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new GetApplicationSourceQuery(id), ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization()
+    .WithName("GetApplicationSource")
+    .WithSummary("Get an application's arrival channel. Requires a signed-in user.")
+    .Produces<ApplicationSourceDto>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status401Unauthorized);
+
+v1.MapPut("/applications/{id:guid}/source", async (
+        Guid id,
+        SetSourceBody body,
+        ICommandHandler<SetApplicationSourceCommand, ApplicationSourceDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new SetApplicationSourceCommand(id, body.Channel), ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminWritePolicy)
+    .WithName("SetApplicationSource")
+    .WithSummary("Set/override an application's arrival channel. Requires an admin (write) role.")
+    .Produces<ApplicationSourceDto>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status400BadRequest)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden)
+    .ProducesProblem(StatusCodes.Status404NotFound);
+
+v1.MapGet("/metrics/channels", async (
+        IQueryHandler<GetChannelBreakdownQuery, IReadOnlyList<SourceMetric>> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new GetChannelBreakdownQuery(), ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminPolicy)
+    .WithName("GetChannelBreakdown")
+    .WithSummary("Applications + hires by arrival channel. Requires an admin role.")
+    .Produces<IReadOnlyList<SourceMetric>>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden);
 
 // --- Recruiter pipeline transitions on an application (admin/recruiter) ---
 v1.MapPost("/applications/{id:guid}/advance", async (
@@ -1375,7 +1422,12 @@ internal sealed record AddContactBody(string Name, string? Title, string? Email,
 /// <summary>Request body for applying to a recruitment request.</summary>
 /// <param name="TalentId">The applying talent's id.</param>
 /// <param name="TalentType">Talent type (<c>student</c>/<c>professional</c>); defaults to professional.</param>
-internal sealed record ApplyToRequestBody(Guid TalentId, string? TalentType);
+/// <param name="Source">Arrival channel (e.g. careers, referral, campaign, board); defaults to direct.</param>
+internal sealed record ApplyToRequestBody(Guid TalentId, string? TalentType, string? Source = null);
+
+/// <summary>Request body for setting an application's arrival channel.</summary>
+/// <param name="Channel">The arrival channel (e.g. referral, campaign, careers, board).</param>
+internal sealed record SetSourceBody(string? Channel);
 
 /// <summary>Request body for setting a requisition's enrichment detail.</summary>
 /// <param name="SalaryMin">Lower salary bound.</param>
