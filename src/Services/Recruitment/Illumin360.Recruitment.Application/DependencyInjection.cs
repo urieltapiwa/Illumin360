@@ -101,6 +101,15 @@ public static class DependencyInjection
             ICommandHandler<SubmitApplicationAnswersCommand, int>,
             SubmitApplicationAnswersCommandHandler>();
         services.AddScoped<
+            ICommandHandler<SetRequisitionInternalCommand, RequisitionDetailDto>,
+            SetRequisitionInternalCommandHandler>();
+        services.AddScoped<
+            IQueryHandler<GetReferralsQuery, IReadOnlyList<ReferralDto>>,
+            GetReferralsQueryHandler>();
+        services.AddScoped<
+            ICommandHandler<SubmitReferralCommand, ReferralDto>,
+            SubmitReferralCommandHandler>();
+        services.AddScoped<
             IQueryHandler<GetApplicationThreadQuery, IReadOnlyList<MessageDto>>,
             GetApplicationThreadQueryHandler>();
         services.AddScoped<

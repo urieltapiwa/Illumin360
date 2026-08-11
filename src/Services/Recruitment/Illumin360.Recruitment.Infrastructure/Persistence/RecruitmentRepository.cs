@@ -397,6 +397,23 @@ public sealed class RecruitmentRepository(RecruitmentDbContext db) : IRecruitmen
             .ToListAsync(cancellationToken).ConfigureAwait(false);
 
     /// <inheritdoc />
+    public void AddReferral(Referral referral) => _db.Referrals.Add(referral);
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<Referral>> ListReferralsAsync(Guid requestId, CancellationToken cancellationToken)
+        => await _db.Referrals.AsNoTracking()
+            .Where(r => r.RequestId == requestId)
+            .OrderByDescending(r => r.CreatedAt)
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<Guid>> ListInternalRequestIdsAsync(CancellationToken cancellationToken)
+        => await _db.RequisitionDetails.AsNoTracking()
+            .Where(d => d.Internal)
+            .Select(d => d.RequestId)
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
     public void AddJobTemplate(JobTemplate template) => _db.JobTemplates.Add(template);
 
     /// <inheritdoc />

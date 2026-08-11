@@ -151,9 +151,13 @@ export default function Admin({ session }: { session: Session }) {
   const [poolMembers, setPoolMembers] = useState<PoolMember[]>([]);
   const [poolBusy, setPoolBusy] = useState(false);
   // Requisition enrichment (salary/type/remote/tags) for the selected pipeline role.
-  type ReqDetail = { salaryMin: number | null; salaryMax: number | null; currency: string; employmentType: string; remote: boolean; tags: string[] };
+  type ReqDetail = { salaryMin: number | null; salaryMax: number | null; currency: string; employmentType: string; remote: boolean; internal: boolean; tags: string[] };
   const [reqDetail, setReqDetail] = useState<ReqDetail | null>(null);
   const [reqTagDraft, setReqTagDraft] = useState("");
+  // Employee referrals for the selected role.
+  type Referral = { id: string; referrerName: string; candidateName: string; candidateEmail: string; note: string | null; createdAt: string };
+  const [referrals, setReferrals] = useState<Referral[]>([]);
+  const [newReferral, setNewReferral] = useState({ referrerName: "", candidateName: "", candidateEmail: "", note: "" });
   type Approval = { status: string; approver: string | null; reason: string | null };
   const [approval, setApproval] = useState<Approval | null>(null);
   // Application form / screening questions for the selected pipeline role.
@@ -236,6 +240,10 @@ export default function Admin({ session }: { session: Session }) {
     fetch(`/api/recruitment/requests/${pipelineReqId}/form`)
       .then((r) => (r.ok ? r.json() : null))
       .then((v) => { if (Array.isArray(v)) setFormQuestions(v); })
+      .catch(() => { /* keep empty */ });
+    fetch(`/api/recruitment/requests/${pipelineReqId}/referrals`, { credentials: "same-origin" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((v) => { if (Array.isArray(v)) setReferrals(v); })
       .catch(() => { /* keep empty */ });
   }, [pipelineReqId]);
   // Recruiter CRM: client list (re-fetched on status-filter change).
@@ -618,6 +626,19 @@ export default function Admin({ session }: { session: Session }) {
     const r = await fetch(`/api/recruitment/form/questions/${questionId}`, { method: "DELETE", credentials: "same-origin" });
     if (r.ok || r.status === 204) setFormQuestions((qs) => qs.filter((q) => q.id !== questionId));
   };
+  // Internal-only visibility toggle (separate from the salary/type/remote details PUT).
+  const setInternal = async (value: boolean) => {
+    if (!pipelineReqId) return;
+    setReqDetail((d) => (d ? { ...d, internal: value } : d));
+    const r = await fetch(`/api/recruitment/requests/${pipelineReqId}/internal`, { method: "PUT", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: JSON.stringify({ internal: value }) });
+    if (r.ok) setReqDetail(await r.json());
+  };
+  // Employee referrals.
+  const submitReferral = async () => {
+    if (!pipelineReqId || !newReferral.referrerName.trim() || !newReferral.candidateName.trim() || !newReferral.candidateEmail.trim()) return;
+    const r = await fetch(`/api/recruitment/requests/${pipelineReqId}/referrals`, { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: JSON.stringify({ referrerName: newReferral.referrerName.trim(), referrerEmail: null, candidateName: newReferral.candidateName.trim(), candidateEmail: newReferral.candidateEmail.trim(), note: newReferral.note.trim() || null }) });
+    if (r.ok) { const ref: Referral = await r.json(); setReferrals((rs) => [ref, ...rs]); setNewReferral({ referrerName: "", candidateName: "", candidateEmail: "", note: "" }); }
+  };
   const approvalAction = async (action: "submit" | "approve" | "reject") => {
     if (!pipelineReqId) return;
     let body: Record<string, string> | undefined;
@@ -909,6 +930,7 @@ export default function Admin({ session }: { session: Session }) {
                       </select>
                     </label>
                     <label className="flex items-center gap-2 text-[11px] text-ink-mid"><input type="checkbox" checked={reqDetail.remote} onChange={(e) => saveReqDetail({ remote: e.target.checked })} />{t("admin.req.remote", "Remote")}</label>
+                    <label className="flex items-center gap-2 text-[11px] text-ink-mid" title={t("admin.req.internalHint", "Hidden from the public careers site; open to referrals only.")}><input type="checkbox" checked={reqDetail.internal} onChange={(e) => setInternal(e.target.checked)} />{t("admin.req.internal", "Internal only")}</label>
                   </div>
                   <div className="mt-3 flex flex-wrap items-center gap-1.5">
                     {reqDetail.tags.map((tag) => (
@@ -956,6 +978,26 @@ export default function Admin({ session }: { session: Session }) {
                   {newQuestion.kind === "select" && <input value={newQuestion.optionsCsv} onChange={(e) => setNewQuestion((f) => ({ ...f, optionsCsv: e.target.value }))} placeholder={t("admin.form.options", "Options, comma-separated")} className="flex-1 min-w-[140px] rounded-lg border border-line/70 bg-panel2/50 px-2.5 py-1 text-[12px] text-ink-hi placeholder:text-ink-lo focus:border-brand/50 focus:outline-none" />}
                   <label className="flex items-center gap-1.5 text-[11px] text-ink-mid"><input type="checkbox" checked={newQuestion.required} onChange={(e) => setNewQuestion((f) => ({ ...f, required: e.target.checked }))} />{t("admin.form.requiredLabel", "Required")}</label>
                   <button onClick={addFormQuestion} disabled={!newQuestion.label.trim()} className="rounded-lg bg-brand/15 px-3 py-1 text-[11px] font-semibold text-brand-bright hover:bg-brand/25 transition disabled:opacity-50">{t("admin.form.add", "Add question")}</button>
+                </div>
+              </div>
+              {/* Employee referrals for the selected role */}
+              <div className="mb-4 rounded-xl border border-line/60 bg-panel2/30 p-3">
+                <div className="eyebrow mb-2">{t("admin.ref.title", "Employee referrals")}</div>
+                <div className="space-y-1.5 mb-2">
+                  {referrals.map((ref) => (
+                    <div key={ref.id} className="rounded-lg border border-line/50 bg-panel/40 px-2.5 py-1.5">
+                      <div className="text-[12px] text-ink-hi">{ref.candidateName} <span className="text-[10px] text-ink-lo">· {ref.candidateEmail}</span></div>
+                      <div className="text-[10px] text-ink-lo">{t("admin.ref.by", "referred by {{name}}", { name: ref.referrerName })}{ref.note ? ` — ${ref.note}` : ""}</div>
+                    </div>
+                  ))}
+                  {referrals.length === 0 && <div className="text-[11px] text-ink-lo">{t("admin.ref.none", "No referrals yet.")}</div>}
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <input value={newReferral.referrerName} onChange={(e) => setNewReferral((f) => ({ ...f, referrerName: e.target.value }))} placeholder={t("admin.ref.referrer", "Referrer name")} className="flex-1 min-w-[120px] rounded-lg border border-line/70 bg-panel2/50 px-2.5 py-1 text-[12px] text-ink-hi placeholder:text-ink-lo focus:border-brand/50 focus:outline-none" />
+                  <input value={newReferral.candidateName} onChange={(e) => setNewReferral((f) => ({ ...f, candidateName: e.target.value }))} placeholder={t("admin.ref.candidate", "Candidate name")} className="flex-1 min-w-[120px] rounded-lg border border-line/70 bg-panel2/50 px-2.5 py-1 text-[12px] text-ink-hi placeholder:text-ink-lo focus:border-brand/50 focus:outline-none" />
+                  <input value={newReferral.candidateEmail} onChange={(e) => setNewReferral((f) => ({ ...f, candidateEmail: e.target.value }))} placeholder={t("admin.ref.email", "Candidate email")} className="flex-1 min-w-[120px] rounded-lg border border-line/70 bg-panel2/50 px-2.5 py-1 text-[12px] text-ink-hi placeholder:text-ink-lo focus:border-brand/50 focus:outline-none" />
+                  <input value={newReferral.note} onChange={(e) => setNewReferral((f) => ({ ...f, note: e.target.value }))} placeholder={t("admin.ref.note", "Note (optional)")} className="flex-1 min-w-[120px] rounded-lg border border-line/70 bg-panel2/50 px-2.5 py-1 text-[12px] text-ink-hi placeholder:text-ink-lo focus:border-brand/50 focus:outline-none" />
+                  <button onClick={submitReferral} disabled={!newReferral.referrerName.trim() || !newReferral.candidateName.trim() || !newReferral.candidateEmail.trim()} className="rounded-lg bg-brand/15 px-3 py-1 text-[11px] font-semibold text-brand-bright hover:bg-brand/25 transition disabled:opacity-50">{t("admin.ref.add", "Refer")}</button>
                 </div>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3">

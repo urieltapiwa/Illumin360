@@ -61,6 +61,9 @@ public sealed class RecruitmentDbContext(DbContextOptions<RecruitmentDbContext> 
     /// <summary>Candidate answers to application-form questions, per application.</summary>
     public DbSet<ApplicationAnswer> ApplicationAnswers => Set<ApplicationAnswer>();
 
+    /// <summary>Employee/network referrals of candidates for requisitions.</summary>
+    public DbSet<Referral> Referrals => Set<Referral>();
+
     /// <summary>Application conversation messages set.</summary>
     public DbSet<ApplicationMessage> ApplicationMessages => Set<ApplicationMessage>();
 
@@ -259,6 +262,7 @@ public sealed class RecruitmentDbContext(DbContextOptions<RecruitmentDbContext> 
             b.Property(d => d.Currency).HasColumnName("currency").HasMaxLength(3);
             b.Property(d => d.EmploymentType).HasColumnName("employment_type").HasConversion(employmentConverter).HasMaxLength(20);
             b.Property(d => d.Remote).HasColumnName("remote");
+            b.Property(d => d.Internal).HasColumnName("internal").HasDefaultValue(false);
             b.Property(d => d.CreatedAt).HasColumnName("created_at");
             b.HasIndex(d => d.RequestId).IsUnique();
             b.Ignore(d => d.DomainEvents);
@@ -362,6 +366,22 @@ public sealed class RecruitmentDbContext(DbContextOptions<RecruitmentDbContext> 
             b.Property(a => a.CreatedAt).HasColumnName("created_at");
             b.HasIndex(a => a.ApplicationId);
             b.Ignore(a => a.DomainEvents);
+        });
+
+        modelBuilder.Entity<Referral>(b =>
+        {
+            b.ToTable("referrals");
+            b.HasKey(r => r.Id);
+            b.Property(r => r.Id).HasColumnName("id");
+            b.Property(r => r.RequestId).HasColumnName("request_id");
+            b.Property(r => r.ReferrerName).HasColumnName("referrer_name").HasMaxLength(160);
+            b.Property(r => r.ReferrerEmail).HasColumnName("referrer_email").HasMaxLength(200);
+            b.Property(r => r.CandidateName).HasColumnName("candidate_name").HasMaxLength(160);
+            b.Property(r => r.CandidateEmail).HasColumnName("candidate_email").HasMaxLength(200);
+            b.Property(r => r.Note).HasColumnName("note").HasMaxLength(1000);
+            b.Property(r => r.CreatedAt).HasColumnName("created_at");
+            b.HasIndex(r => r.RequestId);
+            b.Ignore(r => r.DomainEvents);
         });
 
         var senderConverter = new ValueConverter<MessageSender, string>(

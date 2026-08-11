@@ -10,8 +10,9 @@ namespace Illumin360.Recruitment.Application.Recruitment;
 /// <param name="Currency">Currency code.</param>
 /// <param name="EmploymentType">Employment type (fulltime/parttime/contract/internship/temporary).</param>
 /// <param name="Remote">Whether remote.</param>
+/// <param name="Internal">Whether internal-only (hidden from public careers).</param>
 /// <param name="Tags">Category tags.</param>
-public sealed record RequisitionDetailDto(int? SalaryMin, int? SalaryMax, string Currency, string EmploymentType, bool Remote, IReadOnlyList<string> Tags)
+public sealed record RequisitionDetailDto(int? SalaryMin, int? SalaryMax, string Currency, string EmploymentType, bool Remote, bool Internal, IReadOnlyList<string> Tags)
 {
     /// <summary>Projects a domain detail + tags into the transport DTO.</summary>
     /// <param name="d">The detail, or null if none set yet.</param>
@@ -21,8 +22,8 @@ public sealed record RequisitionDetailDto(int? SalaryMin, int? SalaryMax, string
     {
         ArgumentNullException.ThrowIfNull(tags);
         return d is null
-            ? new RequisitionDetailDto(null, null, "NAD", Domain.EmploymentType.FullTime.ToWire(), false, tags)
-            : new RequisitionDetailDto(d.SalaryMin, d.SalaryMax, d.Currency, d.EmploymentType.ToWire(), d.Remote, tags);
+            ? new RequisitionDetailDto(null, null, "NAD", Domain.EmploymentType.FullTime.ToWire(), false, false, tags)
+            : new RequisitionDetailDto(d.SalaryMin, d.SalaryMax, d.Currency, d.EmploymentType.ToWire(), d.Remote, d.Internal, tags);
     }
 }
 
@@ -38,6 +39,11 @@ public sealed record GetRequisitionDetailQuery(Guid RequestId) : IQuery<Requisit
 /// <param name="EmploymentType">Employment-type name.</param>
 /// <param name="Remote">Whether remote.</param>
 public sealed record SetRequisitionDetailCommand(Guid RequestId, int? SalaryMin, int? SalaryMax, string? Currency, string? EmploymentType, bool Remote) : ICommand<RequisitionDetailDto>;
+
+/// <summary>Sets a requisition's internal-only visibility (upserts the detail if absent).</summary>
+/// <param name="RequestId">The requisition id.</param>
+/// <param name="Internal">True to hide from the public careers site.</param>
+public sealed record SetRequisitionInternalCommand(Guid RequestId, bool Internal) : ICommand<RequisitionDetailDto>;
 
 /// <summary>Adds a tag to a requisition (idempotent).</summary>
 /// <param name="RequestId">The requisition id.</param>
@@ -102,6 +108,48 @@ public sealed class SetRequisitionDetailCommandHandler(IRecruitmentRepository re
             {
                 return update.Error!;
             }
+        }
+
+        await _repository.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        var tags = await _repository.ListRequisitionTagsAsync(command.RequestId, cancellationToken).ConfigureAwait(false);
+        var detail = await _repository.GetRequisitionDetailAsync(command.RequestId, cancellationToken).ConfigureAwait(false);
+        return RequisitionDetailDto.FromDomain(detail, tags.Select(t => t.Label).ToList());
+    }
+}
+
+/// <summary>Handles <see cref="SetRequisitionInternalCommand"/> — upserts the detail and sets its internal flag.</summary>
+/// <param name="repository">The recruitment repository.</param>
+public sealed class SetRequisitionInternalCommandHandler(IRecruitmentRepository repository)
+    : ICommandHandler<SetRequisitionInternalCommand, RequisitionDetailDto>
+{
+    private readonly IRecruitmentRepository _repository = repository;
+
+    /// <inheritdoc />
+    public async Task<Result<RequisitionDetailDto>> HandleAsync(SetRequisitionInternalCommand command, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+
+        var request = await _repository.GetByIdAsync(new RequestId(command.RequestId), cancellationToken).ConfigureAwait(false);
+        if (request is null)
+        {
+            return Error.NotFound("request.not_found", "No matching requisition was found.");
+        }
+
+        var existing = await _repository.GetRequisitionDetailAsync(command.RequestId, cancellationToken).ConfigureAwait(false);
+        if (existing is null)
+        {
+            var creation = RequisitionDetail.Create(command.RequestId, null, null, null, null, false, DateTimeOffset.UtcNow);
+            if (creation.IsFailure)
+            {
+                return creation.Error!;
+            }
+
+            creation.Value!.SetInternal(command.Internal);
+            _repository.AddRequisitionDetail(creation.Value!);
+        }
+        else
+        {
+            existing.SetInternal(command.Internal);
         }
 
         await _repository.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
