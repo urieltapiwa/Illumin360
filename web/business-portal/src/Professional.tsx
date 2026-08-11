@@ -112,6 +112,11 @@ export default function Professional(_props: { session: Session }) {
   // Skill-gap tool: paste a role's required skills → see matched / missing / coverage.
   const [gapInput, setGapInput] = useState("");
   const [skillGap, setSkillGap] = useState<{ matched: string[]; missing: string[]; extra: string[]; coveragePercent: number } | null>(null);
+  // Skills taxonomy: normalize the profile's skills onto canonical names + flag duplicates to merge.
+  type CanonSkill = { id: string; raw: string; canonicalId: string; canonicalDisplay: string; aliased: boolean };
+  type CanonSkills = { skills: CanonSkill[]; duplicates: { canonicalDisplay: string; members: string[] }[] };
+  const [canon, setCanon] = useState<CanonSkills | null>(null);
+  const [canonBusy, setCanonBusy] = useState(false);
   const [cvAdded, setCvAdded] = useState<number | null>(null);
   const [scanning, setScanning] = useState(false);
   // Current CV metadata (if any). Reads are open; upload requires an authenticated professional.
@@ -263,6 +268,14 @@ export default function Professional(_props: { session: Session }) {
     if (required.length === 0) return;
     const r = await fetch("/api/professionals/me/skill-gap", { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: JSON.stringify(required) });
     if (r.ok) setSkillGap(await r.json());
+  };
+  // Normalize my skills onto the canonical taxonomy + surface duplicates to merge.
+  const tidySkills = async () => {
+    setCanonBusy(true);
+    try {
+      const r = await fetch("/api/professionals/me/skills/canonical", { credentials: "same-origin" });
+      if (r.ok) setCanon(await r.json());
+    } finally { setCanonBusy(false); }
   };
   // Upload / replace the professional's CV (stored in MinIO via the Professionals service).
   const uploadCv = async (files: FileList | null) => {
@@ -715,6 +728,33 @@ export default function Professional(_props: { session: Session }) {
                       </div>
                     )}
                     {skillGap.missing.length === 0 && <div className="text-[11px] text-brand-bright">{t("pro.gap.allMatched", "You have every required skill.")}</div>}
+                  </div>
+                )}
+              </div>
+              <div className="mt-3 border-t border-line/40 pt-3">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="eyebrow">{t("pro.canon.title", "Tidy up skills")}</div>
+                  <button onClick={tidySkills} disabled={canonBusy} className="rounded-lg bg-brand/15 px-3 py-1 text-[11px] font-semibold text-brand-bright hover:bg-brand/25 transition disabled:opacity-50">{canonBusy ? t("pro.canon.checking", "Checking…") : t("pro.canon.check", "Normalize")}</button>
+                </div>
+                {canon && (
+                  <div className="mt-2">
+                    {canon.duplicates.length > 0 && (
+                      <div className="mb-2">
+                        {canon.duplicates.map((g) => (
+                          <div key={g.canonicalDisplay} className="text-[11px] text-gold mb-1">{t("pro.canon.dupe", "You list {{members}} — these are the same skill ({{canon}}).", { members: g.members.join(" + "), canon: g.canonicalDisplay })}</div>
+                        ))}
+                      </div>
+                    )}
+                    <div className="flex flex-wrap gap-1.5">
+                      {canon.skills.map((s) => (
+                        <span key={s.id} className={`chip !text-[10px] ${s.aliased ? "!text-brand-bright !border-brand/30" : "!text-ink-mid"}`} title={s.aliased ? t("pro.canon.aliased", "'{{raw}}' → {{canon}}", { raw: s.raw, canon: s.canonicalDisplay }) : undefined}>
+                          {s.canonicalDisplay}{s.aliased && <span className="text-ink-lo"> ⟵ {s.raw}</span>}
+                        </span>
+                      ))}
+                    </div>
+                    {canon.duplicates.length === 0 && canon.skills.every((s) => !s.aliased) && (
+                      <div className="text-[11px] text-brand-bright mt-1">{t("pro.canon.clean", "Your skills are already tidy.")}</div>
+                    )}
                   </div>
                 )}
               </div>

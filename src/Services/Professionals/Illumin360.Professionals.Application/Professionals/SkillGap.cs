@@ -32,7 +32,8 @@ public sealed class GetSkillGapQueryHandler(IProfessionalRepository repository)
             ? (await _repository.ListSkillsAsync(id, cancellationToken).ConfigureAwait(false)).Select(s => s.Name)
             : [];
 
-        var gap = SkillGapAnalyzer.Analyze(mySkills, query.RequiredSkills);
+        // Taxonomy-aware so synonyms match (e.g. a profile listing "JS" covers a role wanting "JavaScript").
+        var gap = SkillGapAnalyzer.Analyze(mySkills, query.RequiredSkills, useTaxonomy: true);
         return new SkillGapDto(gap.Matched, gap.Missing, gap.Extra, gap.CoveragePercent);
     }
 }
