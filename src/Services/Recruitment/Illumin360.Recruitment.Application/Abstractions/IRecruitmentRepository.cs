@@ -393,6 +393,12 @@ public interface IRecruitmentRepository
     /// <param name="cancellationToken">Cancellation token.</param>
     Task<IReadOnlyList<MatchOutcome>> ListMatchOutcomesAsync(CancellationToken cancellationToken);
 
+    /// <summary>Gathers the Recruitment-owned feature snapshot for an application (source, remote, interviews, offer).</summary>
+    /// <param name="applicationId">The application id.</param>
+    /// <param name="requestId">The requisition id.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<OutcomeFeatureSnapshot> GetOutcomeFeaturesAsync(Guid applicationId, Guid requestId, CancellationToken cancellationToken);
+
     /// <summary>Stages an application's arrival-channel source for insertion.</summary>
     /// <param name="source">The source to add.</param>
     void AddApplicationSource(ApplicationSource source);

@@ -437,6 +437,12 @@ public sealed class RecruitmentDbContext(DbContextOptions<RecruitmentDbContext> 
             b.Property(o => o.MatchScore).HasColumnName("match_score").HasPrecision(5, 2);
             b.Property(o => o.Outcome).HasColumnName("outcome").HasMaxLength(20);
             b.Property(o => o.DecidedAt).HasColumnName("decided_at");
+            b.Property(o => o.Source).HasColumnName("source").HasMaxLength(40);
+            b.Property(o => o.Remote).HasColumnName("remote");
+            b.Property(o => o.InterviewCount).HasColumnName("interview_count");
+            b.Property(o => o.AvgInterviewRating).HasColumnName("avg_interview_rating").HasPrecision(4, 2);
+            b.Property(o => o.HadOffer).HasColumnName("had_offer");
+            b.Property(o => o.DaysToDecision).HasColumnName("days_to_decision");
             b.Ignore(o => o.IsHire);
             b.HasIndex(o => o.ApplicationId).IsUnique();
             b.Ignore(o => o.DomainEvents);

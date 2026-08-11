@@ -1441,7 +1441,10 @@ export default function Admin({ session }: { session: Session }) {
 
           {outcomes && outcomes.total > 0 && (
             <motion.section variants={fade} className="card p-5">
-              <div className="mb-3"><h3 className="font-display text-[15px] font-bold text-ink-hi">{t("admin.outcomes.title", "Hiring outcomes")}</h3><p className="text-[11px] text-ink-lo mt-0.5">{t("admin.outcomes.sub", "Captured decisions — the labelled dataset that will train smarter ranking. A higher avg score for hires than rejections means the current ranker is separating well.")}</p></div>
+              <div className="flex items-center justify-between mb-3 gap-3 flex-wrap">
+                <div><h3 className="font-display text-[15px] font-bold text-ink-hi">{t("admin.outcomes.title", "Hiring outcomes")}</h3><p className="text-[11px] text-ink-lo mt-0.5">{t("admin.outcomes.sub", "Captured decisions — the labelled dataset that will train smarter ranking. A higher avg score for hires than rejections means the current ranker is separating well.")}</p></div>
+                <a href="/api/recruitment/metrics/outcomes/export.csv" className="text-[11px] text-ink-lo hover:text-brand-bright transition whitespace-nowrap">{t("admin.outcomes.export", "Export CSV")}</a>
+              </div>
               <div className="grid grid-cols-3 gap-4 mb-3">
                 {[[t("admin.outcomes.total", "Decisions"), `${outcomes.total}`], [t("admin.outcomes.hired", "Hired"), `${outcomes.hired}`], [t("admin.outcomes.rejected", "Rejected"), `${outcomes.rejected}`]].map(([label, val], i) => (
                   <div key={i}><span className="eyebrow">{label as string}</span><div className="num text-[26px] font-bold text-ink-hi leading-none mt-1.5">{val as string}</div></div>

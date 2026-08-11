@@ -43,10 +43,14 @@ public sealed class AdvanceApplicationCommandHandler(IRecruitmentRepository repo
         }
 
         // Capture a labelled outcome when the advance results in a hire (LTR training data).
-        if (application.IsHire)
+        if (application.IsHire && await _repository.GetMatchOutcomeAsync(application.Id.Value, cancellationToken).ConfigureAwait(false) is null)
         {
-            var outcome = MatchOutcome.Capture(application.Id.Value, application.RequestId.Value, application.TalentId, application.TalentType, application.MatchScore, hired: true, DateTimeOffset.UtcNow);
-            if (outcome.IsSuccess && await _repository.GetMatchOutcomeAsync(application.Id.Value, cancellationToken).ConfigureAwait(false) is null)
+            var now = DateTimeOffset.UtcNow;
+            var f = await _repository.GetOutcomeFeaturesAsync(application.Id.Value, application.RequestId.Value, cancellationToken).ConfigureAwait(false)
+                ?? new OutcomeFeatureSnapshot("direct", false, 0, null, false);
+            var days = (int)(now - application.AppliedAt).TotalDays;
+            var outcome = MatchOutcome.Capture(application.Id.Value, application.RequestId.Value, application.TalentId, application.TalentType, application.MatchScore, true, now, f.Source, f.Remote, f.InterviewCount, f.AvgInterviewRating, f.HadOffer, days);
+            if (outcome.IsSuccess)
             {
                 _repository.AddMatchOutcome(outcome.Value!);
             }
@@ -102,10 +106,17 @@ public sealed class RejectApplicationCommandHandler(IRecruitmentRepository repos
         }
 
         // Capture a labelled outcome for the rejection (LTR training data).
-        var outcome = MatchOutcome.Capture(application.Id.Value, application.RequestId.Value, application.TalentId, application.TalentType, application.MatchScore, hired: false, DateTimeOffset.UtcNow);
-        if (outcome.IsSuccess && await _repository.GetMatchOutcomeAsync(application.Id.Value, cancellationToken).ConfigureAwait(false) is null)
+        if (await _repository.GetMatchOutcomeAsync(application.Id.Value, cancellationToken).ConfigureAwait(false) is null)
         {
-            _repository.AddMatchOutcome(outcome.Value!);
+            var now = DateTimeOffset.UtcNow;
+            var f = await _repository.GetOutcomeFeaturesAsync(application.Id.Value, application.RequestId.Value, cancellationToken).ConfigureAwait(false)
+                ?? new OutcomeFeatureSnapshot("direct", false, 0, null, false);
+            var days = (int)(now - application.AppliedAt).TotalDays;
+            var outcome = MatchOutcome.Capture(application.Id.Value, application.RequestId.Value, application.TalentId, application.TalentType, application.MatchScore, false, now, f.Source, f.Remote, f.InterviewCount, f.AvgInterviewRating, f.HadOffer, days);
+            if (outcome.IsSuccess)
+            {
+                _repository.AddMatchOutcome(outcome.Value!);
+            }
         }
 
         await _eventPublisher.PublishAsync(
