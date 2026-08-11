@@ -378,8 +378,12 @@ Three directional forks were decided by the product owner:
    before the flag ships on.
 2. **Marketplace → full transaction layer.** Illumin360 becomes *transactional*: payments/escrow,
    milestones, contracts, and two-sided reviews/reputation are **in scope for v0.3.0** (moved up from Tier 3).
-   This is the milestone's largest workstream — **design-doc-first**, and it needs a `[DECISION: payment
-   provider]` (e.g. Stripe Connect / escrow partner) + a worker-classification/compliance stance.
+   This is the milestone's largest workstream — **design-doc-first**:
+   [`03-architecture/marketplace-transactions-design.md`](03-architecture/marketplace-transactions-design.md).
+   Key findings: it needs a `[DECISION: launch market → payment provider]` — **Stripe Connect is not available
+   for Namibia**, so a NAD/SADC launch points to Flutterwave/Paystack, not Stripe — plus a **legal/regulatory
+   sign-off** on the escrow-via-provider model (holding funds is a licensed activity). **Reviews & reputation
+   (Phase 0) carry no regulatory weight and ship first**; money movement is the last, gated phase.
 3. **Tier 1 headliners → all four committed:** talent rediscovery, nurture sequences, self-schedule +
    interview kits, skills taxonomy v1.
 
