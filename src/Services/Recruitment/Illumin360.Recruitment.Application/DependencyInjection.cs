@@ -25,6 +25,9 @@ public static class DependencyInjection
             IQueryHandler<GetRecruitmentStatsQuery, RecruitmentStatsDto>,
             GetRecruitmentStatsQueryHandler>();
         services.AddScoped<
+            IQueryHandler<GetHiringMetricsQuery, HiringMetricsDto>,
+            GetHiringMetricsQueryHandler>();
+        services.AddScoped<
             ICommandHandler<PostRecruitmentRequestCommand, RecruitmentRequestDto>,
             PostRecruitmentRequestCommandHandler>();
         services.AddScoped<

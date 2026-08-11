@@ -156,12 +156,12 @@ flip the status to ✅ (add the commit/PR ref).
 | Feature | Status | Notes |
 |---|---|---|
 | Recruitment stats / funnel / dashboards | ✅ | `/v1/recruitment/stats` + portal charts |
-| Time-to-hire / source metrics | 🟡 | Partial stats |
+| Time-to-hire / source metrics | ✅ | `GET /v1/recruitment/metrics/hiring` — avg/median days apply→hire + source-of-hire (applications/hires per talent type); admin hiring-metrics panel |
 | Custom reports / CSV-PDF export | ⬜ | |
 | Diversity / EEO reporting | ⬜ | |
 
 - [ ] Export dashboards/reports to CSV/PDF
-- [ ] Time-to-hire and source-of-hire metrics
+- [x] Time-to-hire and source-of-hire metrics — `GetHiringMetricsQuery` + `GET /v1/recruitment/metrics/hiring` computes avg/median days from apply→hire-decision and applications/hires per source (talent type); pure `HiringMath` (avg/median) unit-tested; admin hiring-metrics panel (tiles + per-source conversion bars)
 
 ## K. Platform / cross-cutting
 | Feature | Status | Notes |
@@ -178,7 +178,7 @@ flip the status to ✅ (add the commit/PR ref).
 
 ### Progress
 - Total build items: 48
-- Done: 43
+- Done: 44
 - In progress: 0
 
 **Changelog of ticks**

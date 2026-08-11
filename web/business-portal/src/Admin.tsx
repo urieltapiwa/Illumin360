@@ -148,6 +148,9 @@ export default function Admin({ session }: { session: Session }) {
   // Audit trail.
   type AuditEntry = { id: string; actor: string; action: string; entityType: string; entityId: string | null; summary: string; occurredAt: string };
   const [audit, setAudit] = useState<AuditEntry[] | null>(null);
+  // Hiring metrics (time-to-hire + source-of-hire).
+  type HiringMetrics = { hires: number; avgTimeToHireDays: number; medianTimeToHireDays: number; bySource: { source: string; applications: number; hires: number }[] };
+  const [hiring, setHiring] = useState<HiringMetrics | null>(null);
   useEffect(() => { fetch(import.meta.env.BASE_URL + "admin.json").then((r) => r.json()).then(setD); }, []);
   // Live platform signals from the microservices (via BFF → gateway). Talent count and talent-by-city are
   // real (Candidates service); finance/ops tiles (MRR, subscriptions, tickets, verifications) have no backing
@@ -231,6 +234,14 @@ export default function Admin({ session }: { session: Session }) {
     }, 250);
     return () => clearTimeout(id);
   }, [csQuery, csCity, csAvailability]);
+
+  // Hiring metrics.
+  useEffect(() => {
+    fetch("/api/recruitment/metrics/hiring")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((v) => { if (v) setHiring(v); })
+      .catch(() => { /* offline */ });
+  }, []);
 
   // Audit trail.
   useEffect(() => {
@@ -851,6 +862,30 @@ export default function Admin({ session }: { session: Session }) {
                   </div>
                 </div>
               )}
+            </motion.section>
+          )}
+
+          {hiring && (
+            <motion.section variants={fade} className="card p-5">
+              <div className="mb-3"><h3 className="font-display text-[15px] font-bold text-ink-hi">{t("admin.hire.title", "Hiring metrics")}</h3><p className="text-[11px] text-ink-lo mt-0.5">{t("admin.hire.sub", "Time-to-hire and source-of-hire.")}</p></div>
+              <div className="grid grid-cols-3 gap-4 mb-4">
+                {[[t("admin.hire.avg", "Avg time-to-hire"), `${hiring.avgTimeToHireDays}d`], [t("admin.hire.median", "Median"), `${hiring.medianTimeToHireDays}d`], [t("admin.hire.hires", "Hires"), `${hiring.hires}`]].map(([label, val], i) => (
+                  <div key={i}><span className="eyebrow">{label as string}</span><div className="num text-[26px] font-bold text-ink-hi leading-none mt-1.5">{val as string}</div></div>
+                ))}
+              </div>
+              <div className="eyebrow mb-2">{t("admin.hire.source", "By source")}</div>
+              <div className="space-y-2">
+                {hiring.bySource.map((s) => {
+                  const rate = s.applications > 0 ? Math.round((s.hires / s.applications) * 100) : 0;
+                  return (
+                    <div key={s.source}>
+                      <div className="flex justify-between text-xs mb-1"><span className="text-ink-hi font-medium capitalize">{s.source}</span><span className="num text-[11px] text-ink-mid">{s.hires}/{s.applications} · {rate}%</span></div>
+                      <div className="h-2 rounded-full bg-panel2/70 overflow-hidden"><div className="h-full rounded-full bg-gradient-to-r from-brand-deep to-brand-bright" style={{ width: rate + "%" }} /></div>
+                    </div>
+                  );
+                })}
+                {hiring.bySource.length === 0 && <div className="text-[12px] text-ink-lo">{t("admin.hire.none", "No application data.")}</div>}
+              </div>
             </motion.section>
           )}
 

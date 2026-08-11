@@ -323,4 +323,9 @@ public interface IRecruitmentRepository
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Aggregate recruitment statistics.</returns>
     Task<RecruitmentStatsDto> GetStatsAsync(CancellationToken cancellationToken);
+
+    /// <summary>Returns time-to-hire and source-of-hire metrics.</summary>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Aggregate hiring metrics.</returns>
+    Task<HiringMetricsDto> GetHiringMetricsAsync(CancellationToken cancellationToken);
 }

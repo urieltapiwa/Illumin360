@@ -84,6 +84,17 @@ v1.MapGet("/stats", async (
     .WithSummary("Aggregate recruitment statistics (funnel, hires trend, matching, top cities).")
     .Produces<RecruitmentStatsDto>(StatusCodes.Status200OK);
 
+v1.MapGet("/metrics/hiring", async (
+        IQueryHandler<GetHiringMetricsQuery, HiringMetricsDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new GetHiringMetricsQuery(), ct);
+        return result.ToHttpResult();
+    })
+    .WithName("GetHiringMetrics")
+    .WithSummary("Time-to-hire (avg/median days) and source-of-hire (by talent type).")
+    .Produces<HiringMetricsDto>(StatusCodes.Status200OK);
+
 v1.MapGet("/requests/{id:guid}", async (
         Guid id,
         IQueryHandler<GetRecruitmentRequestByIdQuery, RecruitmentRequestDto> handler,

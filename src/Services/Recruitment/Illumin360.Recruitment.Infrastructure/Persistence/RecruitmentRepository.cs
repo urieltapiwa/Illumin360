@@ -342,6 +342,38 @@ public sealed class RecruitmentRepository(RecruitmentDbContext db) : IRecruitmen
         => await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
     /// <inheritdoc />
+    public async Task<HiringMetricsDto> GetHiringMetricsAsync(CancellationToken cancellationToken)
+    {
+        var apps = _db.Applications.AsNoTracking();
+
+        // Apply→hire durations for hired applications with a recorded decision.
+        var hireRows = await apps
+            .Where(a => a.IsHire && a.DecidedAt != null)
+            .Select(a => new { a.AppliedAt, a.DecidedAt })
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        var durations = hireRows
+            .Select(r => (r.DecidedAt!.Value - r.AppliedAt).TotalDays)
+            .Where(d => d >= 0)
+            .ToList();
+
+        var bySourceRaw = await apps
+            .GroupBy(a => a.TalentType)
+            .Select(g => new { Source = g.Key, Applications = g.Count(), Hires = g.Sum(a => a.IsHire ? 1 : 0) })
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        var bySource = bySourceRaw
+            .Select(x => new SourceMetric(string.IsNullOrWhiteSpace(x.Source) ? "unknown" : x.Source, x.Applications, x.Hires))
+            .OrderByDescending(x => x.Hires)
+            .ThenByDescending(x => x.Applications)
+            .ToList();
+
+        return new HiringMetricsDto(durations.Count, HiringMath.Average(durations), HiringMath.Median(durations), bySource);
+    }
+
+    /// <inheritdoc />
     public async Task<RecruitmentStatsDto> GetStatsAsync(CancellationToken cancellationToken)
     {
         var requests = _db.Requests.AsNoTracking();
