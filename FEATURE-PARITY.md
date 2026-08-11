@@ -222,3 +222,43 @@ flip the status to ✅ (add the commit/PR ref).
 - Browser push notifications — service worker (`public/sw.js`) + Notifications API (`push.ts`) raise an OS toast for each newly-arrived unread in-app notification on the Professional portal (opt-in; polls the existing `/me/notifications` feed; SW `push` handler ready for a future server-side Web Push/VAPID sender) (2026-08-11).
 
 _Update this file as items are ticked; link the commit/PR that delivered each._
+
+---
+
+## Deep parity audit (2026-08-11)
+
+A second, deeper pass that researched what the 10 reference systems **actually ship** (modules, features,
+actions) and mapped their distinctive capabilities against Illumin360 — rather than re-checking our own
+claims. Below is the residual backlog. Tick `[x]` as delivered, same convention as the main checklist.
+
+**Research caveats:** *OpenJobs* has no canonical repo (the closest match is a ~5-commit template — low signal);
+*TalentMatch* is not a single project (benchmarked against the embedding/LTR technique landscape); *OrangeHRM*'s
+richest ATS features are paid-edition, so its free OSS core is thinner than its marketing implies.
+
+### Tier 1 — genuine parity gaps (peers commonly have; Illumin360 does not)
+- [ ] **Custom fields + configurable application forms / screening (knockout) questions per job** — per-role questionnaires and admin-defined custom fields on candidates/jobs/companies (OpenCATS, SpotAxis, OrangeHRM, Horilla, Frappe). *Highest-value catch from this pass.*
+- [ ] **Employee referrals + internal-only job toggle** — referral submission flow + a per-job public/internal visibility switch for employee referrals (EazyRecruit, Frappe, Horilla)
+- [ ] **Candidate source / channel attribution** — capture and report "how they arrived" (referral, campaign, walk-in, website, board) beyond the current `talentType` (OpenCATS, OrangeHRM, Frappe)
+- [ ] **Bulk CSV import** of candidates and job orders — we export (GDPR + reports) but cannot import (OpenCATS, Jobberbase)
+- [ ] **Job distribution / syndication** — social multi-share, LinkedIn/external-board posting, XML/JSON job feed, embeddable job widgets (SVG card / iframe), RSS feeds, and `sitemap.xml` (SpotAxis, Horilla, GitJobs, Jobberbase, OpenCATS)
+- [ ] **Structured multi-round interviews** — interview *rounds* with per-round required skills + aggregated skill ratings across rounds, and reusable interview question banks/kits (Frappe, OrangeHRM, EazyRecruit). Extends the existing single-scorecard + panel-attendee model
+- [ ] **Email-to-ATS intake** — auto-parse résumés emailed to a company inbox into candidate records (EazyRecruit). We parse on upload only
+- [ ] **Richer public-careers search + per-job analytics** — faceted careers filtering (seniority, skills, salary, remote, category) + per-job view / search-appearance counts (GitJobs). Enrichment data already exists; it just isn't a public faceted search
+- [ ] **Featured / paid job listings + monetization** — promoted listings and a billing tier (Jobberbase PayPal, GitJobs 30-day free-then-paid)
+
+### Tier 2 — matching depth (differentiators; largely absent in the peers too)
+Our engine today is a weighted heuristic (city + role + skills). The modern-matcher benchmark adds:
+- [ ] **Semantic / embedding matching** — encode résumé + JD to vectors (Sentence-BERT / pgvector-style), score by cosine similarity to catch implicit/paraphrased skills keyword-matching misses
+- [ ] **Similar candidates ("more like this")** — vector k-NN off a seed candidate
+- [ ] **Skill-gap analysis** — which required skills a candidate lacks (drives upskilling/learning suggestions)
+- [ ] **Salary-expectation & seniority scoring** — add candidate expectation-vs-band and experience-level signals to the composite score (currently city + role + skills only)
+- [ ] **Explainable "why this match"** — per-signal contribution breakdown + matched/missing evidence. *No OSS peer does this well — a real differentiator.*
+- [ ] **Feedback-loop learning** — feed recruiter accept/reject + hire outcomes back as ranking signal (learning-to-rank)
+- [ ] **Bias mitigation / blind screening** — optionally hide name/photo/demographic fields pre-scoring + fairness/adverse-impact auditing. *Also a differentiator — near-absent across OSS.*
+
+### Tier 3 — out of scope (correctly excluded, no action)
+HRMS breadth carried by OrangeHRM / Frappe HR / Horilla that does **not** belong in a talent marketplace:
+payroll, attendance/time tracking, leave management, performance/appraisal, employee lifecycle &
+convert-applicant-to-employee/HRIS, org chart, asset management, expense claims, shift scheduling, LMS;
+plus SpotAxis's multi-tenant SaaS billing and Frappe's staffing-plan/headcount planning. Same category as
+the native **mobile app** — a separate product decision, not a parity gap.
