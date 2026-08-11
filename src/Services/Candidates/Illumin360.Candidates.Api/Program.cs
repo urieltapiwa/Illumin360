@@ -143,6 +143,31 @@ v1.MapGet("/{id:guid}/similar", async (
     .ProducesProblem(StatusCodes.Status403Forbidden)
     .ProducesProblem(StatusCodes.Status404NotFound);
 
+v1.MapGet("/{id:guid}/semantic-similar", async (
+        Guid id,
+        int? take,
+        IConfiguration config,
+        IQueryHandler<GetSemanticSimilarCandidatesQuery, IReadOnlyList<SimilarCandidateDto>> handler,
+        CancellationToken ct) =>
+    {
+        // Feature-flagged off by default (Matching:SemanticEnabled). When off, return an empty set so the
+        // UI can hide the section without special-casing errors.
+        if (!config.GetValue("Matching:SemanticEnabled", false))
+        {
+            return Results.Ok(Array.Empty<SimilarCandidateDto>());
+        }
+
+        var result = await handler.HandleAsync(new GetSemanticSimilarCandidatesQuery(id, take ?? 5), ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminPolicy)
+    .WithName("GetSemanticSimilarCandidates")
+    .WithSummary("Semantic \"more like this\" over embeddings (flag Matching:SemanticEnabled, off by default; hashing provider v1). Requires an admin role.")
+    .Produces<IReadOnlyList<SimilarCandidateDto>>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden)
+    .ProducesProblem(StatusCodes.Status404NotFound);
+
 v1.MapGet("/diversity", async (
         IQueryHandler<GetDiversityReportQuery, DiversityReportDto> handler,
         CancellationToken ct) =>
