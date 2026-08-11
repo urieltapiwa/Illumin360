@@ -25,6 +25,9 @@ public sealed class RecruitmentDbContext(DbContextOptions<RecruitmentDbContext> 
     /// <summary>Interviews set (owned + migration-managed by this service).</summary>
     public DbSet<Interview> Interviews => Set<Interview>();
 
+    /// <summary>Per-skill interview scores (multi-round assessment).</summary>
+    public DbSet<InterviewSkillRating> InterviewSkillRatings => Set<InterviewSkillRating>();
+
     /// <summary>CRM clients set (owned + migration-managed by this service).</summary>
     public DbSet<Client> Clients => Set<Client>();
 
@@ -147,9 +150,25 @@ public sealed class RecruitmentDbContext(DbContextOptions<RecruitmentDbContext> 
             b.Property(i => i.Status).HasColumnName("status").HasMaxLength(20);
             b.Property(i => i.FeedbackRating).HasColumnName("feedback_rating");
             b.Property(i => i.FeedbackComment).HasColumnName("feedback_comment").HasMaxLength(1000);
+            b.Property(i => i.Round).HasColumnName("round").HasMaxLength(80);
+            b.Property(i => i.RequiredSkillsCsv).HasColumnName("required_skills").HasMaxLength(500);
             b.Property(i => i.CreatedAt).HasColumnName("created_at");
+            b.Ignore(i => i.RequiredSkills);
             b.HasIndex(i => i.ApplicationId);
             b.Ignore(i => i.DomainEvents);
+        });
+
+        modelBuilder.Entity<InterviewSkillRating>(b =>
+        {
+            b.ToTable("interview_skill_ratings");
+            b.HasKey(r => r.Id);
+            b.Property(r => r.Id).HasColumnName("id");
+            b.Property(r => r.InterviewId).HasColumnName("interview_id");
+            b.Property(r => r.Skill).HasColumnName("skill").HasMaxLength(80);
+            b.Property(r => r.Rating).HasColumnName("rating");
+            b.Property(r => r.CreatedAt).HasColumnName("created_at");
+            b.HasIndex(r => r.InterviewId);
+            b.Ignore(r => r.DomainEvents);
         });
 
         var clientStatusConverter = new ValueConverter<ClientStatus, string>(

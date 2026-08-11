@@ -15,7 +15,9 @@ namespace Illumin360.Recruitment.Application.Recruitment;
 /// <param name="Status">scheduled/completed/cancelled.</param>
 /// <param name="FeedbackRating">Scorecard rating, if completed.</param>
 /// <param name="FeedbackComment">Scorecard comment, if completed.</param>
-public sealed record InterviewDto(Guid Id, Guid ApplicationId, DateTimeOffset ScheduledAt, int DurationMinutes, string Location, string Status, int? FeedbackRating, string? FeedbackComment)
+/// <param name="Round">Optional round label.</param>
+/// <param name="RequiredSkills">Skills this round assesses.</param>
+public sealed record InterviewDto(Guid Id, Guid ApplicationId, DateTimeOffset ScheduledAt, int DurationMinutes, string Location, string Status, int? FeedbackRating, string? FeedbackComment, string? Round, IReadOnlyList<string> RequiredSkills)
 {
     /// <summary>Projects a domain <see cref="Interview"/> into the transport DTO.</summary>
     /// <param name="i">The interview.</param>
@@ -23,7 +25,7 @@ public sealed record InterviewDto(Guid Id, Guid ApplicationId, DateTimeOffset Sc
     public static InterviewDto FromDomain(Interview i)
     {
         ArgumentNullException.ThrowIfNull(i);
-        return new InterviewDto(i.Id.Value, i.ApplicationId, i.ScheduledAt, i.DurationMinutes, i.Location, i.Status, i.FeedbackRating, i.FeedbackComment);
+        return new InterviewDto(i.Id.Value, i.ApplicationId, i.ScheduledAt, i.DurationMinutes, i.Location, i.Status, i.FeedbackRating, i.FeedbackComment, i.Round, i.RequiredSkills);
     }
 }
 
@@ -113,7 +115,7 @@ public static class Ics
 }
 
 /// <summary>Schedules an interview for an application.</summary>
-public sealed record ScheduleInterviewCommand(Guid ApplicationId, DateTimeOffset ScheduledAt, int DurationMinutes, string Location) : ICommand<InterviewDto>;
+public sealed record ScheduleInterviewCommand(Guid ApplicationId, DateTimeOffset ScheduledAt, int DurationMinutes, string Location, string? Round = null, IReadOnlyList<string>? RequiredSkills = null) : ICommand<InterviewDto>;
 
 /// <summary>Records a scorecard and completes an interview.</summary>
 public sealed record RecordInterviewFeedbackCommand(Guid InterviewId, int Rating, string? Comment) : ICommand<InterviewDto>;
@@ -158,7 +160,7 @@ public sealed class ScheduleInterviewCommandHandler(IRecruitmentRepository repos
     {
         ArgumentNullException.ThrowIfNull(command);
 
-        var creation = Interview.Schedule(command.ApplicationId, command.ScheduledAt, command.DurationMinutes, command.Location, DateTimeOffset.UtcNow);
+        var creation = Interview.Schedule(command.ApplicationId, command.ScheduledAt, command.DurationMinutes, command.Location, DateTimeOffset.UtcNow, command.Round, command.RequiredSkills);
         if (creation.IsFailure)
         {
             return creation.Error!;

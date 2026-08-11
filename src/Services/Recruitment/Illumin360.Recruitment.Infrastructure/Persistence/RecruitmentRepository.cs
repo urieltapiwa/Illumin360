@@ -427,6 +427,34 @@ public sealed class RecruitmentRepository(RecruitmentDbContext db) : IRecruitmen
             .FirstOrDefaultAsync(s => s.ApplicationId == applicationId, cancellationToken).ConfigureAwait(false);
 
     /// <inheritdoc />
+    public void AddSkillRating(InterviewSkillRating rating) => _db.InterviewSkillRatings.Add(rating);
+
+    /// <inheritdoc />
+    public void RemoveSkillRating(InterviewSkillRating rating) => _db.InterviewSkillRatings.Remove(rating);
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<InterviewSkillRating>> ListSkillRatingsAsync(Guid interviewId, CancellationToken cancellationToken)
+        => await _db.InterviewSkillRatings.AsNoTracking()
+            .Where(r => r.InterviewId == interviewId)
+            .OrderBy(r => r.Skill)
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<InterviewSkillRating>> ListSkillRatingsTrackedAsync(Guid interviewId, CancellationToken cancellationToken)
+        => await _db.InterviewSkillRatings
+            .Where(r => r.InterviewId == interviewId)
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<InterviewSkillRating>> ListSkillRatingsForInterviewsAsync(IReadOnlyList<Guid> interviewIds, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(interviewIds);
+        return await _db.InterviewSkillRatings.AsNoTracking()
+            .Where(r => interviewIds.Contains(r.InterviewId))
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
     public async Task<IReadOnlyList<SourceMetric>> GetChannelBreakdownAsync(CancellationToken cancellationToken)
     {
         // Materialise both sides, then join in memory (avoids value-converter subquery pitfalls).

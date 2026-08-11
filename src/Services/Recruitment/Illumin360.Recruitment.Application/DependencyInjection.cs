@@ -119,6 +119,15 @@ public static class DependencyInjection
             IQueryHandler<GetChannelBreakdownQuery, IReadOnlyList<SourceMetric>>,
             GetChannelBreakdownQueryHandler>();
         services.AddScoped<
+            IQueryHandler<GetSkillRatingsQuery, IReadOnlyList<SkillRatingDto>>,
+            GetSkillRatingsQueryHandler>();
+        services.AddScoped<
+            ICommandHandler<RecordSkillRatingsCommand, IReadOnlyList<SkillRatingDto>>,
+            RecordSkillRatingsCommandHandler>();
+        services.AddScoped<
+            IQueryHandler<GetInterviewSummaryQuery, InterviewSummaryDto>,
+            GetInterviewSummaryQueryHandler>();
+        services.AddScoped<
             IQueryHandler<GetApplicationThreadQuery, IReadOnlyList<MessageDto>>,
             GetApplicationThreadQueryHandler>();
         services.AddScoped<
