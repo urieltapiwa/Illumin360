@@ -235,6 +235,7 @@ flip the status to ✅ (add the commit/PR ref).
 - Salary/seniority scoring (Tier 2) — `MatchScorer` blends optional salary-vs-band + seniority-ladder signals (renormalised so base scores are unchanged when absent) + a `SeniorityParser`; seniority auto-wired into professional role-scores; 9 new unit tests, no migration (2026-08-11).
 - Explainable matches (Tier 2) — `MatchScorer.Explain` returns per-signal contributions + reasons; Professionals `POST /me/role-explanation` + a "Why?" expander on marketplace roles; 3 new unit tests, no migration (2026-08-11).
 - Similar candidates (Tier 2) — pure `CandidateSimilarity` ranker + Candidates `GET /{id}/similar`; admin "Similar candidates" list in the search expander; 2 new unit tests, no migration (2026-08-11).
+- Blind screening (Tier 2) — `BlindRedactor` + `?blind=true` on candidate search anonymises name/nationality server-side; admin "Blind screening" toggle; 2 new unit tests, no migration (2026-08-11).
 
 _Update this file as items are ticked; link the commit/PR that delivered each._
 
@@ -271,7 +272,7 @@ Our engine today is a weighted heuristic (city + role + skills). The modern-matc
 - [x] **Salary-expectation & seniority scoring** — `MatchScorer` now blends two optional signals into the composite: **salary** (candidate expectation vs the role's band — full score within/below the band, decaying above the ceiling) and **seniority** (via a `SeniorityParser` ordinal ladder — exact level 1.0, one band off 0.5, else 0.0). Weights renormalise so callers passing only city/role/skills score exactly as before. **Seniority is auto-wired** into the professional marketplace role-scores (derived from headline vs title text — no new fields); salary is engine-ready and consumed wherever a caller supplies a numeric expectation. 9 new unit tests. *(A stored salary-expectation profile field to feed salary scoring end-to-end is a thin follow-up.)*
 - [x] **Explainable "why this match"** — `MatchScorer.Explain` returns a `MatchExplanation` (score + per-signal `MatchSignal`: normalised weight, raw 0–1, point contribution, human reason) for City/Role/Skills/Salary/Seniority; `Score` delegates to it so there's one source of truth. Professionals `POST /me/role-explanation` + a **"Why?"** expander on each marketplace role showing each signal's points + reason. 3 new unit tests. *No OSS peer does this — a real differentiator.*
 - [ ] **Feedback-loop learning** — feed recruiter accept/reject + hire outcomes back as ranking signal (learning-to-rank)
-- [ ] **Bias mitigation / blind screening** — optionally hide name/photo/demographic fields pre-scoring + fairness/adverse-impact auditing. *Also a differentiator — near-absent across OSS.*
+- [x] **Blind screening** — data-minimised candidate search: `GET /v1/candidates/search?blind=true` runs the redaction server-side via a pure `BlindRedactor` (name → a stable anonymous handle like "Candidate 7F3A", nationality → "—"; city/availability/headline + the id kept so reviewers assess on merit and can still act); admin candidate-search **"Blind screening"** toggle; 2 new unit tests. *(Fairness / adverse-impact auditing over hiring outcomes remains a larger follow-up.)*
 
 ### Tier 3 — out of scope (correctly excluded, no action)
 HRMS breadth carried by OrangeHRM / Frappe HR / Horilla that does **not** belong in a talent marketplace:
