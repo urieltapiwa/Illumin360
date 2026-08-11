@@ -9,10 +9,12 @@ namespace Illumin360.Recruitment.Application.Recruitment;
 /// <param name="RequestId">The request being applied to.</param>
 /// <param name="TalentId">The applying talent's id.</param>
 /// <param name="TalentType">Talent type (<c>student</c> or <c>professional</c>).</param>
+/// <param name="Source">Arrival channel (e.g. careers, referral, campaign, board); defaults to "direct".</param>
 public sealed record ApplyToRequestCommand(
     Guid RequestId,
     Guid TalentId,
-    string TalentType) : ICommand<ApplicationDto>;
+    string TalentType,
+    string? Source = null) : ICommand<ApplicationDto>;
 
 /// <summary>Handles <see cref="ApplyToRequestCommand"/> by recording a fresh application against the request.</summary>
 /// <param name="repository">The recruitment repository.</param>
@@ -53,6 +55,13 @@ public sealed class ApplyToRequestCommandHandler(IRecruitmentRepository reposito
         var talentType = string.IsNullOrWhiteSpace(command.TalentType) ? "professional" : command.TalentType.Trim();
         var application = RecruitmentApplication.Apply(requestId, command.TalentId, talentType, DateTimeOffset.UtcNow);
         _repository.AddApplication(application);
+
+        // Record the arrival channel (source attribution) alongside the application.
+        var source = ApplicationSource.Create(application.Id.Value, command.Source, DateTimeOffset.UtcNow);
+        if (source.IsSuccess)
+        {
+            _repository.AddApplicationSource(source.Value!);
+        }
 
         // Staged into the outbox in the same transaction as the application (transactional outbox).
         await _eventPublisher.PublishAsync(

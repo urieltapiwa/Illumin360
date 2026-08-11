@@ -361,6 +361,24 @@ public interface IRecruitmentRepository
     /// <param name="cancellationToken">Cancellation token.</param>
     Task<IReadOnlyList<Guid>> ListInternalRequestIdsAsync(CancellationToken cancellationToken);
 
+    /// <summary>Stages an application's arrival-channel source for insertion.</summary>
+    /// <param name="source">The source to add.</param>
+    void AddApplicationSource(ApplicationSource source);
+
+    /// <summary>Loads an application's source (no-tracking), or null if none recorded.</summary>
+    /// <param name="applicationId">The application id.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<ApplicationSource?> GetApplicationSourceAsync(Guid applicationId, CancellationToken cancellationToken);
+
+    /// <summary>Loads an application's source (tracked, for update), or null if none recorded.</summary>
+    /// <param name="applicationId">The application id.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<ApplicationSource?> GetApplicationSourceTrackedAsync(Guid applicationId, CancellationToken cancellationToken);
+
+    /// <summary>Applications + hires broken down by arrival channel (descending by applications).</summary>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<IReadOnlyList<SourceMetric>> GetChannelBreakdownAsync(CancellationToken cancellationToken);
+
     /// <summary>Stages a new job template for insertion.</summary>
     /// <param name="template">The template to add.</param>
     void AddJobTemplate(JobTemplate template);

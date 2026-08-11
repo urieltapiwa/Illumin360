@@ -64,6 +64,9 @@ public sealed class RecruitmentDbContext(DbContextOptions<RecruitmentDbContext> 
     /// <summary>Employee/network referrals of candidates for requisitions.</summary>
     public DbSet<Referral> Referrals => Set<Referral>();
 
+    /// <summary>Per-application arrival-channel source attribution.</summary>
+    public DbSet<ApplicationSource> ApplicationSources => Set<ApplicationSource>();
+
     /// <summary>Application conversation messages set.</summary>
     public DbSet<ApplicationMessage> ApplicationMessages => Set<ApplicationMessage>();
 
@@ -382,6 +385,18 @@ public sealed class RecruitmentDbContext(DbContextOptions<RecruitmentDbContext> 
             b.Property(r => r.CreatedAt).HasColumnName("created_at");
             b.HasIndex(r => r.RequestId);
             b.Ignore(r => r.DomainEvents);
+        });
+
+        modelBuilder.Entity<ApplicationSource>(b =>
+        {
+            b.ToTable("application_sources");
+            b.HasKey(s => s.Id);
+            b.Property(s => s.Id).HasColumnName("id");
+            b.Property(s => s.ApplicationId).HasColumnName("application_id");
+            b.Property(s => s.Channel).HasColumnName("channel").HasMaxLength(40);
+            b.Property(s => s.CreatedAt).HasColumnName("created_at");
+            b.HasIndex(s => s.ApplicationId).IsUnique();
+            b.Ignore(s => s.DomainEvents);
         });
 
         var senderConverter = new ValueConverter<MessageSender, string>(
