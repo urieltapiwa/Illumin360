@@ -214,6 +214,18 @@ v1.MapPost("/me/skill-gap", async (
     .WithSummary("Analyse the current profile's skills against a role's required skills (matched / missing / coverage).")
     .Produces<SkillGapDto>(StatusCodes.Status200OK);
 
+v1.MapPost("/me/role-explanation", async (
+        RoleToScore role,
+        IQueryHandler<ExplainRoleQuery, RoleExplanationDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new ExplainRoleQuery(role), ct);
+        return result.ToHttpResult();
+    })
+    .WithName("ExplainRoleMatch")
+    .WithSummary("Explain how a marketplace role scores against the current profile (per-signal 'why this match').")
+    .Produces<RoleExplanationDto>(StatusCodes.Status200OK);
+
 v1.MapPost("/me/cv/parse", async (
         IQueryHandler<ParseCvSkillsQuery, CvSkillsDto> handler,
         CancellationToken ct) =>

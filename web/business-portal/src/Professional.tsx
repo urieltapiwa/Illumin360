@@ -101,6 +101,10 @@ export default function Professional(_props: { session: Session }) {
   const [appliedRoles, setAppliedRoles] = useState<Record<string, "pending" | "done" | "error">>({});
   // Apply-time screening form (only opens for roles that have application-form questions).
   const [applyForm, setApplyForm] = useState<{ roleId: string; roleTitle: string; questions: FormQuestion[] } | null>(null);
+  // "Why this match?" per-signal explanation, lazily fetched per role.
+  type RoleExplanation = { score: number; signals: { name: string; points: number; reason: string }[] };
+  const [explain, setExplain] = useState<Record<string, RoleExplanation>>({});
+  const [explainOpen, setExplainOpen] = useState<string | null>(null);
   const [cv, setCv] = useState<{ fileName: string; uploadedAt: string } | null>(null);
   const [cvBusy, setCvBusy] = useState<"idle" | "uploading" | "error">("idle");
   const [cvSkills, setCvSkills] = useState<string[] | null>(null);
@@ -242,6 +246,15 @@ export default function Professional(_props: { session: Session }) {
       const s = await r.json();
       setD((prev) => (prev ? { ...prev, skills: [...prev.skills, { id: s.id, name: s.name, level: s.level, trend: s.trend }] } : prev));
       setNewSkill({ name: "", level: 60 });
+    }
+  };
+  // "Why this match?" — fetch the per-signal breakdown for a marketplace role.
+  const toggleExplain = async (role: OpenRole) => {
+    if (explainOpen === role.id) { setExplainOpen(null); return; }
+    setExplainOpen(role.id);
+    if (!explain[role.id]) {
+      const r = await fetch("/api/professionals/me/role-explanation", { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: JSON.stringify({ id: role.id, title: role.title, city: role.city, industry: "" }) });
+      if (r.ok) { const e: RoleExplanation = await r.json(); setExplain((m) => ({ ...m, [role.id]: e })); }
     }
   };
   // Skill-gap: compare my skills to a role's required skills.
@@ -543,10 +556,23 @@ export default function Professional(_props: { session: Session }) {
                       <div className="mt-2 flex items-center justify-between text-[10px] text-ink-lo"><span>{r.positions} position{r.positions === 1 ? "" : "s"}</span><span className="text-brand-bright">Open</span></div>
                       {live && (
                         <div className="mt-2.5 border-t border-line/40 pt-2.5">
-                          {state === "done" ? (
-                            <span className="chip !text-[10px] !text-brand-bright !border-brand/30">✓ Applied</span>
-                          ) : (
-                            <button onClick={() => applyToRole(r.id)} disabled={state === "pending"} className="rounded-lg bg-brand/15 px-2.5 py-1 text-[11px] font-semibold text-brand-bright hover:bg-brand/25 transition disabled:opacity-50">{state === "pending" ? "Applying…" : state === "error" ? "Retry" : "Apply"}</button>
+                          <div className="flex items-center gap-1.5">
+                            {state === "done" ? (
+                              <span className="chip !text-[10px] !text-brand-bright !border-brand/30">✓ Applied</span>
+                            ) : (
+                              <button onClick={() => applyToRole(r.id)} disabled={state === "pending"} className="rounded-lg bg-brand/15 px-2.5 py-1 text-[11px] font-semibold text-brand-bright hover:bg-brand/25 transition disabled:opacity-50">{state === "pending" ? "Applying…" : state === "error" ? "Retry" : "Apply"}</button>
+                            )}
+                            {score !== undefined && <button onClick={() => toggleExplain(r)} className="ml-auto text-[10px] font-semibold text-ink-lo hover:text-brand-bright transition">{explainOpen === r.id ? "Hide" : "Why?"}</button>}
+                          </div>
+                          {explainOpen === r.id && explain[r.id] && (
+                            <div className="mt-2 space-y-1">
+                              {explain[r.id].signals.map((s) => (
+                                <div key={s.name} className="flex items-baseline gap-2 text-[10px]">
+                                  <span className="num text-brand-bright w-8 shrink-0">+{s.points}</span>
+                                  <span className="text-ink-mid">{s.reason}</span>
+                                </div>
+                              ))}
+                            </div>
                           )}
                         </div>
                       )}

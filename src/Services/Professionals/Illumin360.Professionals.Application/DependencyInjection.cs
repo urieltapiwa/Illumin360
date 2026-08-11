@@ -43,6 +43,9 @@ public static class DependencyInjection
             IQueryHandler<GetSkillGapQuery, SkillGapDto>,
             GetSkillGapQueryHandler>();
         services.AddScoped<
+            IQueryHandler<ExplainRoleQuery, RoleExplanationDto>,
+            ExplainRoleQueryHandler>();
+        services.AddScoped<
             ICommandHandler<ApplyCvSkillsCommand, AppliedSkillsDto>,
             ApplyCvSkillsCommandHandler>();
         services.AddScoped<
