@@ -5,6 +5,7 @@ import { Chart, sparkOption, nf, C } from "@illumin360/ui";
 import { logout, type Session } from "./auth";
 import { useTranslation } from "react-i18next";
 import { LanguageSwitcher, ThemeSwitcher } from "@illumin360/ui";
+import TalentApplications from "./TalentApplications";
 
 interface Match { role: string; company: string; city: string; industry: string; match: number; salaryLo: number; salaryHi: number; posted: string; type: string; id?: string; status?: string; }
 interface Prof {
@@ -87,7 +88,6 @@ export default function Professional(_props: { session: Session }) {
   const [openRoles, setOpenRoles] = useState<OpenRole[] | null>(null);
   const [roleScores, setRoleScores] = useState<Record<string, number>>({});
   const [matchFilter, setMatchFilter] = useState<"all" | "saved" | "applied">("all");
-  const [myApps, setMyApps] = useState<{ id: string; roleTitle: string; city: string; status: string; appliedAt: string; decidedAt: string | null }[] | null>(null);
   const [savedSearches, setSavedSearches] = useState<{ id: string; label: string; city: string | null; keyword: string | null; alertsEnabled: boolean }[] | null>(null);
   const [notifications, setNotifications] = useState<{ id: string; kind: string; text: string; isRead: boolean; createdAt: string }[] | null>(null);
   const [ssForm, setSsForm] = useState({ label: "", city: "", keyword: "" });
@@ -147,10 +147,6 @@ export default function Professional(_props: { session: Session }) {
   useEffect(() => {
     const id = d?.id;
     if (!id) return;
-    fetch(`/api/recruitment/talents/${id}/applications`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((v) => { if (Array.isArray(v)) setMyApps(v); })
-      .catch(() => { /* recruitment unavailable */ });
     fetch(`/api/recruitment/saved-searches?talentId=${id}`)
       .then((r) => (r.ok ? r.json() : null))
       .then((v) => { if (Array.isArray(v)) setSavedSearches(v); })
@@ -530,28 +526,8 @@ export default function Professional(_props: { session: Session }) {
             </motion.section>
           )}
 
-          {/* my applications: live status timeline */}
-          {myApps && myApps.length > 0 && (
-            <div className="grid grid-cols-1 gap-5">
-              <motion.section variants={fade} className="card p-5">
-                <div className="flex items-center justify-between mb-3">
-                  <div><h3 className="font-display text-[15px] font-bold text-ink-hi">{t("pro.applications.mineTitle", "My applications")}</h3><p className="text-[11px] text-ink-lo mt-0.5">{t("pro.applications.mineSub", "Live status of the roles you've applied to.")}</p></div>
-                  <span className="chip !text-[10px] !text-brand-bright !border-brand/30"><span className="h-1.5 w-1.5 rounded-full bg-brand-bright animate-pulse" /> LIVE · {myApps.length}</span>
-                </div>
-                <div className="space-y-2">
-                  {myApps.map((a) => {
-                    const cls = a.status === "hired" ? "!text-brand-bright !border-brand/30" : a.status === "rejected" ? "!text-pink !border-pink/30" : (a.status === "shortlisted" || a.status === "reviewed") ? "!text-gold !border-gold/30" : "!text-ink-mid !border-line/70";
-                    return (
-                      <div key={a.id} className="flex items-center gap-3 rounded-xl border border-line/60 bg-panel2/40 px-3 py-2">
-                        <div className="min-w-0 flex-1"><div className="text-[13px] text-ink-hi truncate">{a.roleTitle}</div><div className="text-[10px] text-ink-lo truncate">{a.city} · {t("pro.applications.appliedOn", "applied")} {new Date(a.appliedAt).toLocaleDateString()}</div></div>
-                        <span className={`chip !text-[10px] capitalize ${cls}`}>{a.status}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </motion.section>
-            </div>
-          )}
+          {/* my applications: live status + offers (accept/decline/e-sign) + employer messaging */}
+          {d.id && <TalentApplications talentId={d.id} senderName={p.name} live={live} />}
 
           {/* saved searches + job alerts */}
           {live && d.id && (
