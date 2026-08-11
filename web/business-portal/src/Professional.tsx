@@ -105,6 +105,9 @@ export default function Professional(_props: { session: Session }) {
   const [cvBusy, setCvBusy] = useState<"idle" | "uploading" | "error">("idle");
   const [cvSkills, setCvSkills] = useState<string[] | null>(null);
   const [newSkill, setNewSkill] = useState<{ name: string; level: number }>({ name: "", level: 60 });
+  // Skill-gap tool: paste a role's required skills → see matched / missing / coverage.
+  const [gapInput, setGapInput] = useState("");
+  const [skillGap, setSkillGap] = useState<{ matched: string[]; missing: string[]; extra: string[]; coveragePercent: number } | null>(null);
   const [cvAdded, setCvAdded] = useState<number | null>(null);
   const [scanning, setScanning] = useState(false);
   // Current CV metadata (if any). Reads are open; upload requires an authenticated professional.
@@ -240,6 +243,13 @@ export default function Professional(_props: { session: Session }) {
       setD((prev) => (prev ? { ...prev, skills: [...prev.skills, { id: s.id, name: s.name, level: s.level, trend: s.trend }] } : prev));
       setNewSkill({ name: "", level: 60 });
     }
+  };
+  // Skill-gap: compare my skills to a role's required skills.
+  const runSkillGap = async () => {
+    const required = gapInput.split(",").map((s) => s.trim()).filter(Boolean);
+    if (required.length === 0) return;
+    const r = await fetch("/api/professionals/me/skill-gap", { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: JSON.stringify(required) });
+    if (r.ok) setSkillGap(await r.json());
   };
   // Upload / replace the professional's CV (stored in MinIO via the Professionals service).
   const uploadCv = async (files: FileList | null) => {
@@ -646,6 +656,27 @@ export default function Professional(_props: { session: Session }) {
                   <button onClick={addSkill} disabled={!newSkill.name.trim()} className="rounded-lg bg-brand/15 px-3 py-1.5 text-[11px] font-semibold text-brand-bright hover:bg-brand/25 transition disabled:opacity-50">{t("pro.skills.addBtn", "Add")}</button>
                 </div>
               )}
+              <div className="mt-3 border-t border-line/40 pt-3">
+                <div className="eyebrow mb-1.5">{t("pro.gap.title", "Skill gap for a role")}</div>
+                <div className="flex items-center gap-2">
+                  <input value={gapInput} onChange={(e) => setGapInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") runSkillGap(); }} placeholder={t("pro.gap.placeholder", "Required skills, comma-separated")} className="flex-1 min-w-0 rounded-lg border border-line/70 bg-panel2/50 px-2.5 py-1.5 text-[12px] text-ink-hi placeholder:text-ink-lo focus:border-brand/50 focus:outline-none" />
+                  <button onClick={runSkillGap} disabled={!gapInput.trim()} className="rounded-lg bg-brand/15 px-3 py-1.5 text-[11px] font-semibold text-brand-bright hover:bg-brand/25 transition disabled:opacity-50">{t("pro.gap.check", "Check")}</button>
+                </div>
+                {skillGap && (
+                  <div className="mt-2.5">
+                    <div className="flex items-center justify-between text-xs mb-1"><span className="text-ink-mid">{t("pro.gap.coverage", "Coverage")}</span><span className="num text-ink-hi">{skillGap.coveragePercent}%</span></div>
+                    <div className="h-2 rounded-full bg-panel2/70 overflow-hidden mb-2"><div className="h-full rounded-full bg-gradient-to-r from-brand-deep to-brand-bright" style={{ width: skillGap.coveragePercent + "%" }} /></div>
+                    {skillGap.matched.length > 0 && <div className="flex flex-wrap gap-1.5 mb-1.5">{skillGap.matched.map((s) => <span key={s} className="chip !text-[10px] !text-brand-bright !border-brand/30 capitalize">✓ {s}</span>)}</div>}
+                    {skillGap.missing.length > 0 && (
+                      <div>
+                        <div className="text-[10px] text-ink-lo mb-1">{t("pro.gap.toLearn", "To learn")}</div>
+                        <div className="flex flex-wrap gap-1.5">{skillGap.missing.map((s) => <span key={s} className="chip !text-[10px] !text-gold !border-gold/30 capitalize">{s}</span>)}</div>
+                      </div>
+                    )}
+                    {skillGap.missing.length === 0 && <div className="text-[11px] text-brand-bright">{t("pro.gap.allMatched", "You have every required skill.")}</div>}
+                  </div>
+                )}
+              </div>
             </motion.section>
 
             <motion.section variants={fade} className="card p-5">
