@@ -17,6 +17,19 @@ public sealed record TalentProfile(string City, string Role, IReadOnlyCollection
 /// <param name="Seniority">Seniority level word for the role, if known.</param>
 public sealed record RoleListing(string Title, string City, string Industry, int? SalaryMin = null, int? SalaryMax = null, string? Seniority = null);
 
+/// <summary>One signal's contribution to a match score.</summary>
+/// <param name="Name">Signal name (City / Role / Skills / Salary / Seniority).</param>
+/// <param name="Weight">The signal's normalised weight (0–1, sums to 1 across signals).</param>
+/// <param name="RawScore">The signal's raw fit (0–1).</param>
+/// <param name="Points">Approximate points this signal adds to the 0–100 total.</param>
+/// <param name="Reason">Human-readable explanation.</param>
+public sealed record MatchSignal(string Name, double Weight, double RawScore, int Points, string Reason);
+
+/// <summary>A match score with its per-signal breakdown ("why this match").</summary>
+/// <param name="Score">The overall 0–100 score.</param>
+/// <param name="Signals">The contributing signals, in evaluation order.</param>
+public sealed record MatchExplanation(int Score, IReadOnlyList<MatchSignal> Signals);
+
 /// <summary>
 /// Deterministic talent↔role match scoring. Produces a 0–100 score from three weighted signals so the
 /// whole platform ranks the same way:
@@ -50,19 +63,25 @@ public static class MatchScorer
     /// <param name="talent">The talent profile.</param>
     /// <param name="listing">The role listing.</param>
     /// <returns>A match score between 0 and 100.</returns>
-    public static int Score(TalentProfile talent, RoleListing listing)
+    public static int Score(TalentProfile talent, RoleListing listing) => Explain(talent, listing).Score;
+
+    /// <summary>
+    /// Scores a talent against a role and returns a per-signal breakdown ("why this match") — each signal's
+    /// weight, raw 0–1 score, its point contribution to the total, and a human-readable reason.
+    /// </summary>
+    /// <param name="talent">The talent profile.</param>
+    /// <param name="listing">The role listing.</param>
+    /// <returns>The score + signal contributions.</returns>
+    public static MatchExplanation Explain(TalentProfile talent, RoleListing listing)
     {
         ArgumentNullException.ThrowIfNull(talent);
         ArgumentNullException.ThrowIfNull(listing);
 
-        var cityScore = string.Equals(talent.City?.Trim(), listing.City?.Trim(), StringComparison.OrdinalIgnoreCase)
-            && !string.IsNullOrWhiteSpace(talent.City)
-            ? 1.0
-            : 0.0;
+        var sameCity = string.Equals(talent.City?.Trim(), listing.City?.Trim(), StringComparison.OrdinalIgnoreCase)
+            && !string.IsNullOrWhiteSpace(talent.City);
+        var cityScore = sameCity ? 1.0 : 0.0;
 
-        var talentRoleTokens = Tokenize(talent.Role);
-        var listingTitleTokens = Tokenize(listing.Title);
-        var roleScore = Overlap(talentRoleTokens, listingTitleTokens);
+        var roleScore = Overlap(Tokenize(talent.Role), Tokenize(listing.Title));
 
         var listingText = Tokenize($"{listing.Title} {listing.Industry}");
         var skillTokens = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -74,30 +93,42 @@ public static class MatchScorer
             }
         }
 
-        var skillScore = skillTokens.Count == 0
-            ? 0.0
-            : (double)skillTokens.Count(listingText.Contains) / skillTokens.Count;
+        var matchedSkills = skillTokens.Count == 0 ? 0 : skillTokens.Count(listingText.Contains);
+        var skillScore = skillTokens.Count == 0 ? 0.0 : (double)matchedSkills / skillTokens.Count;
 
-        // Base signals always contribute; optional salary/seniority signals join only when data exists.
-        var weightSum = CityWeight + RoleWeight + SkillWeight;
-        var weighted = (CityWeight * cityScore) + (RoleWeight * roleScore) + (SkillWeight * skillScore);
+        // Collect signal contributions; base three always count, salary/seniority only when data is present.
+        var raw = new List<(string Name, double Weight, double Score, string Reason)>
+        {
+            ("City", CityWeight, cityScore, sameCity ? $"Same city ({listing.City})" : "Different city"),
+            ("Role", RoleWeight, roleScore, $"Role-title overlap {Pct(roleScore)}"),
+            ("Skills", SkillWeight, skillScore, skillTokens.Count == 0 ? "No skills listed" : $"Matched {matchedSkills} of {skillTokens.Count} skill terms"),
+        };
 
         if (talent.SalaryExpectation is { } expectation && (listing.SalaryMin.HasValue || listing.SalaryMax.HasValue))
         {
-            weighted += SalaryWeight * SalarySignal(expectation, listing.SalaryMin, listing.SalaryMax);
-            weightSum += SalaryWeight;
+            var s = SalarySignal(expectation, listing.SalaryMin, listing.SalaryMax);
+            raw.Add(("Salary", SalaryWeight, s, s >= 1.0 ? "Expectation within budget" : "Expectation above the band"));
         }
 
         var talentRank = SeniorityParser.Rank(talent.Seniority);
         var listingRank = SeniorityParser.Rank(listing.Seniority);
         if (talentRank is { } tr && listingRank is { } lr)
         {
-            weighted += SeniorityWeight * SenioritySignal(tr, lr);
-            weightSum += SeniorityWeight;
+            var s = SenioritySignal(tr, lr);
+            raw.Add(("Seniority", SeniorityWeight, s, s >= 1.0 ? "Seniority level matches" : s > 0 ? "Seniority one level off" : "Seniority mismatch"));
         }
 
-        return Math.Clamp((int)Math.Round(weighted / weightSum * 100), 0, 100);
+        var weightSum = raw.Sum(x => x.Weight);
+        var total = Math.Clamp((int)Math.Round(raw.Sum(x => x.Weight * x.Score) / weightSum * 100), 0, 100);
+
+        var signals = raw
+            .Select(x => new MatchSignal(x.Name, Math.Round(x.Weight / weightSum, 2), Math.Round(x.Score, 2), (int)Math.Round(x.Weight / weightSum * x.Score * 100), x.Reason))
+            .ToList();
+
+        return new MatchExplanation(total, signals);
     }
+
+    private static string Pct(double fraction) => $"{(int)Math.Round(fraction * 100)}%";
 
     // 1.0 when the expectation fits within (or below) the role's band; decays above the ceiling.
     private static double SalarySignal(int expectation, int? min, int? max)
