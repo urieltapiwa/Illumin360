@@ -135,6 +135,7 @@ export default function Admin({ session }: { session: Session }) {
   const [csQuery, setCsQuery] = useState("");
   const [csCity, setCsCity] = useState("");
   const [csAvailability, setCsAvailability] = useState("");
+  const [csBlind, setCsBlind] = useState(false);
   const [csResult, setCsResult] = useState<SearchResult | null>(null);
   // Notes + tags for a candidate expanded in the search results.
   type CandNote = { id: string; author: string; body: string; createdAt: string };
@@ -292,6 +293,7 @@ export default function Admin({ session }: { session: Session }) {
     if (csQuery.trim()) qs.set("q", csQuery.trim());
     if (csCity) qs.set("city", csCity);
     if (csAvailability) qs.set("availability", csAvailability);
+    if (csBlind) qs.set("blind", "true");
     qs.set("pageSize", "10");
     const id = setTimeout(() => {
       fetch("/api/candidates/search?" + qs.toString())
@@ -300,7 +302,7 @@ export default function Admin({ session }: { session: Session }) {
         .catch(() => { /* offline */ });
     }, 250);
     return () => clearTimeout(id);
-  }, [csQuery, csCity, csAvailability]);
+  }, [csQuery, csCity, csAvailability, csBlind]);
 
   // Diversity / EEO report.
   useEffect(() => {
@@ -1634,6 +1636,7 @@ export default function Admin({ session }: { session: Session }) {
                   {["ActivelyLooking", "OpenToOpportunities", "NotAvailable"].map((a) => <option key={a} value={a}>{a}</option>)}
                 </select>
                 {csCity && <button onClick={() => setCsCity("")} className="chip !text-[11px] !text-brand-bright !border-brand/30">{csCity} ✕</button>}
+                <label className="flex items-center gap-1.5 text-[11px] text-ink-mid ml-auto" title={t("admin.search.blindHint", "Hide names + nationality so you assess on merit (blind screening).")}><input type="checkbox" checked={csBlind} onChange={(e) => setCsBlind(e.target.checked)} />{t("admin.search.blind", "Blind screening")}</label>
               </div>
               <div className="grid gap-4 lg:grid-cols-[1fr_200px]">
                 <div className="space-y-2">

@@ -70,14 +70,15 @@ v1.MapGet("/search", async (
         bool? hasCv,
         int? page,
         int? pageSize,
+        bool? blind,
         IQueryHandler<SearchCandidatesQuery, CandidateSearchResultDto> handler,
         CancellationToken ct) =>
     {
-        var result = await handler.HandleAsync(new SearchCandidatesQuery(city, availability, q, hasCv, page ?? 1, pageSize ?? 20), ct);
+        var result = await handler.HandleAsync(new SearchCandidatesQuery(city, availability, q, hasCv, page ?? 1, pageSize ?? 20, blind ?? false), ct);
         return result.ToHttpResult();
     })
     .WithName("SearchCandidates")
-    .WithSummary("Faceted candidate search over city, availability, keyword and CV presence — returns matches, total and facet counts.")
+    .WithSummary("Faceted candidate search over city, availability, keyword and CV presence — returns matches, total and facet counts. Pass blind=true to anonymise name + nationality (blind screening).")
     .Produces<CandidateSearchResultDto>(StatusCodes.Status200OK)
     .ProducesProblem(StatusCodes.Status400BadRequest);
 

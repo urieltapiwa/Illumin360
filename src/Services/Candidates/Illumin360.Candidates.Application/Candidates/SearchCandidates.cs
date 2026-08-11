@@ -31,7 +31,8 @@ public sealed record CandidateSearchResultDto(IReadOnlyList<CandidateDto> Items,
 /// <param name="HasCv">Optional CV-presence filter.</param>
 /// <param name="Page">1-based page number.</param>
 /// <param name="PageSize">Page size (1–100).</param>
-public sealed record SearchCandidatesQuery(string? City, string? Availability, string? Query, bool? HasCv, int Page = 1, int PageSize = 20)
+/// <param name="Blind">When true, anonymise name + nationality in the results (blind screening).</param>
+public sealed record SearchCandidatesQuery(string? City, string? Availability, string? Query, bool? HasCv, int Page = 1, int PageSize = 20, bool Blind = false)
     : IQuery<CandidateSearchResultDto>;
 
 /// <summary>Handles <see cref="SearchCandidatesQuery"/>.</summary>
@@ -68,6 +69,12 @@ public sealed class SearchCandidatesQueryHandler(ICandidateRepository repository
         var (items, total) = await _repository.SearchAsync(criteria, (page - 1) * pageSize, pageSize, cancellationToken).ConfigureAwait(false);
         var facets = await _repository.GetCandidateFacetsAsync(criteria, cancellationToken).ConfigureAwait(false);
 
-        return new CandidateSearchResultDto(items.Select(CandidateDto.FromDomain).ToList(), total, page, pageSize, facets);
+        var projected = items.Select(CandidateDto.FromDomain);
+        if (query.Blind)
+        {
+            projected = projected.Select(BlindRedactor.Redact);
+        }
+
+        return new CandidateSearchResultDto(projected.ToList(), total, page, pageSize, facets);
     }
 }
