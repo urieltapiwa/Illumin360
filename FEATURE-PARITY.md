@@ -58,13 +58,13 @@ flip the status to ✅ (add the commit/PR ref).
 | Applications-per-request listing | ✅ | `GET /requests/{id}/applications` |
 | Pipeline stages (applied→reviewed→shortlist→interview→hire) | ✅ | Recruiter transition endpoints advance/reject with terminal-decision guards (409) |
 | Advance / reject application (with reason) | ✅ | Advance/reject endpoints (admin-gated); free-text reject reason stored in a service-owned `application_rejections` side-table (the seeded `applications` table isn't writable), surfaced on the application listing + kanban cards |
-| Kanban pipeline board (per requisition) | ✅ | Admin-portal "Application pipeline" board — role selector + stage columns (applied→…→hired/rejected) with advance/reject. Drag-drop is a polish follow-up |
+| Kanban pipeline board (per requisition) | ✅ | Admin-portal "Application pipeline" board — role selector + stage columns (applied→…→hired/rejected) with advance/reject **and drag-and-drop** (drag a card to a later stage → chained advances; drop on Rejected → reject; valid drop targets highlight) |
 | Bulk actions | ✅ | `POST /v1/recruitment/applications/bulk` advances/rejects many applications at once (per-item results, batch cap, dedup); kanban card checkboxes + bulk action bar |
 | Application status visible to applicant | ✅ | "My applications" live status timeline (`GET /recruitment/talents/{id}/applications`) on the professional portal |
 
 - [x] Application stage-transition endpoints — `POST /v1/recruitment/applications/{id}/advance|reject` (admin-gated), domain stage machine (applied→reviewed→shortlisted→hired) with terminal-conflict guards
 - [x] Free-text reject reason — `ApplicationRejection` aggregate + service-owned `application_rejections` side-table (unique per application; the seeded `applications` table has no writable column); `reject` accepts an optional reason (validated ≤1000 chars), surfaced on the applications listing (`ApplicationDto.RejectReason`) and kanban cards; unit tests
-- [x] Recruiter pipeline board — Admin-portal kanban per requisition (role selector + stage columns, advance/reject on cards, live match %). Drag-drop = polish follow-up
+- [x] Recruiter pipeline board — Admin-portal kanban per requisition (role selector + stage columns, advance/reject on cards, live match %), now with **HTML5 drag-and-drop**: drag a non-terminal card onto a later column to chain the right number of `advance` calls, or onto Rejected to reject; only legal forward targets accept a drop (they highlight, backward/same-stage drops are ignored). Reuses the existing advance/reject endpoints (no backend change)
 - [x] Applicant-facing application status timeline — "My applications" panel on the professional portal, live status per applied role (`GET /recruitment/talents/{id}/applications`)
 - [x] Bulk actions — `POST /v1/recruitment/applications/bulk` advances/rejects many applications in one request (dedup, 200-item cap, per-item ok/status/error, single save, outbox event per success), writes admin-gated; unit tests; kanban card checkboxes + a bulk action bar (advance/reject/clear) in the admin portal
 
@@ -215,5 +215,6 @@ flip the status to ✅ (add the commit/PR ref).
 - Offer management — `offers` in Recruitment + create/send/accept/decline/withdraw state machine, admin pipeline offer drawer (2026-08-10).
 - Onboarding checklist — `onboarding_checklists`/`onboarding_tasks` in Recruitment, start-on-hire with default tasks + toggle/add/remove, admin pipeline checklist (2026-08-10).
 - Talent-side offer + messaging UI — shared `TalentApplications` panel on the Professional & Student portals: expandable per-application view with offer accept/decline/e-sign + letter, and a two-way employer conversation (composer + auto mark-read) (2026-08-11).
+- Kanban drag-and-drop — admin pipeline board cards are now draggable between stage columns (forward drop → chained advances, drop on Rejected → reject; legal targets highlight), reusing the existing advance/reject endpoints (2026-08-11).
 
 _Update this file as items are ticked; link the commit/PR that delivered each._
