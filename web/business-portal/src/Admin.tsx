@@ -201,6 +201,11 @@ export default function Admin({ session }: { session: Session }) {
   type RankModel = { trained: boolean; message: string; sampleCount: number; modelAuc: number; baselineAuc: number; accuracy: number; logLoss: number; betterThanBaseline: boolean; weights: { feature: string; weight: number }[] };
   const [rankModel, setRankModel] = useState<RankModel | null>(null);
   const [rankBusy, setRankBusy] = useState(false);
+  // Live learned ranking of the selected requisition's applicants (flag-gated server-side).
+  type RankedApp = { applicationId: string; talentType: string; status: string; matchScore: number; learnedScore: number };
+  type RankedApps = { usedModel: boolean; message: string; applications: RankedApp[] };
+  const [rankedApps, setRankedApps] = useState<RankedApps | null>(null);
+  const [rankedBusy, setRankedBusy] = useState(false);
   const SOURCE_CHANNELS = ["direct", "careers", "referral", "campaign", "board", "agency", "walk-in"];
   // Job templates.
   type JobTemplate = { id: string; name: string; title: string; city: string | null; positions: number; employmentType: string; remote: boolean; tags: string[] };
@@ -763,6 +768,15 @@ export default function Admin({ session }: { session: Session }) {
       const r = await fetch("/api/recruitment/metrics/outcomes/model", { credentials: "same-origin" });
       if (r.ok) setRankModel(await r.json());
     } finally { setRankBusy(false); }
+  };
+  // Rank the selected requisition's applicants live — by the learned model when it's enabled and beats the heuristic.
+  const rankApplicants = async () => {
+    if (!pipelineReqId) return;
+    setRankedBusy(true);
+    try {
+      const r = await fetch(`/api/recruitment/requests/${pipelineReqId}/applications/ranked`, { credentials: "same-origin" });
+      if (r.ok) setRankedApps(await r.json());
+    } finally { setRankedBusy(false); }
   };
   // Feature (promote) the selected role for N days, or clear with 0.
   const setFeatured = async (days: number) => {
@@ -1488,6 +1502,38 @@ export default function Admin({ session }: { session: Session }) {
                           ))}
                         </div>
                       </>
+                    )}
+                  </div>
+                )}
+              </div>
+              <div className="mt-4 border-t border-line/40 pt-3">
+                <div className="flex items-center justify-between gap-3 flex-wrap">
+                  <div>
+                    <div className="eyebrow">{t("admin.ranked.title", "Live learned ranking")}</div>
+                    <p className="text-[11px] text-ink-lo mt-0.5">{t("admin.ranked.sub", "Reorders this role's applicants by predicted hire likelihood when the model is enabled and beats the heuristic.")}</p>
+                  </div>
+                  <button onClick={rankApplicants} disabled={rankedBusy || !pipelineReqId} className="rounded-lg bg-brand/15 px-3 py-1 text-[11px] font-semibold text-brand-bright hover:bg-brand/25 transition disabled:opacity-50">{rankedBusy ? t("admin.ranked.ranking", "Ranking…") : t("admin.ranked.rank", "Rank applicants")}</button>
+                </div>
+                {rankedApps && (
+                  <div className="mt-2">
+                    <div className={`text-[11px] ${rankedApps.usedModel ? "text-brand-bright" : "text-ink-mid"}`}>{rankedApps.usedModel ? "🤖 " : ""}{rankedApps.message}</div>
+                    {rankedApps.applications.length > 0 && (
+                      <div className="mt-2 overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead><tr className="text-left eyebrow border-b border-line/60"><th className="py-1.5 pl-1 font-semibold">#</th><th className="font-semibold">{t("admin.ranked.talent", "Talent")}</th><th className="font-semibold">{t("admin.ranked.status", "Status")}</th><th className="font-semibold text-right">{t("admin.ranked.match", "Match")}</th><th className="font-semibold text-right pr-1">{t("admin.ranked.learned", "Learned")}</th></tr></thead>
+                          <tbody>
+                            {rankedApps.applications.map((a, i) => (
+                              <tr key={a.applicationId} className="border-b border-line/30">
+                                <td className="py-1.5 pl-1 num text-ink-lo">{i + 1}</td>
+                                <td className="text-[12px] text-ink-mid capitalize">{a.talentType}</td>
+                                <td><span className="chip !text-[10px]">{a.status}</span></td>
+                                <td className="num text-[12px] text-ink-mid text-right">{Math.round(a.matchScore)}</td>
+                                <td className={`num text-[12px] text-right pr-1 ${rankedApps.usedModel ? "text-brand-bright font-semibold" : "text-ink-mid"}`}>{a.learnedScore}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
                     )}
                   </div>
                 )}

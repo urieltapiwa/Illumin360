@@ -146,6 +146,9 @@ public static class DependencyInjection
             IQueryHandler<GetRankModelQuery, RankModelReportDto>,
             GetRankModelQueryHandler>();
         services.AddScoped<
+            IQueryHandler<GetRankedApplicationsQuery, RankedApplicationsDto>,
+            GetRankedApplicationsQueryHandler>();
+        services.AddScoped<
             IQueryHandler<GetApplicationThreadQuery, IReadOnlyList<MessageDto>>,
             GetApplicationThreadQueryHandler>();
         services.AddScoped<
