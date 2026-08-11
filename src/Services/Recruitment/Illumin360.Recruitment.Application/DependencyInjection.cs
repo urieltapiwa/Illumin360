@@ -86,6 +86,21 @@ public static class DependencyInjection
             ICommandHandler<RemoveInterviewAttendeeCommand, bool>,
             RemoveInterviewAttendeeCommandHandler>();
         services.AddScoped<
+            IQueryHandler<GetFormQuestionsQuery, IReadOnlyList<FormQuestionDto>>,
+            GetFormQuestionsQueryHandler>();
+        services.AddScoped<
+            ICommandHandler<AddFormQuestionCommand, FormQuestionDto>,
+            AddFormQuestionCommandHandler>();
+        services.AddScoped<
+            ICommandHandler<RemoveFormQuestionCommand, bool>,
+            RemoveFormQuestionCommandHandler>();
+        services.AddScoped<
+            IQueryHandler<GetApplicationAnswersQuery, IReadOnlyList<AnswerDto>>,
+            GetApplicationAnswersQueryHandler>();
+        services.AddScoped<
+            ICommandHandler<SubmitApplicationAnswersCommand, int>,
+            SubmitApplicationAnswersCommandHandler>();
+        services.AddScoped<
             IQueryHandler<GetApplicationThreadQuery, IReadOnlyList<MessageDto>>,
             GetApplicationThreadQueryHandler>();
         services.AddScoped<

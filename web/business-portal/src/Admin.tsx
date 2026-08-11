@@ -156,6 +156,13 @@ export default function Admin({ session }: { session: Session }) {
   const [reqTagDraft, setReqTagDraft] = useState("");
   type Approval = { status: string; approver: string | null; reason: string | null };
   const [approval, setApproval] = useState<Approval | null>(null);
+  // Application form / screening questions for the selected pipeline role.
+  type FormQuestion = { id: string; label: string; kind: string; options: string[]; required: boolean; sortOrder: number };
+  const [formQuestions, setFormQuestions] = useState<FormQuestion[]>([]);
+  const [newQuestion, setNewQuestion] = useState({ label: "", kind: "text", required: false, optionsCsv: "" });
+  // Candidate answers for the application open in the drawer.
+  type Answer = { questionId: string; label: string; value: string };
+  const [appAnswers, setAppAnswers] = useState<Answer[]>([]);
   // Job templates.
   type JobTemplate = { id: string; name: string; title: string; city: string | null; positions: number; employmentType: string; remote: boolean; tags: string[] };
   const [templates, setTemplates] = useState<JobTemplate[] | null>(null);
@@ -225,6 +232,10 @@ export default function Admin({ session }: { session: Session }) {
     fetch(`/api/recruitment/requests/${pipelineReqId}/approval`)
       .then((r) => (r.ok ? r.json() : null))
       .then((v) => { if (v) setApproval(v); })
+      .catch(() => { /* keep empty */ });
+    fetch(`/api/recruitment/requests/${pipelineReqId}/form`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((v) => { if (Array.isArray(v)) setFormQuestions(v); })
       .catch(() => { /* keep empty */ });
   }, [pipelineReqId]);
   // Recruiter CRM: client list (re-fetched on status-filter change).
@@ -332,7 +343,11 @@ export default function Admin({ session }: { session: Session }) {
 
   // Offers + onboarding + interviews for the application selected on a pipeline card.
   useEffect(() => {
-    if (!offerAppId) { setOffers(null); setOnboarding(null); setMessages([]); setInterviews([]); setIvOpen(null); return; }
+    if (!offerAppId) { setOffers(null); setOnboarding(null); setMessages([]); setInterviews([]); setIvOpen(null); setAppAnswers([]); return; }
+    fetch(`/api/recruitment/applications/${offerAppId}/answers`, { credentials: "same-origin" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((v) => { if (Array.isArray(v)) setAppAnswers(v); })
+      .catch(() => { /* keep empty */ });
     fetch(`/api/recruitment/applications/${offerAppId}/messages`, { credentials: "same-origin" })
       .then((r) => (r.ok ? r.json() : null))
       .then((v) => { if (Array.isArray(v)) setMessages(v); })
@@ -591,6 +606,17 @@ export default function Admin({ session }: { session: Session }) {
   const removeReqTag = async (label: string) => {
     const r = await fetch(`/api/recruitment/requests/${pipelineReqId}/tags/${encodeURIComponent(label)}`, { method: "DELETE", credentials: "same-origin" });
     if (r.ok) { const tags = await r.json(); setReqDetail((d) => (d ? { ...d, tags } : d)); }
+  };
+  // Application-form / screening questions (per requisition).
+  const addFormQuestion = async () => {
+    if (!pipelineReqId || !newQuestion.label.trim()) return;
+    const options = newQuestion.kind === "select" ? newQuestion.optionsCsv.split(",").map((o) => o.trim()).filter(Boolean) : null;
+    const r = await fetch(`/api/recruitment/requests/${pipelineReqId}/form`, { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: JSON.stringify({ label: newQuestion.label.trim(), kind: newQuestion.kind, options, required: newQuestion.required }) });
+    if (r.ok) { const q: FormQuestion = await r.json(); setFormQuestions((qs) => [...qs, q]); setNewQuestion({ label: "", kind: "text", required: false, optionsCsv: "" }); }
+  };
+  const removeFormQuestion = async (questionId: string) => {
+    const r = await fetch(`/api/recruitment/form/questions/${questionId}`, { method: "DELETE", credentials: "same-origin" });
+    if (r.ok || r.status === 204) setFormQuestions((qs) => qs.filter((q) => q.id !== questionId));
   };
   const approvalAction = async (action: "submit" | "approve" | "reject") => {
     if (!pipelineReqId) return;
@@ -907,6 +933,31 @@ export default function Admin({ session }: { session: Session }) {
                   )}
                 </div>
               )}
+              {/* Application form / screening questions for the selected role */}
+              <div className="mb-4 rounded-xl border border-line/60 bg-panel2/30 p-3">
+                <div className="eyebrow mb-2">{t("admin.form.title", "Application form / screening questions")}</div>
+                <div className="space-y-1.5 mb-2">
+                  {formQuestions.map((q) => (
+                    <div key={q.id} className="flex items-center gap-2 rounded-lg border border-line/50 bg-panel/40 px-2.5 py-1.5">
+                      <div className="min-w-0 flex-1">
+                        <div className="text-[12px] text-ink-hi truncate">{q.label} {q.required && <span className="text-pink" title={t("admin.form.required", "Required")}>*</span>}</div>
+                        <div className="text-[10px] text-ink-lo">{q.kind}{q.options.length > 0 ? ` · ${q.options.join(" / ")}` : ""}</div>
+                      </div>
+                      <button onClick={() => removeFormQuestion(q.id)} className="text-ink-lo hover:text-pink text-[11px]" title={t("admin.form.remove", "Remove")}>✕</button>
+                    </div>
+                  ))}
+                  {formQuestions.length === 0 && <div className="text-[11px] text-ink-lo">{t("admin.form.none", "No questions — applicants apply without a form.")}</div>}
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <input value={newQuestion.label} onChange={(e) => setNewQuestion((f) => ({ ...f, label: e.target.value }))} placeholder={t("admin.form.question", "Question")} className="flex-1 min-w-[160px] rounded-lg border border-line/70 bg-panel2/50 px-2.5 py-1 text-[12px] text-ink-hi placeholder:text-ink-lo focus:border-brand/50 focus:outline-none" />
+                  <select value={newQuestion.kind} onChange={(e) => setNewQuestion((f) => ({ ...f, kind: e.target.value }))} className="rounded-lg border border-line/70 bg-panel2/50 px-2 py-1 text-[12px] text-ink-hi capitalize focus:border-brand/50 focus:outline-none">
+                    {["text", "textarea", "boolean", "number", "select"].map((k) => <option key={k} value={k}>{k}</option>)}
+                  </select>
+                  {newQuestion.kind === "select" && <input value={newQuestion.optionsCsv} onChange={(e) => setNewQuestion((f) => ({ ...f, optionsCsv: e.target.value }))} placeholder={t("admin.form.options", "Options, comma-separated")} className="flex-1 min-w-[140px] rounded-lg border border-line/70 bg-panel2/50 px-2.5 py-1 text-[12px] text-ink-hi placeholder:text-ink-lo focus:border-brand/50 focus:outline-none" />}
+                  <label className="flex items-center gap-1.5 text-[11px] text-ink-mid"><input type="checkbox" checked={newQuestion.required} onChange={(e) => setNewQuestion((f) => ({ ...f, required: e.target.checked }))} />{t("admin.form.requiredLabel", "Required")}</label>
+                  <button onClick={addFormQuestion} disabled={!newQuestion.label.trim()} className="rounded-lg bg-brand/15 px-3 py-1 text-[11px] font-semibold text-brand-bright hover:bg-brand/25 transition disabled:opacity-50">{t("admin.form.add", "Add question")}</button>
+                </div>
+              </div>
               <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3">
                 {pipelineStages.map((stage) => {
                   const cards = (pipelineApps ?? []).filter((a) => a.status === stage);
@@ -998,6 +1049,19 @@ export default function Admin({ session }: { session: Session }) {
                       <div className="text-[12px] text-ink-lo">{t("admin.onboarding.loading", "…")}</div>
                     )}
                   </div>
+                  {appAnswers.length > 0 && (
+                    <div className="mt-4 border-t border-line/40 pt-4">
+                      <div className="eyebrow mb-2">{t("admin.answers.title", "Application answers")}</div>
+                      <div className="space-y-1.5">
+                        {appAnswers.map((a) => (
+                          <div key={a.questionId} className="rounded-lg border border-line/50 bg-panel/40 px-2.5 py-1.5">
+                            <div className="text-[10px] text-ink-lo">{a.label}</div>
+                            <div className="text-[12px] text-ink-hi">{a.value}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   <div className="mt-4 border-t border-line/40 pt-4">
                     <div className="eyebrow mb-2">{t("admin.msg.title", "Messages with candidate")}</div>
                     <div className="space-y-1.5 mb-2 max-h-48 overflow-y-auto">

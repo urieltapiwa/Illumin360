@@ -601,6 +601,82 @@ v1.MapDelete("/interviews/attendees/{attendeeId:guid}", async (
     .ProducesProblem(StatusCodes.Status403Forbidden)
     .ProducesProblem(StatusCodes.Status404NotFound);
 
+// --- Application forms: configurable per-requisition screening questions + candidate answers ---
+v1.MapGet("/requests/{id:guid}/form", async (
+        Guid id,
+        IQueryHandler<GetFormQuestionsQuery, IReadOnlyList<FormQuestionDto>> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new GetFormQuestionsQuery(id), ct);
+        return result.ToHttpResult();
+    })
+    .WithName("GetApplicationForm")
+    .WithSummary("List a requisition's application-form / screening questions (public — candidates render this).")
+    .Produces<IReadOnlyList<FormQuestionDto>>(StatusCodes.Status200OK);
+
+v1.MapPost("/requests/{id:guid}/form", async (
+        Guid id,
+        FormQuestionBody body,
+        ICommandHandler<AddFormQuestionCommand, FormQuestionDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new AddFormQuestionCommand(id, body.Label, body.Kind, body.Options, body.Required), ct);
+        return result.ToCreatedResult(dto => $"/v1/recruitment/form/questions/{dto.Id}");
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminWritePolicy)
+    .WithName("AddApplicationFormQuestion")
+    .WithSummary("Add an application-form question to a requisition. Requires an admin (write) role.")
+    .Produces<FormQuestionDto>(StatusCodes.Status201Created)
+    .ProducesProblem(StatusCodes.Status400BadRequest)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden);
+
+v1.MapDelete("/form/questions/{questionId:guid}", async (
+        Guid questionId,
+        ICommandHandler<RemoveFormQuestionCommand, bool> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new RemoveFormQuestionCommand(questionId), ct);
+        return result.IsSuccess ? Results.NoContent() : result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminWritePolicy)
+    .WithName("RemoveApplicationFormQuestion")
+    .WithSummary("Remove an application-form question. Requires an admin (write) role.")
+    .Produces(StatusCodes.Status204NoContent)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden)
+    .ProducesProblem(StatusCodes.Status404NotFound);
+
+v1.MapGet("/applications/{id:guid}/answers", async (
+        Guid id,
+        IQueryHandler<GetApplicationAnswersQuery, IReadOnlyList<AnswerDto>> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new GetApplicationAnswersQuery(id), ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization()
+    .WithName("GetApplicationAnswers")
+    .WithSummary("List a candidate's application-form answers. Requires a signed-in user.")
+    .Produces<IReadOnlyList<AnswerDto>>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status401Unauthorized);
+
+v1.MapPost("/applications/{id:guid}/answers", async (
+        Guid id,
+        SubmitAnswersBody body,
+        ICommandHandler<SubmitApplicationAnswersCommand, int> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new SubmitApplicationAnswersCommand(id, body.Answers ?? []), ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization()
+    .WithName("SubmitApplicationAnswers")
+    .WithSummary("Submit (replace) a candidate's application-form answers. Requires a signed-in user.")
+    .Produces<int>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status400BadRequest)
+    .ProducesProblem(StatusCodes.Status401Unauthorized);
+
 // --- Recruiter pipeline transitions on an application (admin/recruiter) ---
 v1.MapPost("/applications/{id:guid}/advance", async (
         Guid id,
@@ -1305,6 +1381,17 @@ internal sealed record MarkReadBody(string? Reader);
 /// <param name="Email">Attendee email.</param>
 /// <param name="Role">Panel role.</param>
 internal sealed record AttendeeBody(string Name, string? Email, string? Role);
+
+/// <summary>Request body for adding an application-form question.</summary>
+/// <param name="Label">Question text.</param>
+/// <param name="Kind">Input-type name (text/textarea/boolean/number/select).</param>
+/// <param name="Options">Options (select only).</param>
+/// <param name="Required">Whether an answer is required.</param>
+internal sealed record FormQuestionBody(string Label, string? Kind, IReadOnlyList<string>? Options, bool Required);
+
+/// <summary>Request body for submitting application-form answers.</summary>
+/// <param name="Answers">The answers ({questionId, value}).</param>
+internal sealed record SubmitAnswersBody(IReadOnlyList<AnswerInput>? Answers);
 
 /// <summary>Request body for a bulk pipeline action.</summary>
 /// <param name="ApplicationIds">The applications to transition.</param>

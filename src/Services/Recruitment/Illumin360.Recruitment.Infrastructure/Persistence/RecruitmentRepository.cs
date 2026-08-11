@@ -361,6 +361,42 @@ public sealed class RecruitmentRepository(RecruitmentDbContext db) : IRecruitmen
             .ToListAsync(cancellationToken).ConfigureAwait(false);
 
     /// <inheritdoc />
+    public void AddFormQuestion(ApplicationFormQuestion question) => _db.FormQuestions.Add(question);
+
+    /// <inheritdoc />
+    public void RemoveFormQuestion(ApplicationFormQuestion question) => _db.FormQuestions.Remove(question);
+
+    /// <inheritdoc />
+    public async Task<ApplicationFormQuestion?> GetFormQuestionAsync(Guid id, CancellationToken cancellationToken)
+        => await _db.FormQuestions.FirstOrDefaultAsync(q => q.Id == id, cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<ApplicationFormQuestion>> ListFormQuestionsAsync(Guid requestId, CancellationToken cancellationToken)
+        => await _db.FormQuestions.AsNoTracking()
+            .Where(q => q.RequestId == requestId)
+            .OrderBy(q => q.SortOrder)
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
+    public void AddApplicationAnswer(ApplicationAnswer answer) => _db.ApplicationAnswers.Add(answer);
+
+    /// <inheritdoc />
+    public void RemoveApplicationAnswer(ApplicationAnswer answer) => _db.ApplicationAnswers.Remove(answer);
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<ApplicationAnswer>> ListApplicationAnswersAsync(Guid applicationId, CancellationToken cancellationToken)
+        => await _db.ApplicationAnswers.AsNoTracking()
+            .Where(a => a.ApplicationId == applicationId)
+            .OrderBy(a => a.CreatedAt)
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<ApplicationAnswer>> ListApplicationAnswersTrackedAsync(Guid applicationId, CancellationToken cancellationToken)
+        => await _db.ApplicationAnswers
+            .Where(a => a.ApplicationId == applicationId)
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
     public void AddJobTemplate(JobTemplate template) => _db.JobTemplates.Add(template);
 
     /// <inheritdoc />

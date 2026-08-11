@@ -55,6 +55,12 @@ public sealed class RecruitmentDbContext(DbContextOptions<RecruitmentDbContext> 
     /// <summary>Interview panel attendees set.</summary>
     public DbSet<InterviewAttendee> InterviewAttendees => Set<InterviewAttendee>();
 
+    /// <summary>Configurable application-form / screening questions per requisition.</summary>
+    public DbSet<ApplicationFormQuestion> FormQuestions => Set<ApplicationFormQuestion>();
+
+    /// <summary>Candidate answers to application-form questions, per application.</summary>
+    public DbSet<ApplicationAnswer> ApplicationAnswers => Set<ApplicationAnswer>();
+
     /// <summary>Application conversation messages set.</summary>
     public DbSet<ApplicationMessage> ApplicationMessages => Set<ApplicationMessage>();
 
@@ -320,6 +326,41 @@ public sealed class RecruitmentDbContext(DbContextOptions<RecruitmentDbContext> 
             b.Property(a => a.Role).HasColumnName("role").HasMaxLength(40);
             b.Property(a => a.CreatedAt).HasColumnName("created_at");
             b.HasIndex(a => a.InterviewId);
+            b.Ignore(a => a.DomainEvents);
+        });
+
+        var questionKindConverter = new ValueConverter<QuestionKind, string>(
+            v => v.ToString(),
+            v => Enum.Parse<QuestionKind>(v));
+
+        modelBuilder.Entity<ApplicationFormQuestion>(b =>
+        {
+            b.ToTable("application_form_questions");
+            b.HasKey(q => q.Id);
+            b.Property(q => q.Id).HasColumnName("id");
+            b.Property(q => q.RequestId).HasColumnName("request_id");
+            b.Property(q => q.Label).HasColumnName("label").HasMaxLength(300);
+            b.Property(q => q.Kind).HasColumnName("kind").HasConversion(questionKindConverter).HasMaxLength(20);
+            b.Property(q => q.OptionsCsv).HasColumnName("options").HasMaxLength(1000);
+            b.Property(q => q.Required).HasColumnName("required");
+            b.Property(q => q.SortOrder).HasColumnName("sort_order");
+            b.Property(q => q.CreatedAt).HasColumnName("created_at");
+            b.Ignore(q => q.Options);
+            b.HasIndex(q => q.RequestId);
+            b.Ignore(q => q.DomainEvents);
+        });
+
+        modelBuilder.Entity<ApplicationAnswer>(b =>
+        {
+            b.ToTable("application_answers");
+            b.HasKey(a => a.Id);
+            b.Property(a => a.Id).HasColumnName("id");
+            b.Property(a => a.ApplicationId).HasColumnName("application_id");
+            b.Property(a => a.QuestionId).HasColumnName("question_id");
+            b.Property(a => a.QuestionLabel).HasColumnName("question_label").HasMaxLength(300);
+            b.Property(a => a.Value).HasColumnName("value").HasMaxLength(4000);
+            b.Property(a => a.CreatedAt).HasColumnName("created_at");
+            b.HasIndex(a => a.ApplicationId);
             b.Ignore(a => a.DomainEvents);
         });
 
