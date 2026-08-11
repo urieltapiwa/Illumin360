@@ -1290,6 +1290,23 @@ v1.MapGet("/metrics/outcomes", async (
     .ProducesProblem(StatusCodes.Status401Unauthorized)
     .ProducesProblem(StatusCodes.Status403Forbidden);
 
+v1.MapGet("/requests/{id:guid}/rediscovery", async (
+        Guid id,
+        int? take,
+        IQueryHandler<GetRediscoveryQuery, IReadOnlyList<RediscoveredCandidateDto>> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new GetRediscoveryQuery(id, take ?? 10), ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminPolicy)
+    .WithName("GetRediscovery")
+    .WithSummary("Rediscover past not-hired applicants ('silver medalists') who fit this requisition. Requires an admin role.")
+    .Produces<IReadOnlyList<RediscoveredCandidateDto>>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden)
+    .ProducesProblem(StatusCodes.Status404NotFound);
+
 v1.MapGet("/requests/{id:guid}/applications/ranked", async (
         Guid id,
         IConfiguration config,

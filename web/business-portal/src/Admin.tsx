@@ -206,6 +206,10 @@ export default function Admin({ session }: { session: Session }) {
   type RankedApps = { usedModel: boolean; message: string; applications: RankedApp[] };
   const [rankedApps, setRankedApps] = useState<RankedApps | null>(null);
   const [rankedBusy, setRankedBusy] = useState(false);
+  // Talent rediscovery — past not-hired applicants ("silver medalists") re-ranked for the selected role.
+  type Rediscovered = { talentId: string; talentType: string; score: number; reason: string; priorTitle: string; priorStatus: string; priorMatchScore: number; interviewCount: number; hadOffer: boolean };
+  const [rediscovered, setRediscovered] = useState<Rediscovered[] | null>(null);
+  const [rediscoverBusy, setRediscoverBusy] = useState(false);
   const SOURCE_CHANNELS = ["direct", "careers", "referral", "campaign", "board", "agency", "walk-in"];
   // Job templates.
   type JobTemplate = { id: string; name: string; title: string; city: string | null; positions: number; employmentType: string; remote: boolean; tags: string[] };
@@ -777,6 +781,15 @@ export default function Admin({ session }: { session: Session }) {
       const r = await fetch(`/api/recruitment/requests/${pipelineReqId}/applications/ranked`, { credentials: "same-origin" });
       if (r.ok) setRankedApps(await r.json());
     } finally { setRankedBusy(false); }
+  };
+  // Rediscover past not-hired applicants who fit the selected requisition.
+  const rediscoverTalent = async () => {
+    if (!pipelineReqId) return;
+    setRediscoverBusy(true);
+    try {
+      const r = await fetch(`/api/recruitment/requests/${pipelineReqId}/rediscovery?take=10`, { credentials: "same-origin" });
+      if (r.ok) setRediscovered(await r.json());
+    } finally { setRediscoverBusy(false); }
   };
   // Feature (promote) the selected role for N days, or clear with 0.
   const setFeatured = async (days: number) => {
@@ -1529,6 +1542,38 @@ export default function Admin({ session }: { session: Session }) {
                                 <td><span className="chip !text-[10px]">{a.status}</span></td>
                                 <td className="num text-[12px] text-ink-mid text-right">{Math.round(a.matchScore)}</td>
                                 <td className={`num text-[12px] text-right pr-1 ${rankedApps.usedModel ? "text-brand-bright font-semibold" : "text-ink-mid"}`}>{a.learnedScore}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+              <div className="mt-4 border-t border-line/40 pt-3">
+                <div className="flex items-center justify-between gap-3 flex-wrap">
+                  <div>
+                    <div className="eyebrow">{t("admin.rediscover.title", "Rediscover talent")}</div>
+                    <p className="text-[11px] text-ink-lo mt-0.5">{t("admin.rediscover.sub", "Past applicants who weren't hired elsewhere but fit this role — ranked by prior engagement and role similarity.")}</p>
+                  </div>
+                  <button onClick={rediscoverTalent} disabled={rediscoverBusy || !pipelineReqId} className="rounded-lg bg-brand/15 px-3 py-1 text-[11px] font-semibold text-brand-bright hover:bg-brand/25 transition disabled:opacity-50">{rediscoverBusy ? t("admin.rediscover.searching", "Searching…") : t("admin.rediscover.find", "Find silver medalists")}</button>
+                </div>
+                {rediscovered && (
+                  <div className="mt-2">
+                    {rediscovered.length === 0 ? (
+                      <div className="text-[11px] text-ink-mid">{t("admin.rediscover.none", "No past applicants match this role yet.")}</div>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead><tr className="text-left eyebrow border-b border-line/60"><th className="py-1.5 pl-1 font-semibold">{t("admin.rediscover.fit", "Fit")}</th><th className="font-semibold">{t("admin.rediscover.talent", "Talent")}</th><th className="font-semibold">{t("admin.rediscover.prior", "Prior role")}</th><th className="font-semibold">{t("admin.rediscover.why", "Why")}</th></tr></thead>
+                          <tbody>
+                            {rediscovered.map((c) => (
+                              <tr key={c.talentId} className="border-b border-line/30">
+                                <td className="py-1.5 pl-1 num text-[12px] text-brand-bright font-semibold">{c.score}</td>
+                                <td className="text-[12px] text-ink-mid capitalize">{c.talentType}<span className="text-ink-lo"> · {c.talentId.slice(0, 8)}</span></td>
+                                <td className="text-[12px] text-ink-mid">{c.priorTitle}<span className="chip !text-[10px] ml-1">{c.priorStatus}</span></td>
+                                <td className="text-[11px] text-ink-lo">{c.reason}</td>
                               </tr>
                             ))}
                           </tbody>
