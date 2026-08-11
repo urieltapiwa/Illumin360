@@ -1134,6 +1134,61 @@ v1.MapGet("/careers/{id:guid}", async (
     .WithSummary("Public branded careers detail page for a single role (HTML + JobPosting JSON-LD).")
     .Produces(StatusCodes.Status200OK, contentType: "text/html");
 
+// Syndication feeds (public): RSS, sitemap and JSON — internal-only roles excluded. Absolute URLs are
+// built from the incoming request origin so external readers/aggregators resolve them.
+async Task<IReadOnlyList<RecruitmentRequestDto>> PublicCareersRolesAsync(
+    IQueryHandler<GetRecruitmentRequestsQuery, IReadOnlyList<RecruitmentRequestDto>> handler,
+    IRecruitmentRepository repository,
+    CancellationToken ct)
+{
+    var result = await handler.HandleAsync(new GetRecruitmentRequestsQuery(null, "open", 1, 100), ct);
+    var roles = result.IsSuccess ? result.Value! : [];
+    var internalIds = (await repository.ListInternalRequestIdsAsync(ct)).ToHashSet();
+    return roles.Where(r => !internalIds.Contains(r.Id)).ToList();
+}
+
+v1.MapGet("/careers/feed.xml", async (
+        HttpRequest request,
+        IQueryHandler<GetRecruitmentRequestsQuery, IReadOnlyList<RecruitmentRequestDto>> handler,
+        IRecruitmentRepository repository,
+        CancellationToken ct) =>
+    {
+        var roles = await PublicCareersRolesAsync(handler, repository, ct);
+        var origin = $"{request.Scheme}://{request.Host}";
+        return Results.Content(CareersSyndication.RenderRss(roles, careersBrand, origin, careersBasePath), "application/rss+xml; charset=utf-8");
+    })
+    .WithName("CareersRss")
+    .WithSummary("Public RSS 2.0 feed of open roles (internal roles excluded).")
+    .Produces(StatusCodes.Status200OK, contentType: "application/rss+xml");
+
+v1.MapGet("/careers/sitemap.xml", async (
+        HttpRequest request,
+        IQueryHandler<GetRecruitmentRequestsQuery, IReadOnlyList<RecruitmentRequestDto>> handler,
+        IRecruitmentRepository repository,
+        CancellationToken ct) =>
+    {
+        var roles = await PublicCareersRolesAsync(handler, repository, ct);
+        var origin = $"{request.Scheme}://{request.Host}";
+        return Results.Content(CareersSyndication.RenderSitemap(roles, origin, careersBasePath), "application/xml; charset=utf-8");
+    })
+    .WithName("CareersSitemap")
+    .WithSummary("Public XML sitemap of the careers pages (internal roles excluded).")
+    .Produces(StatusCodes.Status200OK, contentType: "application/xml");
+
+v1.MapGet("/careers/feed.json", async (
+        HttpRequest request,
+        IQueryHandler<GetRecruitmentRequestsQuery, IReadOnlyList<RecruitmentRequestDto>> handler,
+        IRecruitmentRepository repository,
+        CancellationToken ct) =>
+    {
+        var roles = await PublicCareersRolesAsync(handler, repository, ct);
+        var origin = $"{request.Scheme}://{request.Host}";
+        return Results.Content(CareersSyndication.RenderJsonFeed(roles, origin, careersBasePath), "application/json; charset=utf-8");
+    })
+    .WithName("CareersJsonFeed")
+    .WithSummary("Public JSON feed of open roles for embedding/aggregation (internal roles excluded).")
+    .Produces(StatusCodes.Status200OK, contentType: "application/json");
+
 // --- Bulk email campaigns ---
 v1.MapGet("/campaigns", async (
         IQueryHandler<GetCampaignsQuery, IReadOnlyList<CampaignDto>> handler,
