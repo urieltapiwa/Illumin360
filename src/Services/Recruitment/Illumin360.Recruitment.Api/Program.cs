@@ -849,6 +849,106 @@ v1.MapGet("/careers/{id:guid}", async (
     .WithSummary("Public branded careers detail page for a single role (HTML + JobPosting JSON-LD).")
     .Produces(StatusCodes.Status200OK, contentType: "text/html");
 
+// --- Bulk email campaigns ---
+v1.MapGet("/campaigns", async (
+        IQueryHandler<GetCampaignsQuery, IReadOnlyList<CampaignDto>> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new GetCampaignsQuery(), ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminWritePolicy)
+    .WithName("GetCampaigns")
+    .WithSummary("List email campaigns. Requires an admin (write) role.")
+    .Produces<IReadOnlyList<CampaignDto>>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden);
+
+v1.MapPost("/campaigns", async (
+        CampaignBody body,
+        ICommandHandler<CreateCampaignCommand, CampaignDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new CreateCampaignCommand(body.Name, body.Subject, body.Body), ct);
+        return result.ToCreatedResult(dto => $"/v1/recruitment/campaigns/{dto.Id}");
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminWritePolicy)
+    .WithName("CreateCampaign")
+    .WithSummary("Create a draft email campaign. Requires an admin (write) role.")
+    .Produces<CampaignDto>(StatusCodes.Status201Created)
+    .ProducesProblem(StatusCodes.Status400BadRequest)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden);
+
+v1.MapGet("/campaigns/{id:guid}", async (
+        Guid id,
+        IQueryHandler<GetCampaignQuery, CampaignDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new GetCampaignQuery(id), ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminWritePolicy)
+    .WithName("GetCampaign")
+    .WithSummary("Get a campaign with its recipients. Requires an admin (write) role.")
+    .Produces<CampaignDto>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status404NotFound);
+
+v1.MapPost("/campaigns/{id:guid}/recipients", async (
+        Guid id,
+        RecipientBody body,
+        ICommandHandler<AddCampaignRecipientCommand, CampaignDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new AddCampaignRecipientCommand(id, body.Email), ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminWritePolicy)
+    .WithName("AddCampaignRecipient")
+    .WithSummary("Add a recipient to a draft campaign. Requires an admin (write) role.")
+    .Produces<CampaignDto>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status400BadRequest)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden)
+    .ProducesProblem(StatusCodes.Status404NotFound)
+    .ProducesProblem(StatusCodes.Status409Conflict);
+
+v1.MapDelete("/campaigns/{id:guid}/recipients/{email}", async (
+        Guid id,
+        string email,
+        ICommandHandler<RemoveCampaignRecipientCommand, CampaignDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new RemoveCampaignRecipientCommand(id, email), ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminWritePolicy)
+    .WithName("RemoveCampaignRecipient")
+    .WithSummary("Remove a recipient from a draft campaign. Requires an admin (write) role.")
+    .Produces<CampaignDto>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden)
+    .ProducesProblem(StatusCodes.Status404NotFound)
+    .ProducesProblem(StatusCodes.Status409Conflict);
+
+v1.MapPost("/campaigns/{id:guid}/send", async (
+        Guid id,
+        ICommandHandler<SendCampaignCommand, CampaignDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new SendCampaignCommand(id), ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminWritePolicy)
+    .WithName("SendCampaign")
+    .WithSummary("Send a draft campaign to its recipients. Requires an admin (write) role.")
+    .Produces<CampaignDto>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status400BadRequest)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden)
+    .ProducesProblem(StatusCodes.Status404NotFound)
+    .ProducesProblem(StatusCodes.Status409Conflict);
+
 // --- In-app messaging: candidate ↔ employer conversation per application ---
 v1.MapGet("/applications/{id:guid}/messages", async (
         Guid id,
@@ -1076,6 +1176,16 @@ internal sealed record JobTemplateBody(string Name, string Title, string? City, 
 /// <summary>Request body for applying a template.</summary>
 /// <param name="CompanyId">Hiring company id.</param>
 internal sealed record UseTemplateBody(Guid CompanyId);
+
+/// <summary>Request body for creating an email campaign.</summary>
+/// <param name="Name">Internal name.</param>
+/// <param name="Subject">Email subject.</param>
+/// <param name="Body">Email body.</param>
+internal sealed record CampaignBody(string Name, string Subject, string Body);
+
+/// <summary>Request body for adding a campaign recipient.</summary>
+/// <param name="Email">Recipient email.</param>
+internal sealed record RecipientBody(string Email);
 
 /// <summary>Request body for sending an application message.</summary>
 /// <param name="Sender">Sender side (recruiter/talent).</param>

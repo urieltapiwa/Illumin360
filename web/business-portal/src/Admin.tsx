@@ -140,6 +140,11 @@ export default function Admin({ session }: { session: Session }) {
   type JobTemplate = { id: string; name: string; title: string; city: string | null; positions: number; employmentType: string; remote: boolean; tags: string[] };
   const [templates, setTemplates] = useState<JobTemplate[] | null>(null);
   const [newTemplate, setNewTemplate] = useState({ name: "", title: "", city: "", positions: 1 });
+  // Bulk email campaigns.
+  type Campaign = { id: string; name: string; subject: string; body: string; status: string; recipientCount: number; recipients: string[] };
+  const [campaigns, setCampaigns] = useState<Campaign[] | null>(null);
+  const [newCampaign, setNewCampaign] = useState({ name: "", subject: "", body: "" });
+  const [campaignRecipient, setCampaignRecipient] = useState<Record<string, string>>({});
   useEffect(() => { fetch(import.meta.env.BASE_URL + "admin.json").then((r) => r.json()).then(setD); }, []);
   // Live platform signals from the microservices (via BFF → gateway). Talent count and talent-by-city are
   // real (Candidates service); finance/ops tiles (MRR, subscriptions, tickets, verifications) have no backing
@@ -223,6 +228,14 @@ export default function Admin({ session }: { session: Session }) {
     }, 250);
     return () => clearTimeout(id);
   }, [csQuery, csCity, csAvailability]);
+
+  // Bulk email campaigns.
+  useEffect(() => {
+    fetch("/api/recruitment/campaigns", { credentials: "same-origin" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((v) => { if (Array.isArray(v)) setCampaigns(v); })
+      .catch(() => { /* offline / unauthorised */ });
+  }, []);
 
   // Job templates.
   useEffect(() => {
@@ -423,6 +436,26 @@ export default function Admin({ session }: { session: Session }) {
     }
     const r = await fetch(`/api/recruitment/requests/${pipelineReqId}/approval/${action}`, { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: body ? JSON.stringify(body) : undefined });
     if (r.ok) setApproval(await r.json());
+  };
+  const createCampaign = async () => {
+    if (!newCampaign.name.trim() || !newCampaign.subject.trim() || !newCampaign.body.trim()) return;
+    const r = await fetch("/api/recruitment/campaigns", { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: JSON.stringify(newCampaign) });
+    if (r.ok) { const c: Campaign = await r.json(); setCampaigns((cs) => [c, ...(cs ?? [])]); setNewCampaign({ name: "", subject: "", body: "" }); }
+  };
+  const patchCampaign = (c: Campaign) => setCampaigns((cs) => cs?.map((x) => (x.id === c.id ? c : x)) ?? cs);
+  const addCampaignRecipient = async (id: string) => {
+    const email = (campaignRecipient[id] ?? "").trim();
+    if (!email) return;
+    const r = await fetch(`/api/recruitment/campaigns/${id}/recipients`, { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: JSON.stringify({ email }) });
+    if (r.ok) { patchCampaign(await r.json()); setCampaignRecipient((m) => ({ ...m, [id]: "" })); }
+  };
+  const removeCampaignRecipient = async (id: string, email: string) => {
+    const r = await fetch(`/api/recruitment/campaigns/${id}/recipients/${encodeURIComponent(email)}`, { method: "DELETE", credentials: "same-origin" });
+    if (r.ok) patchCampaign(await r.json());
+  };
+  const sendCampaign = async (id: string) => {
+    const r = await fetch(`/api/recruitment/campaigns/${id}/send`, { method: "POST", credentials: "same-origin" });
+    if (r.ok) patchCampaign(await r.json());
   };
   const createTemplate = async () => {
     if (!newTemplate.name.trim() || !newTemplate.title.trim()) return;
@@ -799,6 +832,49 @@ export default function Admin({ session }: { session: Session }) {
                   </div>
                 </div>
               )}
+            </motion.section>
+          )}
+
+          {campaigns && (
+            <motion.section variants={fade} className="card p-5">
+              <div className="flex items-center justify-between mb-3 gap-3 flex-wrap">
+                <div><h3 className="font-display text-[15px] font-bold text-ink-hi">{t("admin.camp.title", "Email campaigns")}</h3><p className="text-[11px] text-ink-lo mt-0.5">{t("admin.camp.sub", "Compose and send bulk emails to candidates.")}</p></div>
+                <span className="chip !text-[10px]">{campaigns.length}</span>
+              </div>
+              <div className="space-y-3">
+                {campaigns.map((c) => (
+                  <div key={c.id} className="rounded-xl border border-line/60 bg-panel2/40 p-3.5">
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                      <div className="min-w-0"><div className="text-sm font-semibold text-ink-hi truncate">{c.name}</div><div className="text-[11px] text-ink-lo truncate">{c.subject}</div></div>
+                      <span className={`chip !text-[10px] capitalize ${c.status === "sent" ? "!text-brand-bright !border-brand/30" : "!text-gold !border-gold/30"}`}>{c.status}{c.status === "sent" ? ` · ${c.recipientCount}` : ""}</span>
+                    </div>
+                    {c.status === "draft" ? (
+                      <>
+                        <div className="flex flex-wrap items-center gap-1.5 my-2">
+                          {c.recipients.map((e) => <span key={e} className="chip !text-[10px]">{e} <button onClick={() => removeCampaignRecipient(c.id, e)} className="ml-1 hover:text-pink">✕</button></span>)}
+                          {c.recipients.length === 0 && <span className="text-[11px] text-ink-lo">{t("admin.camp.noRecipients", "No recipients")}</span>}
+                        </div>
+                        <div className="flex gap-2">
+                          <input value={campaignRecipient[c.id] ?? ""} onChange={(e) => setCampaignRecipient((m) => ({ ...m, [c.id]: e.target.value }))} onKeyDown={(e) => { if (e.key === "Enter") addCampaignRecipient(c.id); }} placeholder={t("admin.camp.addEmail", "email@company.na")} className="flex-1 rounded-lg border border-line/70 bg-panel2/50 px-2.5 py-1 text-[12px] text-ink-hi placeholder:text-ink-lo focus:border-brand/50 focus:outline-none" />
+                          <button onClick={() => addCampaignRecipient(c.id)} className="rounded-lg bg-panel2/70 px-2.5 py-1 text-[11px] font-semibold text-ink-mid hover:text-ink-hi transition">{t("admin.camp.add", "Add")}</button>
+                          <button onClick={() => sendCampaign(c.id)} disabled={c.recipients.length === 0} className="rounded-lg bg-brand/15 px-2.5 py-1 text-[11px] font-semibold text-brand-bright hover:bg-brand/25 transition disabled:opacity-50">{t("admin.camp.send", "Send")}</button>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="text-[11px] text-ink-lo mt-1">{t("admin.camp.sentTo", "Sent to {{n}} recipient(s).", { n: c.recipientCount })}</div>
+                    )}
+                  </div>
+                ))}
+                {campaigns.length === 0 && <div className="py-3 text-center text-[12px] text-ink-lo">{t("admin.camp.empty", "No campaigns yet.")}</div>}
+              </div>
+              <div className="mt-3 border-t border-line/40 pt-3 grid gap-2">
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <input value={newCampaign.name} onChange={(e) => setNewCampaign((f) => ({ ...f, name: e.target.value }))} placeholder={t("admin.camp.name", "Campaign name")} className="rounded-lg border border-line/70 bg-panel2/50 px-2.5 py-1.5 text-[12px] text-ink-hi placeholder:text-ink-lo focus:border-brand/50 focus:outline-none" />
+                  <input value={newCampaign.subject} onChange={(e) => setNewCampaign((f) => ({ ...f, subject: e.target.value }))} placeholder={t("admin.camp.subject", "Subject")} className="rounded-lg border border-line/70 bg-panel2/50 px-2.5 py-1.5 text-[12px] text-ink-hi placeholder:text-ink-lo focus:border-brand/50 focus:outline-none" />
+                </div>
+                <textarea value={newCampaign.body} onChange={(e) => setNewCampaign((f) => ({ ...f, body: e.target.value }))} placeholder={t("admin.camp.body", "Message body…")} className="min-h-[64px] resize-y rounded-lg border border-line/70 bg-panel2/50 px-2.5 py-1.5 text-[12px] text-ink-hi placeholder:text-ink-lo focus:border-brand/50 focus:outline-none" />
+                <button onClick={createCampaign} disabled={!newCampaign.name.trim() || !newCampaign.subject.trim() || !newCampaign.body.trim()} className="justify-self-start rounded-lg bg-brand/15 px-3 py-1.5 text-[11px] font-semibold text-brand-bright hover:bg-brand/25 transition disabled:opacity-50">{t("admin.camp.create", "Create draft")}</button>
+              </div>
             </motion.section>
           )}
 

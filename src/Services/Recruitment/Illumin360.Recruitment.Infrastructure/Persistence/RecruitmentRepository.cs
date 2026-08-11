@@ -249,6 +249,41 @@ public sealed class RecruitmentRepository(RecruitmentDbContext db) : IRecruitmen
     public void AddApproval(RequisitionApproval approval) => _db.RequisitionApprovals.Add(approval);
 
     /// <inheritdoc />
+    public void AddCampaign(EmailCampaign campaign) => _db.EmailCampaigns.Add(campaign);
+
+    /// <inheritdoc />
+    public async Task<EmailCampaign?> GetCampaignAsync(Guid id, CancellationToken cancellationToken)
+        => await _db.EmailCampaigns.FirstOrDefaultAsync(c => c.Id == id, cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<EmailCampaign>> ListCampaignsAsync(CancellationToken cancellationToken)
+        => await _db.EmailCampaigns.AsNoTracking()
+            .OrderByDescending(c => c.CreatedAt)
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
+    public void AddCampaignRecipient(CampaignRecipient recipient) => _db.CampaignRecipients.Add(recipient);
+
+    /// <inheritdoc />
+    public void RemoveCampaignRecipient(CampaignRecipient recipient) => _db.CampaignRecipients.Remove(recipient);
+
+    /// <inheritdoc />
+    public async Task<bool> CampaignRecipientExistsAsync(Guid campaignId, string email, CancellationToken cancellationToken)
+        => await _db.CampaignRecipients.AsNoTracking()
+            .AnyAsync(r => r.CampaignId == campaignId && r.Email == email, cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
+    public async Task<CampaignRecipient?> GetCampaignRecipientAsync(Guid campaignId, string email, CancellationToken cancellationToken)
+        => await _db.CampaignRecipients.FirstOrDefaultAsync(r => r.CampaignId == campaignId && r.Email == email, cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<CampaignRecipient>> ListCampaignRecipientsAsync(Guid campaignId, CancellationToken cancellationToken)
+        => await _db.CampaignRecipients.AsNoTracking()
+            .Where(r => r.CampaignId == campaignId)
+            .OrderBy(r => r.Email)
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
     public void AddApplicationMessage(ApplicationMessage message) => _db.ApplicationMessages.Add(message);
 
     /// <inheritdoc />

@@ -58,6 +58,12 @@ public sealed class RecruitmentDbContext(DbContextOptions<RecruitmentDbContext> 
     /// <summary>Application conversation messages set.</summary>
     public DbSet<ApplicationMessage> ApplicationMessages => Set<ApplicationMessage>();
 
+    /// <summary>Bulk email campaigns set.</summary>
+    public DbSet<EmailCampaign> EmailCampaigns => Set<EmailCampaign>();
+
+    /// <summary>Email campaign recipients set.</summary>
+    public DbSet<CampaignRecipient> CampaignRecipients => Set<CampaignRecipient>();
+
     /// <inheritdoc />
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -332,6 +338,36 @@ public sealed class RecruitmentDbContext(DbContextOptions<RecruitmentDbContext> 
             b.Ignore(m => m.IsRead);
             b.HasIndex(m => m.ApplicationId);
             b.Ignore(m => m.DomainEvents);
+        });
+
+        var campaignStatusConverter = new ValueConverter<CampaignStatus, string>(
+            v => v.ToString(),
+            v => Enum.Parse<CampaignStatus>(v));
+
+        modelBuilder.Entity<EmailCampaign>(b =>
+        {
+            b.ToTable("email_campaigns");
+            b.HasKey(c => c.Id);
+            b.Property(c => c.Id).HasColumnName("id");
+            b.Property(c => c.Name).HasColumnName("name").HasMaxLength(160);
+            b.Property(c => c.Subject).HasColumnName("subject").HasMaxLength(200);
+            b.Property(c => c.Body).HasColumnName("body").HasMaxLength(10000);
+            b.Property(c => c.Status).HasColumnName("status").HasConversion(campaignStatusConverter).HasMaxLength(20);
+            b.Property(c => c.RecipientCount).HasColumnName("recipient_count");
+            b.Property(c => c.CreatedAt).HasColumnName("created_at");
+            b.Property(c => c.SentAt).HasColumnName("sent_at");
+            b.Ignore(c => c.DomainEvents);
+        });
+
+        modelBuilder.Entity<CampaignRecipient>(b =>
+        {
+            b.ToTable("campaign_recipients");
+            b.HasKey(r => r.Id);
+            b.Property(r => r.Id).HasColumnName("id");
+            b.Property(r => r.CampaignId).HasColumnName("campaign_id");
+            b.Property(r => r.Email).HasColumnName("email").HasMaxLength(200);
+            b.HasIndex(r => new { r.CampaignId, r.Email }).IsUnique();
+            b.Ignore(r => r.DomainEvents);
         });
 
         modelBuilder.Entity<RecruitmentApplication>(b =>

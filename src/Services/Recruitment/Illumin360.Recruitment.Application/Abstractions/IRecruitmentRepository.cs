@@ -223,6 +223,44 @@ public interface IRecruitmentRepository
     /// <param name="approval">The approval to add.</param>
     void AddApproval(RequisitionApproval approval);
 
+    /// <summary>Stages a new email campaign for insertion.</summary>
+    /// <param name="campaign">The campaign to add.</param>
+    void AddCampaign(EmailCampaign campaign);
+
+    /// <summary>Loads a campaign by id (change-tracked), or null if not present.</summary>
+    /// <param name="id">The campaign id.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<EmailCampaign?> GetCampaignAsync(Guid id, CancellationToken cancellationToken);
+
+    /// <summary>Lists all campaigns, newest first.</summary>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<IReadOnlyList<EmailCampaign>> ListCampaignsAsync(CancellationToken cancellationToken);
+
+    /// <summary>Stages a new campaign recipient for insertion.</summary>
+    /// <param name="recipient">The recipient to add.</param>
+    void AddCampaignRecipient(CampaignRecipient recipient);
+
+    /// <summary>Removes a campaign recipient.</summary>
+    /// <param name="recipient">The recipient to remove.</param>
+    void RemoveCampaignRecipient(CampaignRecipient recipient);
+
+    /// <summary>Whether the campaign already has the given (normalised) recipient email.</summary>
+    /// <param name="campaignId">The campaign id.</param>
+    /// <param name="email">The normalised email.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<bool> CampaignRecipientExistsAsync(Guid campaignId, string email, CancellationToken cancellationToken);
+
+    /// <summary>Loads a campaign recipient by normalised email, or null if not present.</summary>
+    /// <param name="campaignId">The campaign id.</param>
+    /// <param name="email">The normalised email.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<CampaignRecipient?> GetCampaignRecipientAsync(Guid campaignId, string email, CancellationToken cancellationToken);
+
+    /// <summary>Lists a campaign's recipients.</summary>
+    /// <param name="campaignId">The campaign id.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<IReadOnlyList<CampaignRecipient>> ListCampaignRecipientsAsync(Guid campaignId, CancellationToken cancellationToken);
+
     /// <summary>Stages a new application message for insertion.</summary>
     /// <param name="message">The message to add.</param>
     void AddApplicationMessage(ApplicationMessage message);
