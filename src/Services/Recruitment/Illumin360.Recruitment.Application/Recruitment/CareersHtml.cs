@@ -45,7 +45,7 @@ public static class CareersHtml
         });
 
         var sb = new StringBuilder();
-        AppendHead(sb, title, description, $"{bp}", jsonLd);
+        AppendHead(sb, title, description, $"{bp}", jsonLd, $"{bp}/feed.xml");
         sb.Append("<body><main class=\"wrap\">");
         sb.Append(CultureInfo.InvariantCulture, $"<header class=\"hero\"><p class=\"eyebrow\">{b} Careers</p><h1>Open roles</h1><p class=\"lede\">{Enc(description)}</p></header>");
 
@@ -104,18 +104,27 @@ public static class CareersHtml
         sb.Append(CultureInfo.InvariantCulture, $"<p class=\"back\"><a href=\"{bp}\">← All roles</a></p>");
         sb.Append(CultureInfo.InvariantCulture, $"<header class=\"hero\"><p class=\"eyebrow\">{b} Careers</p><h1>{Enc(role.Title)}</h1><p class=\"lede\">{Enc(role.City)} · {role.Positions} position{(role.Positions == 1 ? string.Empty : "s")} · posted {role.CreatedAt.UtcDateTime.ToString("d MMM yyyy", CultureInfo.InvariantCulture)}</p></header>");
         sb.Append(CultureInfo.InvariantCulture, $"<section class=\"body\"><p>{b} is hiring a <strong>{Enc(role.Title)}</strong> based in {Enc(role.City)}. This is an open role on the Illumin360 marketplace.</p><p><a class=\"apply\" href=\"/?screen=register\">Apply on Illumin360</a></p></section>");
+
+        // Social share row — hrefs are populated client-side from the page URL (no server origin needed).
+        sb.Append("<section class=\"share\"><span>Share this role:</span> <a id=\"s-x\" rel=\"noopener\" target=\"_blank\">X</a> <a id=\"s-li\" rel=\"noopener\" target=\"_blank\">LinkedIn</a> <a id=\"s-fb\" rel=\"noopener\" target=\"_blank\">Facebook</a> <a id=\"s-em\">Email</a></section>");
+        sb.Append("<script>(function(){var u=encodeURIComponent(location.href),t=encodeURIComponent(document.title);var m={'s-x':'https://twitter.com/intent/tweet?url='+u+'&text='+t,'s-li':'https://www.linkedin.com/sharing/share-offsite/?url='+u,'s-fb':'https://www.facebook.com/sharer/sharer.php?u='+u,'s-em':'mailto:?subject='+t+'&body='+u};for(var k in m){var e=document.getElementById(k);if(e)e.href=m[k];}})();</script>");
         sb.Append(CultureInfo.InvariantCulture, $"<footer class=\"foot\">{b} · Powered by Illumin360</footer>");
         sb.Append("</main></body></html>");
         return sb.ToString();
     }
 
-    private static void AppendHead(StringBuilder sb, string title, string description, string canonicalPath, string jsonLd)
+    private static void AppendHead(StringBuilder sb, string title, string description, string canonicalPath, string jsonLd, string? feedPath = null)
     {
         var t = Enc(title);
         var d = Enc(description);
         sb.Append("<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">");
         sb.Append(CultureInfo.InvariantCulture, $"<title>{t}</title><meta name=\"description\" content=\"{d}\">");
         sb.Append(CultureInfo.InvariantCulture, $"<link rel=\"canonical\" href=\"{Enc(canonicalPath)}\">");
+        if (!string.IsNullOrEmpty(feedPath))
+        {
+            sb.Append(CultureInfo.InvariantCulture, $"<link rel=\"alternate\" type=\"application/rss+xml\" title=\"Open roles\" href=\"{Enc(feedPath)}\">");
+        }
+
         sb.Append(CultureInfo.InvariantCulture, $"<meta property=\"og:type\" content=\"website\"><meta property=\"og:title\" content=\"{t}\"><meta property=\"og:description\" content=\"{d}\">");
         sb.Append(CultureInfo.InvariantCulture, $"<script type=\"application/ld+json\">{jsonLd}</script>");
         sb.Append("<style>");
@@ -126,6 +135,7 @@ public static class CareersHtml
         sb.Append(".role a:hover{border-color:#2fd39a}.title{font-weight:600;font-size:17px}.meta{color:#9fb3aa;font-size:13px}");
         sb.Append(".empty{color:#9fb3aa}.back a{color:#2fd39a;text-decoration:none;font-size:14px}.body{margin-top:24px}");
         sb.Append(".apply{display:inline-block;margin-top:12px;background:#1fb283;color:#04120c;font-weight:700;padding:10px 18px;border-radius:10px;text-decoration:none}");
+        sb.Append(".share{margin-top:24px;font-size:14px;color:#9fb3aa}.share a{color:#2fd39a;text-decoration:none;margin:0 6px}.share a:hover{text-decoration:underline}");
         sb.Append(".foot{margin-top:48px;padding-top:16px;border-top:1px solid #1c3329;color:#6f8479;font-size:13px}");
         sb.Append("</style></head>");
     }
