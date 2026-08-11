@@ -90,6 +90,9 @@ export default function Admin({ session }: { session: Session }) {
   const [pipelineReqId, setPipelineReqId] = useState<string | null>(null);
   const [pipelineApps, setPipelineApps] = useState<{ id: string; talentType: string; matchScore: number; status: string; rejectReason?: string | null }[] | null>(null);
   const [selectedApps, setSelectedApps] = useState<Set<string>>(new Set());
+  // Kanban drag-and-drop: the card being dragged + the column currently hovered.
+  const [dragAppId, setDragAppId] = useState<string | null>(null);
+  const [dragOverStage, setDragOverStage] = useState<string | null>(null);
   // Recruiter CRM (clients + contacts).
   type CrmClient = { id: string; name: string; industry: string | null; city: string | null; status: string; contactCount: number };
   type CrmContact = { id: string; name: string; title: string | null; email: string | null; phone: string | null; isPrimary: boolean };
@@ -348,6 +351,25 @@ export default function Admin({ session }: { session: Session }) {
     if (r.ok) {
       const u = await r.json().catch(() => null);
       setPipelineApps((prev) => (prev ? prev.map((a) => (a.id === id ? { ...a, status: u?.status ?? (action === "reject" ? "rejected" : a.status), rejectReason: u?.rejectReason ?? a.rejectReason } : a)) : prev));
+    }
+  };
+  // Kanban drop: move an application to a target stage using the available transitions. The backend
+  // advances strictly one stage forward (applied→reviewed→shortlisted→hired) or rejects (terminal),
+  // so a forward drop chains the right number of advances; dropping on "rejected" rejects; backward or
+  // same-stage drops are unsupported and ignored.
+  const advanceOrder = ["applied", "reviewed", "shortlisted", "hired"];
+  const moveApp = async (id: string, target: string) => {
+    const app = (pipelineApps ?? []).find((a) => a.id === id);
+    if (!app || app.status === target) return;
+    if (target === "rejected") { await transitionApp(id, "reject"); return; }
+    const from = advanceOrder.indexOf(app.status);
+    const to = advanceOrder.indexOf(target);
+    if (from < 0 || to < 0 || to <= from) return; // only forward moves are supported
+    for (let i = from; i < to; i++) {
+      const r = await fetch(`/api/recruitment/applications/${id}/advance`, { method: "POST", credentials: "same-origin" });
+      if (!r.ok) break;
+      const u = await r.json().catch(() => null);
+      if (u?.status) setPipelineApps((prev) => (prev ? prev.map((a) => (a.id === id ? { ...a, status: u.status } : a)) : prev));
     }
   };
   const createClient = async () => {
@@ -732,7 +754,7 @@ export default function Admin({ session }: { session: Session }) {
           {pipelineReqs && pipelineReqs.length > 0 && (
             <motion.section variants={fade} className="card p-5">
               <div className="flex items-center justify-between mb-3 gap-3 flex-wrap">
-                <div><h3 className="font-display text-[15px] font-bold text-ink-hi">{t("admin.pipeline.title", "Application pipeline")}</h3><p className="text-[11px] text-ink-lo mt-0.5">{t("admin.pipeline.sub", "Move applicants through the hiring stages.")}</p></div>
+                <div><h3 className="font-display text-[15px] font-bold text-ink-hi">{t("admin.pipeline.title", "Application pipeline")}</h3><p className="text-[11px] text-ink-lo mt-0.5">{t("admin.pipeline.sub", "Drag a card to a later stage — or use the buttons.")}</p></div>
                 <div className="flex flex-wrap gap-1.5">
                   {pipelineReqs.map((r) => (
                     <button key={r.id} onClick={() => setPipelineReqId(r.id)} className={`rounded-lg px-2.5 py-1 text-[11px] font-semibold transition ${pipelineReqId === r.id ? "bg-brand/20 text-brand-bright" : "bg-panel2/60 text-ink-lo hover:text-ink-hi"}`}>{r.title}</button>
@@ -790,12 +812,28 @@ export default function Admin({ session }: { session: Session }) {
                 {pipelineStages.map((stage) => {
                   const cards = (pipelineApps ?? []).filter((a) => a.status === stage);
                   const terminal = stage === "hired" || stage === "rejected";
+                  // Is `stage` a legal drop target for the card currently being dragged?
+                  const dragging = dragAppId ? (pipelineApps ?? []).find((a) => a.id === dragAppId) : null;
+                  const validDrop = !!dragging && dragging.status !== stage && (stage === "rejected"
+                    ? advanceOrder.includes(dragging.status)
+                    : advanceOrder.indexOf(stage) > advanceOrder.indexOf(dragging.status));
                   return (
-                    <div key={stage} className="rounded-xl border border-line/60 bg-panel2/30 p-2.5">
+                    <div
+                      key={stage}
+                      onDragOver={(e) => { if (validDrop) { e.preventDefault(); setDragOverStage(stage); } }}
+                      onDragLeave={() => setDragOverStage((s) => (s === stage ? null : s))}
+                      onDrop={(e) => { e.preventDefault(); const id = dragAppId ?? e.dataTransfer.getData("text/plain"); if (id && validDrop) moveApp(id, stage); setDragAppId(null); setDragOverStage(null); }}
+                      className={`rounded-xl border p-2.5 transition ${dragOverStage === stage && validDrop ? "border-brand/60 bg-brand/[0.08] ring-1 ring-brand/40" : validDrop ? "border-dashed border-brand/40 bg-panel2/30" : "border-line/60 bg-panel2/30"}`}
+                    >
                       <div className="flex items-center justify-between mb-2"><span className="eyebrow capitalize">{stage}</span><span className="num text-[11px] text-ink-lo">{cards.length}</span></div>
                       <div className="space-y-2">
                         {cards.map((a) => (
-                          <div key={a.id} className={`rounded-lg border p-2 ${stage === "hired" ? "border-brand/40 bg-brand/[0.06]" : stage === "rejected" ? "border-pink/30 bg-pink/[0.05]" : "border-line/50 bg-panel/40"}`}>
+                          <div
+                            key={a.id}
+                            draggable={!terminal}
+                            onDragStart={(e) => { setDragAppId(a.id); e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", a.id); }}
+                            onDragEnd={() => { setDragAppId(null); setDragOverStage(null); }}
+                            className={`rounded-lg border p-2 ${!terminal ? "cursor-grab active:cursor-grabbing" : ""} ${dragAppId === a.id ? "opacity-50" : ""} ${stage === "hired" ? "border-brand/40 bg-brand/[0.06]" : stage === "rejected" ? "border-pink/30 bg-pink/[0.05]" : "border-line/50 bg-panel/40"}`}>
                             <div className="flex items-center justify-between gap-1"><label className="flex items-center gap-1.5 min-w-0"><input type="checkbox" checked={selectedApps.has(a.id)} onChange={() => toggleAppSelect(a.id)} /><span className="text-[11px] text-ink-hi capitalize truncate">{a.talentType}</span></label><span className="num text-[11px] text-brand-bright">{Math.round(a.matchScore)}%</span></div>
                             {stage === "rejected" && a.rejectReason && <div className="mt-1 text-[10px] text-ink-lo italic">“{a.rejectReason}”</div>}
                             {!terminal && (
