@@ -104,6 +104,9 @@ public static class DependencyInjection
             ICommandHandler<SetRequisitionInternalCommand, RequisitionDetailDto>,
             SetRequisitionInternalCommandHandler>();
         services.AddScoped<
+            ICommandHandler<SetRequisitionFeaturedCommand, RequisitionDetailDto>,
+            SetRequisitionFeaturedCommandHandler>();
+        services.AddScoped<
             IQueryHandler<GetReferralsQuery, IReadOnlyList<ReferralDto>>,
             GetReferralsQueryHandler>();
         services.AddScoped<

@@ -288,6 +288,7 @@ public sealed class RecruitmentDbContext(DbContextOptions<RecruitmentDbContext> 
             b.Property(d => d.EmploymentType).HasColumnName("employment_type").HasConversion(employmentConverter).HasMaxLength(20);
             b.Property(d => d.Remote).HasColumnName("remote");
             b.Property(d => d.Internal).HasColumnName("internal").HasDefaultValue(false);
+            b.Property(d => d.FeaturedUntil).HasColumnName("featured_until");
             b.Property(d => d.CreatedAt).HasColumnName("created_at");
             b.HasIndex(d => d.RequestId).IsUnique();
             b.Ignore(d => d.DomainEvents);

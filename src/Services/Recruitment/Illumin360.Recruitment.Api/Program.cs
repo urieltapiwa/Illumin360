@@ -740,6 +740,23 @@ v1.MapPut("/requests/{id:guid}/internal", async (
     .ProducesProblem(StatusCodes.Status403Forbidden)
     .ProducesProblem(StatusCodes.Status404NotFound);
 
+v1.MapPut("/requests/{id:guid}/feature", async (
+        Guid id,
+        SetFeaturedBody body,
+        ICommandHandler<SetRequisitionFeaturedCommand, RequisitionDetailDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new SetRequisitionFeaturedCommand(id, body.Days), ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminWritePolicy)
+    .WithName("SetRequisitionFeatured")
+    .WithSummary("Promote (feature) a role for N days on the public careers site, or clear it with days ≤ 0. Requires an admin (write) role. Payment is handled out-of-band before promoting.")
+    .Produces<RequisitionDetailDto>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden)
+    .ProducesProblem(StatusCodes.Status404NotFound);
+
 v1.MapGet("/requests/{id:guid}/referrals", async (
         Guid id,
         IQueryHandler<GetReferralsQuery, IReadOnlyList<ReferralDto>> handler,
@@ -1154,6 +1171,7 @@ v1.MapGet("/careers", async (
         // Hide internal-only roles from the public careers site.
         var internalIds = (await repository.ListInternalRequestIdsAsync(ct)).ToHashSet();
         var remoteIds = (await repository.ListRemoteRequestIdsAsync(ct)).ToHashSet();
+        var featuredIds = (await repository.ListFeaturedRequestIdsAsync(DateTimeOffset.UtcNow, ct)).ToHashSet();
         var publicRoles = roles.Where(r => !internalIds.Contains(r.Id));
 
         // Faceted filtering: keyword (title/city) + remote-only.
@@ -1170,8 +1188,10 @@ v1.MapGet("/careers", async (
             publicRoles = publicRoles.Where(r => remoteIds.Contains(r.Id));
         }
 
-        var filter = new CareersHtml.CareersFilter(keyword, remote == true, remoteIds);
-        return Results.Content(CareersHtml.RenderIndex(publicRoles.ToList(), careersBrand, careersBasePath, filter), "text/html; charset=utf-8");
+        // Featured (paid) roles float to the top.
+        var ordered = publicRoles.OrderByDescending(r => featuredIds.Contains(r.Id)).ToList();
+        var filter = new CareersHtml.CareersFilter(keyword, remote == true, remoteIds, featuredIds);
+        return Results.Content(CareersHtml.RenderIndex(ordered, careersBrand, careersBasePath, filter), "text/html; charset=utf-8");
     })
     .WithName("CareersIndex")
     .WithSummary("Public branded careers landing page listing open roles (HTML).")
@@ -1643,6 +1663,10 @@ internal sealed record SubmitAnswersBody(IReadOnlyList<AnswerInput>? Answers);
 /// <summary>Request body for toggling a requisition's internal-only visibility.</summary>
 /// <param name="Internal">True to hide from the public careers site.</param>
 internal sealed record SetInternalBody(bool Internal);
+
+/// <summary>Request body for promoting (featuring) a requisition.</summary>
+/// <param name="Days">Days to feature for (≤ 0 clears the promotion).</param>
+internal sealed record SetFeaturedBody(int Days);
 
 /// <summary>Request body for submitting a referral.</summary>
 /// <param name="ReferrerName">The referrer's name.</param>

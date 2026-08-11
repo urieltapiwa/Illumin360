@@ -11,8 +11,9 @@ namespace Illumin360.Recruitment.Application.Recruitment;
 /// <param name="EmploymentType">Employment type (fulltime/parttime/contract/internship/temporary).</param>
 /// <param name="Remote">Whether remote.</param>
 /// <param name="Internal">Whether internal-only (hidden from public careers).</param>
+/// <param name="FeaturedUntil">Featured-promotion expiry (UTC), if any.</param>
 /// <param name="Tags">Category tags.</param>
-public sealed record RequisitionDetailDto(int? SalaryMin, int? SalaryMax, string Currency, string EmploymentType, bool Remote, bool Internal, IReadOnlyList<string> Tags)
+public sealed record RequisitionDetailDto(int? SalaryMin, int? SalaryMax, string Currency, string EmploymentType, bool Remote, bool Internal, DateTimeOffset? FeaturedUntil, IReadOnlyList<string> Tags)
 {
     /// <summary>Projects a domain detail + tags into the transport DTO.</summary>
     /// <param name="d">The detail, or null if none set yet.</param>
@@ -22,8 +23,8 @@ public sealed record RequisitionDetailDto(int? SalaryMin, int? SalaryMax, string
     {
         ArgumentNullException.ThrowIfNull(tags);
         return d is null
-            ? new RequisitionDetailDto(null, null, "NAD", Domain.EmploymentType.FullTime.ToWire(), false, false, tags)
-            : new RequisitionDetailDto(d.SalaryMin, d.SalaryMax, d.Currency, d.EmploymentType.ToWire(), d.Remote, d.Internal, tags);
+            ? new RequisitionDetailDto(null, null, "NAD", Domain.EmploymentType.FullTime.ToWire(), false, false, null, tags)
+            : new RequisitionDetailDto(d.SalaryMin, d.SalaryMax, d.Currency, d.EmploymentType.ToWire(), d.Remote, d.Internal, d.FeaturedUntil, tags);
     }
 }
 
@@ -44,6 +45,11 @@ public sealed record SetRequisitionDetailCommand(Guid RequestId, int? SalaryMin,
 /// <param name="RequestId">The requisition id.</param>
 /// <param name="Internal">True to hide from the public careers site.</param>
 public sealed record SetRequisitionInternalCommand(Guid RequestId, bool Internal) : ICommand<RequisitionDetailDto>;
+
+/// <summary>Promotes (features) a requisition for a number of days, or clears the promotion when days ≤ 0.</summary>
+/// <param name="RequestId">The requisition id.</param>
+/// <param name="Days">Days to feature for (≤ 0 clears the promotion).</param>
+public sealed record SetRequisitionFeaturedCommand(Guid RequestId, int Days) : ICommand<RequisitionDetailDto>;
 
 /// <summary>Adds a tag to a requisition (idempotent).</summary>
 /// <param name="RequestId">The requisition id.</param>
@@ -150,6 +156,50 @@ public sealed class SetRequisitionInternalCommandHandler(IRecruitmentRepository 
         else
         {
             existing.SetInternal(command.Internal);
+        }
+
+        await _repository.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        var tags = await _repository.ListRequisitionTagsAsync(command.RequestId, cancellationToken).ConfigureAwait(false);
+        var detail = await _repository.GetRequisitionDetailAsync(command.RequestId, cancellationToken).ConfigureAwait(false);
+        return RequisitionDetailDto.FromDomain(detail, tags.Select(t => t.Label).ToList());
+    }
+}
+
+/// <summary>Handles <see cref="SetRequisitionFeaturedCommand"/> — upserts the detail and sets/clears the promotion.</summary>
+/// <param name="repository">The recruitment repository.</param>
+public sealed class SetRequisitionFeaturedCommandHandler(IRecruitmentRepository repository)
+    : ICommandHandler<SetRequisitionFeaturedCommand, RequisitionDetailDto>
+{
+    private readonly IRecruitmentRepository _repository = repository;
+
+    /// <inheritdoc />
+    public async Task<Result<RequisitionDetailDto>> HandleAsync(SetRequisitionFeaturedCommand command, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+
+        var request = await _repository.GetByIdAsync(new RequestId(command.RequestId), cancellationToken).ConfigureAwait(false);
+        if (request is null)
+        {
+            return Error.NotFound("request.not_found", "No matching requisition was found.");
+        }
+
+        var until = command.Days > 0 ? DateTimeOffset.UtcNow.AddDays(command.Days) : (DateTimeOffset?)null;
+
+        var existing = await _repository.GetRequisitionDetailAsync(command.RequestId, cancellationToken).ConfigureAwait(false);
+        if (existing is null)
+        {
+            var creation = RequisitionDetail.Create(command.RequestId, null, null, null, null, false, DateTimeOffset.UtcNow);
+            if (creation.IsFailure)
+            {
+                return creation.Error!;
+            }
+
+            creation.Value!.SetFeaturedUntil(until);
+            _repository.AddRequisitionDetail(creation.Value!);
+        }
+        else
+        {
+            existing.SetFeaturedUntil(until);
         }
 
         await _repository.SaveChangesAsync(cancellationToken).ConfigureAwait(false);

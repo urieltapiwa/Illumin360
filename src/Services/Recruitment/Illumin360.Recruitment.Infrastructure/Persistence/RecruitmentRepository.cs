@@ -421,6 +421,13 @@ public sealed class RecruitmentRepository(RecruitmentDbContext db) : IRecruitmen
             .ToListAsync(cancellationToken).ConfigureAwait(false);
 
     /// <inheritdoc />
+    public async Task<IReadOnlyList<Guid>> ListFeaturedRequestIdsAsync(DateTimeOffset now, CancellationToken cancellationToken)
+        => await _db.RequisitionDetails.AsNoTracking()
+            .Where(d => d.FeaturedUntil != null && d.FeaturedUntil > now)
+            .Select(d => d.RequestId)
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
     public async Task RecordCareerViewAsync(Guid requestId, DateTimeOffset viewedAt, CancellationToken cancellationToken)
     {
         var existing = await _db.CareerViews.FirstOrDefaultAsync(v => v.RequestId == requestId, cancellationToken).ConfigureAwait(false);
