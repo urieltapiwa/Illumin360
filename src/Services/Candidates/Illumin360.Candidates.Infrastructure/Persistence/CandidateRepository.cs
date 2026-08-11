@@ -30,6 +30,10 @@ public sealed class CandidateRepository(CandidatesDbContext db) : ICandidateRepo
     }
 
     /// <inheritdoc />
+    public async Task<IReadOnlyList<Candidate>> ListAllAsync(CancellationToken cancellationToken)
+        => await _db.Candidates.AsNoTracking().ToListAsync(cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
     public async Task<(IReadOnlyList<Candidate> Items, int Total)> SearchAsync(
         CandidateSearchCriteria criteria, int skip, int take, CancellationToken cancellationToken)
     {

@@ -194,6 +194,22 @@ v1.MapPost("/", async (
     .ProducesProblem(StatusCodes.Status401Unauthorized)
     .ProducesProblem(StatusCodes.Status403Forbidden);
 
+v1.MapPost("/import", async (
+        ImportCandidatesCommand command,
+        ICommandHandler<ImportCandidatesCommand, ImportResultDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(command, ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminWritePolicy)
+    .WithName("ImportCandidates")
+    .WithSummary("Bulk-import candidates from CSV (header: firstName,lastName,city,nationality[,availability,headline]). Dedupes by name+city. Requires an admin (write) role.")
+    .Produces<ImportResultDto>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status400BadRequest)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden);
+
 // --- Per-candidate CV upload / download (recruiter/admin registry) ---
 v1.MapPost("/{id:guid}/cv", async (
         Guid id,
