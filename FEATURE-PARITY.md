@@ -221,6 +221,7 @@ flip the status to ✅ (add the commit/PR ref).
 - Panel-interview attendee UI — admin pipeline "Interviews & panel" drawer: schedule/list/cancel interviews, per-interview `.ics` link, and add/remove panellists (name/email/role), over the existing interview + attendee endpoints (2026-08-11).
 - Browser push notifications — service worker (`public/sw.js`) + Notifications API (`push.ts`) raise an OS toast for each newly-arrived unread in-app notification on the Professional portal (opt-in; polls the existing `/me/notifications` feed; SW `push` handler ready for a future server-side Web Push/VAPID sender) (2026-08-11).
 - Configurable application forms / screening questions (Tier 1 #1) — Recruitment `application_form_questions` + `application_answers` tables/endpoints (EF migration `ApplicationForms`), admin pipeline form-builder + candidate answers in the application drawer; 4 new unit tests (2026-08-11).
+- Candidate apply-time form capture (Tier 1 #1 sub-task) — `ApplyForm` modal on the Professional marketplace apply: roles with screening questions collect answers (required-validated) then apply + POST answers; roles without questions keep one-click apply (2026-08-11).
 
 _Update this file as items are ticked; link the commit/PR that delivered each._
 
@@ -238,7 +239,7 @@ richest ATS features are paid-edition, so its free OSS core is thinner than its 
 
 ### Tier 1 — genuine parity gaps (peers commonly have; Illumin360 does not)
 - [x] **Configurable application forms / screening questions per job** — Recruitment service owns `application_form_questions` (per requisition: label, kind text/textarea/boolean/number/select, options, required, order) + `application_answers` (per application, label snapshotted); `GET/POST /requests/{id}/form`, `DELETE /form/questions/{id}` (admin-write), `GET/POST /applications/{id}/answers` (auth). Admin pipeline **form-builder** (add/remove questions per role) + candidate **answers shown in the application drawer**; domain + handler unit tests (OpenCATS, SpotAxis, OrangeHRM, Horilla, Frappe). *Remaining sub-task ↓ candidate apply-time capture.*
-  - [ ] Candidate apply-time form capture — render the role's questions in the Professional/Student apply flow and POST answers to `/applications/{id}/answers` (endpoint + recruiter view already live)
+  - [x] Candidate apply-time form capture — `ApplyForm` modal on the Professional marketplace apply: roles with questions open the form (text/textarea/boolean/number/select, required-validated), then apply → POST answers to `/applications/{id}/answers`; roles without questions keep one-click apply. (Student has no live recruitment-request apply flow, so nothing to wire there yet)
   - [ ] Admin-defined **custom fields** on candidate/company records (beyond per-job forms) — the broader OpenCATS/SpotAxis custom-field capability
 - [ ] **Employee referrals + internal-only job toggle** — referral submission flow + a per-job public/internal visibility switch for employee referrals (EazyRecruit, Frappe, Horilla)
 - [ ] **Candidate source / channel attribution** — capture and report "how they arrived" (referral, campaign, walk-in, website, board) beyond the current `talentType` (OpenCATS, OrangeHRM, Frappe)
