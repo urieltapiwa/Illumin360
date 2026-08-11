@@ -677,6 +677,57 @@ v1.MapPost("/applications/{id:guid}/answers", async (
     .ProducesProblem(StatusCodes.Status400BadRequest)
     .ProducesProblem(StatusCodes.Status401Unauthorized);
 
+// --- Internal-only visibility + employee referrals ---
+v1.MapPut("/requests/{id:guid}/internal", async (
+        Guid id,
+        SetInternalBody body,
+        ICommandHandler<SetRequisitionInternalCommand, RequisitionDetailDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new SetRequisitionInternalCommand(id, body.Internal), ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminWritePolicy)
+    .WithName("SetRequisitionInternal")
+    .WithSummary("Mark a requisition internal-only (hidden from public careers) or public. Requires an admin (write) role.")
+    .Produces<RequisitionDetailDto>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden)
+    .ProducesProblem(StatusCodes.Status404NotFound);
+
+v1.MapGet("/requests/{id:guid}/referrals", async (
+        Guid id,
+        IQueryHandler<GetReferralsQuery, IReadOnlyList<ReferralDto>> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new GetReferralsQuery(id), ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminPolicy)
+    .WithName("GetReferrals")
+    .WithSummary("List a requisition's referrals. Requires an admin role.")
+    .Produces<IReadOnlyList<ReferralDto>>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden);
+
+v1.MapPost("/requests/{id:guid}/referrals", async (
+        Guid id,
+        ReferralBody body,
+        ICommandHandler<SubmitReferralCommand, ReferralDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(
+            new SubmitReferralCommand(id, body.ReferrerName, body.ReferrerEmail, body.CandidateName, body.CandidateEmail, body.Note), ct);
+        return result.ToCreatedResult(dto => $"/v1/recruitment/requests/{id}/referrals/{dto.Id}");
+    })
+    .RequireAuthorization()
+    .WithName("SubmitReferral")
+    .WithSummary("Refer a candidate for a requisition. Requires a signed-in user.")
+    .Produces<ReferralDto>(StatusCodes.Status201Created)
+    .ProducesProblem(StatusCodes.Status400BadRequest)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status404NotFound);
+
 // --- Recruiter pipeline transitions on an application (admin/recruiter) ---
 v1.MapPost("/applications/{id:guid}/advance", async (
         Guid id,
@@ -1000,11 +1051,16 @@ const string careersBasePath = "/careers";
 
 v1.MapGet("/careers", async (
         IQueryHandler<GetRecruitmentRequestsQuery, IReadOnlyList<RecruitmentRequestDto>> handler,
+        IRecruitmentRepository repository,
         CancellationToken ct) =>
     {
         var result = await handler.HandleAsync(new GetRecruitmentRequestsQuery(null, "open", 1, 100), ct);
         var roles = result.IsSuccess ? result.Value! : [];
-        return Results.Content(CareersHtml.RenderIndex(roles, careersBrand, careersBasePath), "text/html; charset=utf-8");
+
+        // Hide internal-only roles from the public careers site.
+        var internalIds = (await repository.ListInternalRequestIdsAsync(ct)).ToHashSet();
+        var publicRoles = roles.Where(r => !internalIds.Contains(r.Id)).ToList();
+        return Results.Content(CareersHtml.RenderIndex(publicRoles, careersBrand, careersBasePath), "text/html; charset=utf-8");
     })
     .WithName("CareersIndex")
     .WithSummary("Public branded careers landing page listing open roles (HTML).")
@@ -1013,11 +1069,14 @@ v1.MapGet("/careers", async (
 v1.MapGet("/careers/{id:guid}", async (
         Guid id,
         IQueryHandler<GetRecruitmentRequestByIdQuery, RecruitmentRequestDto> handler,
+        IRecruitmentRepository repository,
         CancellationToken ct) =>
     {
         var result = await handler.HandleAsync(new GetRecruitmentRequestByIdQuery(id), ct);
-        if (result.IsFailure)
+        var detail = await repository.GetRequisitionDetailAsync(id, ct);
+        if (result.IsFailure || detail?.Internal == true)
         {
+            // Internal-only roles are not exposed on the public careers site.
             return Results.Content(
                 CareersHtml.RenderIndex([], careersBrand, careersBasePath), "text/html; charset=utf-8", statusCode: StatusCodes.Status404NotFound);
         }
@@ -1392,6 +1451,18 @@ internal sealed record FormQuestionBody(string Label, string? Kind, IReadOnlyLis
 /// <summary>Request body for submitting application-form answers.</summary>
 /// <param name="Answers">The answers ({questionId, value}).</param>
 internal sealed record SubmitAnswersBody(IReadOnlyList<AnswerInput>? Answers);
+
+/// <summary>Request body for toggling a requisition's internal-only visibility.</summary>
+/// <param name="Internal">True to hide from the public careers site.</param>
+internal sealed record SetInternalBody(bool Internal);
+
+/// <summary>Request body for submitting a referral.</summary>
+/// <param name="ReferrerName">The referrer's name.</param>
+/// <param name="ReferrerEmail">The referrer's email.</param>
+/// <param name="CandidateName">The candidate's name.</param>
+/// <param name="CandidateEmail">The candidate's email.</param>
+/// <param name="Note">Optional note.</param>
+internal sealed record ReferralBody(string ReferrerName, string? ReferrerEmail, string CandidateName, string CandidateEmail, string? Note);
 
 /// <summary>Request body for a bulk pipeline action.</summary>
 /// <param name="ApplicationIds">The applications to transition.</param>

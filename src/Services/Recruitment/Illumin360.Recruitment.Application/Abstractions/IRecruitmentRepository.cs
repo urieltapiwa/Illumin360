@@ -348,6 +348,19 @@ public interface IRecruitmentRepository
     /// <param name="cancellationToken">Cancellation token.</param>
     Task<IReadOnlyList<ApplicationAnswer>> ListApplicationAnswersTrackedAsync(Guid applicationId, CancellationToken cancellationToken);
 
+    /// <summary>Stages a new referral for insertion.</summary>
+    /// <param name="referral">The referral to add.</param>
+    void AddReferral(Referral referral);
+
+    /// <summary>Lists a requisition's referrals, newest first.</summary>
+    /// <param name="requestId">The requisition id.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<IReadOnlyList<Referral>> ListReferralsAsync(Guid requestId, CancellationToken cancellationToken);
+
+    /// <summary>Lists the request ids currently flagged internal-only (for hiding from public careers).</summary>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<IReadOnlyList<Guid>> ListInternalRequestIdsAsync(CancellationToken cancellationToken);
+
     /// <summary>Stages a new job template for insertion.</summary>
     /// <param name="template">The template to add.</param>
     void AddJobTemplate(JobTemplate template);

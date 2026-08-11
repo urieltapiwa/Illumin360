@@ -66,8 +66,23 @@ public sealed class RequisitionDetail : Entity<Guid>
     /// <summary>Whether the role is remote.</summary>
     public bool Remote { get; private set; }
 
+    /// <summary>
+    /// Whether the role is internal-only (visible to employees/referrals; hidden from the public careers
+    /// site). Defaults to false (public).
+    /// </summary>
+    public bool Internal { get; private set; }
+
     /// <summary>When the detail was created (UTC).</summary>
     public DateTimeOffset CreatedAt { get; private set; }
+
+    /// <summary>Sets the internal-only visibility flag.</summary>
+    /// <param name="value">True to make the role internal-only (hidden from public careers).</param>
+    /// <returns>This detail.</returns>
+    public RequisitionDetail SetInternal(bool value)
+    {
+        Internal = value;
+        return this;
+    }
 
     /// <summary>Creates enrichment for a requisition.</summary>
     /// <param name="requestId">The requisition (required).</param>
