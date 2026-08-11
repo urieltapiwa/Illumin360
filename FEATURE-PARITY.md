@@ -87,14 +87,14 @@ flip the status to ✅ (add the commit/PR ref).
 ## E. Interviews & scheduling
 | Feature | Status | Notes |
 |---|---|---|
-| Interview scheduling | ✅ | Schedule/list/cancel interviews per application (`interviews` table + admin-gated endpoints) |
+| Interview scheduling | ✅ | Schedule/list/cancel interviews per application (`interviews` table + admin-gated endpoints); **admin pipeline "Interviews & panel" drawer** (schedule with datetime/duration/location, cancel, `.ics` link) |
 | Calendar integration (ICS/Google) | ✅ | Per-interview `.ics` invite + a subscribable per-talent calendar feed `GET /v1/recruitment/talents/{id}/calendar.ics` (multi-VEVENT, cancelled marked STATUS:CANCELLED) that Google/Outlook can subscribe to by URL |
 | Interview scorecards / feedback | ✅ | Rating (1–5) + comment completes an interview |
-| Panel interviews | ✅ | `interview_attendees` table + `GET/POST/DELETE /v1/recruitment/interviews/{id}/attendees`; the `.ics` invite lists the panel as ATTENDEE lines. Admin attendee-management UI is a follow-up |
+| Panel interviews | ✅ | `interview_attendees` table + `GET/POST/DELETE /v1/recruitment/interviews/{id}/attendees`; the `.ics` invite lists the panel as ATTENDEE lines. **Admin attendee-management UI** now live in the pipeline "Interviews & panel" drawer (expand an interview → add/remove panellists with name/email/role) |
 
 - [x] Schedule interview (slot, location/mode, `.ics` invite) — schedule/list/cancel + `/interviews/{id}/ics`
 - [x] Calendar sync — subscribable iCalendar feed `GET /v1/recruitment/talents/{id}/calendar.ics` (`Ics.BuildFeed` multi-VEVENT VCALENDAR with X-WR-CALNAME; cancelled interviews → STATUS:CANCELLED) that Google/Outlook subscribe to by URL and poll; repository joins interviews across the talent's applications; unit tests. A one-click "add to calendar" UI link is a follow-up
-- [x] Panel interviews — `InterviewAttendee` aggregate + `interview_attendees` table; `GET/POST/DELETE /v1/recruitment/interviews/{id}/attendees` (writes admin-gated, name+email validation), and the `.ics` invite now emits an ATTENDEE line per panellist (mailto or invalid:nomail); domain/handler unit tests. Admin attendee-management UI is a follow-up
+- [x] Panel interviews — `InterviewAttendee` aggregate + `interview_attendees` table; `GET/POST/DELETE /v1/recruitment/interviews/{id}/attendees` (writes admin-gated, name+email validation), and the `.ics` invite now emits an ATTENDEE line per panellist (mailto or invalid:nomail); domain/handler unit tests. **Admin attendee-management UI**: the pipeline drawer now hosts an "Interviews & panel" section (schedule/list/cancel interviews, per-interview `.ics` link, and expand an interview to add/remove panellists with name/email/role) over the existing endpoints — no backend change
 - [x] Interview scorecard + feedback capture — rating (1–5) + comment completes the interview
 
 ## F. Offers & onboarding
@@ -217,5 +217,6 @@ flip the status to ✅ (add the commit/PR ref).
 - Talent-side offer + messaging UI — shared `TalentApplications` panel on the Professional & Student portals: expandable per-application view with offer accept/decline/e-sign + letter, and a two-way employer conversation (composer + auto mark-read) (2026-08-11).
 - Kanban drag-and-drop — admin pipeline board cards are now draggable between stage columns (forward drop → chained advances, drop on Rejected → reject; legal targets highlight), reusing the existing advance/reject endpoints (2026-08-11).
 - Talent-pool recruiter UI — admin-portal "Talent pools" panel (create pool, expand to view/remove members, live counts) + "Add to shortlist" chips on candidate-search results, over the existing `/v1/candidates/pools` endpoints (2026-08-11).
+- Panel-interview attendee UI — admin pipeline "Interviews & panel" drawer: schedule/list/cancel interviews, per-interview `.ics` link, and add/remove panellists (name/email/role), over the existing interview + attendee endpoints (2026-08-11).
 
 _Update this file as items are ticked; link the commit/PR that delivered each._
