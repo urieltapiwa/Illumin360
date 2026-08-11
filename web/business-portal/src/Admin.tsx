@@ -108,6 +108,10 @@ export default function Admin({ session }: { session: Session }) {
   type OnbTask = { id: string; label: string; isDone: boolean; sortOrder: number };
   type Onboarding = { id: string; applicationId: string; roleTitle: string; completed: number; total: number; tasks: OnbTask[] };
   const [onboarding, setOnboarding] = useState<Onboarding | "none" | null>(null);
+  // Candidate↔employer messaging (per selected application).
+  type Message = { id: string; sender: string; senderName: string; body: string; sentAt: string; read: boolean };
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [msgDraft, setMsgDraft] = useState("");
   // Faceted candidate search.
   type SearchCandidate = { id: string; firstName: string; lastName: string; city: string; availability: string; publicHeadline: string | null };
   type FacetCount = { label: string; count: number };
@@ -245,7 +249,11 @@ export default function Admin({ session }: { session: Session }) {
 
   // Offers + onboarding for the application selected on a pipeline card.
   useEffect(() => {
-    if (!offerAppId) { setOffers(null); setOnboarding(null); return; }
+    if (!offerAppId) { setOffers(null); setOnboarding(null); setMessages([]); return; }
+    fetch(`/api/recruitment/applications/${offerAppId}/messages`, { credentials: "same-origin" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((v) => { if (Array.isArray(v)) setMessages(v); })
+      .catch(() => { /* keep empty */ });
     fetch(`/api/recruitment/applications/${offerAppId}/offers`)
       .then((r) => (r.ok ? r.json() : null))
       .then((v) => { if (Array.isArray(v)) setOffers(v); })
@@ -321,6 +329,11 @@ export default function Admin({ session }: { session: Session }) {
       setContacts((cs) => cs?.filter((c) => c.id !== contactId) ?? cs);
       setClients((cs) => cs?.map((cl) => (cl.id === selClient ? { ...cl, contactCount: Math.max(0, cl.contactCount - 1) } : cl)) ?? cs);
     }
+  };
+  const sendMessage = async () => {
+    if (!offerAppId || !msgDraft.trim()) return;
+    const r = await fetch(`/api/recruitment/applications/${offerAppId}/messages`, { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: JSON.stringify({ sender: "recruiter", senderName: session.name || "Recruiter", body: msgDraft.trim() }) });
+    if (r.ok) { const m: Message = await r.json(); setMessages((ms) => [...ms, m]); setMsgDraft(""); }
   };
   const createAndSendOffer = async () => {
     if (!offerAppId || !newOffer.title.trim() || !newOffer.salaryAmount || !newOffer.startDate) return;
@@ -767,6 +780,22 @@ export default function Admin({ session }: { session: Session }) {
                     ) : (
                       <div className="text-[12px] text-ink-lo">{t("admin.onboarding.loading", "…")}</div>
                     )}
+                  </div>
+                  <div className="mt-4 border-t border-line/40 pt-4">
+                    <div className="eyebrow mb-2">{t("admin.msg.title", "Messages with candidate")}</div>
+                    <div className="space-y-1.5 mb-2 max-h-48 overflow-y-auto">
+                      {messages.map((m) => (
+                        <div key={m.id} className={`rounded-lg px-2.5 py-1.5 text-[12px] ${m.sender === "recruiter" ? "bg-brand/[0.08] ml-8" : "bg-panel2/50 mr-8"}`}>
+                          <div className="flex items-center justify-between gap-2"><span className="text-[10px] font-semibold text-ink-lo capitalize">{m.senderName} · {m.sender}</span><span className="text-[10px] text-ink-lo">{new Date(m.sentAt).toLocaleDateString()}</span></div>
+                          <div className="text-ink-mid">{m.body}</div>
+                        </div>
+                      ))}
+                      {messages.length === 0 && <div className="py-2 text-center text-[12px] text-ink-lo">{t("admin.msg.none", "No messages yet.")}</div>}
+                    </div>
+                    <div className="flex gap-2">
+                      <input value={msgDraft} onChange={(e) => setMsgDraft(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") sendMessage(); }} placeholder={t("admin.msg.placeholder", "Message the candidate…")} className="flex-1 rounded-lg border border-line/70 bg-panel2/50 px-2.5 py-1.5 text-[12px] text-ink-hi placeholder:text-ink-lo focus:border-brand/50 focus:outline-none" />
+                      <button onClick={sendMessage} disabled={!msgDraft.trim()} className="rounded-lg bg-brand/15 px-3 py-1.5 text-[11px] font-semibold text-brand-bright hover:bg-brand/25 transition disabled:opacity-50">{t("admin.msg.send", "Send")}</button>
+                    </div>
                   </div>
                 </div>
               )}

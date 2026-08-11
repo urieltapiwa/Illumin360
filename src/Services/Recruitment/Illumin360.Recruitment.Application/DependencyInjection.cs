@@ -80,6 +80,15 @@ public static class DependencyInjection
             ICommandHandler<RemoveInterviewAttendeeCommand, bool>,
             RemoveInterviewAttendeeCommandHandler>();
         services.AddScoped<
+            IQueryHandler<GetApplicationThreadQuery, IReadOnlyList<MessageDto>>,
+            GetApplicationThreadQueryHandler>();
+        services.AddScoped<
+            ICommandHandler<SendApplicationMessageCommand, MessageDto>,
+            SendApplicationMessageCommandHandler>();
+        services.AddScoped<
+            ICommandHandler<MarkThreadReadCommand, int>,
+            MarkThreadReadCommandHandler>();
+        services.AddScoped<
             IQueryHandler<ListClientsQuery, IReadOnlyList<ClientDto>>,
             ListClientsQueryHandler>();
         services.AddScoped<

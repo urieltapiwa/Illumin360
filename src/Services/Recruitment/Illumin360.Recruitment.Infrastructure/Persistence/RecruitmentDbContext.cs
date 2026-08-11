@@ -55,6 +55,9 @@ public sealed class RecruitmentDbContext(DbContextOptions<RecruitmentDbContext> 
     /// <summary>Interview panel attendees set.</summary>
     public DbSet<InterviewAttendee> InterviewAttendees => Set<InterviewAttendee>();
 
+    /// <summary>Application conversation messages set.</summary>
+    public DbSet<ApplicationMessage> ApplicationMessages => Set<ApplicationMessage>();
+
     /// <inheritdoc />
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -309,6 +312,26 @@ public sealed class RecruitmentDbContext(DbContextOptions<RecruitmentDbContext> 
             b.Property(a => a.CreatedAt).HasColumnName("created_at");
             b.HasIndex(a => a.InterviewId);
             b.Ignore(a => a.DomainEvents);
+        });
+
+        var senderConverter = new ValueConverter<MessageSender, string>(
+            v => v.ToString(),
+            v => Enum.Parse<MessageSender>(v));
+
+        modelBuilder.Entity<ApplicationMessage>(b =>
+        {
+            b.ToTable("application_messages");
+            b.HasKey(m => m.Id);
+            b.Property(m => m.Id).HasColumnName("id");
+            b.Property(m => m.ApplicationId).HasColumnName("application_id");
+            b.Property(m => m.Sender).HasColumnName("sender").HasConversion(senderConverter).HasMaxLength(20);
+            b.Property(m => m.SenderName).HasColumnName("sender_name").HasMaxLength(160);
+            b.Property(m => m.Body).HasColumnName("body").HasMaxLength(4000);
+            b.Property(m => m.SentAt).HasColumnName("sent_at");
+            b.Property(m => m.ReadAt).HasColumnName("read_at");
+            b.Ignore(m => m.IsRead);
+            b.HasIndex(m => m.ApplicationId);
+            b.Ignore(m => m.DomainEvents);
         });
 
         modelBuilder.Entity<RecruitmentApplication>(b =>

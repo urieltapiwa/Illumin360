@@ -223,6 +223,20 @@ public interface IRecruitmentRepository
     /// <param name="approval">The approval to add.</param>
     void AddApproval(RequisitionApproval approval);
 
+    /// <summary>Stages a new application message for insertion.</summary>
+    /// <param name="message">The message to add.</param>
+    void AddApplicationMessage(ApplicationMessage message);
+
+    /// <summary>Lists an application's messages, oldest first (read-only).</summary>
+    /// <param name="applicationId">The application id.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<IReadOnlyList<ApplicationMessage>> ListApplicationMessagesAsync(Guid applicationId, CancellationToken cancellationToken);
+
+    /// <summary>Lists an application's messages for update (change-tracked).</summary>
+    /// <param name="applicationId">The application id.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<IReadOnlyList<ApplicationMessage>> ListApplicationMessagesTrackedAsync(Guid applicationId, CancellationToken cancellationToken);
+
     /// <summary>Stages a new interview attendee for insertion.</summary>
     /// <param name="attendee">The attendee to add.</param>
     void AddInterviewAttendee(InterviewAttendee attendee);
