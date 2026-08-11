@@ -45,11 +45,13 @@ public sealed class GetAccountsQueryHandler(IAccountRepository repository)
 /// <summary>Handles <see cref="SetAccountStatusCommand"/>.</summary>
 /// <param name="repository">The account repository.</param>
 /// <param name="publisher">The integration-event publisher (outbox-backed).</param>
-public sealed class SetAccountStatusCommandHandler(IAccountRepository repository, IIntegrationEventPublisher publisher)
+/// <param name="audit">The audit-trail repository.</param>
+public sealed class SetAccountStatusCommandHandler(IAccountRepository repository, IIntegrationEventPublisher publisher, IAuditRepository audit)
     : ICommandHandler<SetAccountStatusCommand, AccountDto>
 {
     private readonly IAccountRepository _repository = repository;
     private readonly IIntegrationEventPublisher _publisher = publisher;
+    private readonly IAuditRepository _audit = audit;
 
     /// <inheritdoc />
     public async Task<Result<AccountDto>> HandleAsync(SetAccountStatusCommand command, CancellationToken cancellationToken)
@@ -82,6 +84,16 @@ public sealed class SetAccountStatusCommandHandler(IAccountRepository repository
         }
 
         account.ClearDomainEvents();
+
+        var verb = command.Action == AccountAction.Suspend ? "suspended" : "activated";
+        _audit.Add(AuditEntry.Record(
+            command.ActingAdmin,
+            $"account.{verb}",
+            "account",
+            command.Id.ToString(),
+            $"Account {verb} by {command.ActingAdmin}.",
+            DateTimeOffset.UtcNow));
+
         await _repository.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         return AccountDto.FromDomain(account);
     }

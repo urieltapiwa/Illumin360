@@ -25,13 +25,16 @@ public sealed record DecideVerificationCommand(Guid Id, VerificationDecision Dec
 /// <summary>Handles <see cref="DecideVerificationCommand"/>.</summary>
 /// <param name="repository">The verification repository.</param>
 /// <param name="publisher">The integration-event publisher (outbox-backed).</param>
+/// <param name="audit">The audit-trail repository.</param>
 public sealed class DecideVerificationCommandHandler(
     IVerificationRepository repository,
-    IIntegrationEventPublisher publisher)
+    IIntegrationEventPublisher publisher,
+    IAuditRepository audit)
     : ICommandHandler<DecideVerificationCommand, VerificationDto>
 {
     private readonly IVerificationRepository _repository = repository;
     private readonly IIntegrationEventPublisher _publisher = publisher;
+    private readonly IAuditRepository _audit = audit;
 
     /// <inheritdoc />
     public async Task<Result<VerificationDto>> HandleAsync(
@@ -67,6 +70,16 @@ public sealed class DecideVerificationCommandHandler(
         }
 
         verification.ClearDomainEvents();
+
+        var decision = command.Decision == VerificationDecision.Approve ? "approved" : "rejected";
+        _audit.Add(AuditEntry.Record(
+            command.DecidedBy,
+            $"verification.{decision}",
+            "verification",
+            command.Id.ToString(),
+            $"Verification for {verification.Entity} {decision}.",
+            DateTimeOffset.UtcNow));
+
         await _repository.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         return VerificationDto.FromDomain(verification);

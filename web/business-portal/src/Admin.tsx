@@ -145,6 +145,9 @@ export default function Admin({ session }: { session: Session }) {
   const [campaigns, setCampaigns] = useState<Campaign[] | null>(null);
   const [newCampaign, setNewCampaign] = useState({ name: "", subject: "", body: "" });
   const [campaignRecipient, setCampaignRecipient] = useState<Record<string, string>>({});
+  // Audit trail.
+  type AuditEntry = { id: string; actor: string; action: string; entityType: string; entityId: string | null; summary: string; occurredAt: string };
+  const [audit, setAudit] = useState<AuditEntry[] | null>(null);
   useEffect(() => { fetch(import.meta.env.BASE_URL + "admin.json").then((r) => r.json()).then(setD); }, []);
   // Live platform signals from the microservices (via BFF → gateway). Talent count and talent-by-city are
   // real (Candidates service); finance/ops tiles (MRR, subscriptions, tickets, verifications) have no backing
@@ -228,6 +231,14 @@ export default function Admin({ session }: { session: Session }) {
     }, 250);
     return () => clearTimeout(id);
   }, [csQuery, csCity, csAvailability]);
+
+  // Audit trail.
+  useEffect(() => {
+    fetch("/api/admin/audit", { credentials: "same-origin" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((v) => { if (Array.isArray(v)) setAudit(v); })
+      .catch(() => { /* offline / unauthorised */ });
+  }, []);
 
   // Bulk email campaigns.
   useEffect(() => {
@@ -832,6 +843,29 @@ export default function Admin({ session }: { session: Session }) {
                   </div>
                 </div>
               )}
+            </motion.section>
+          )}
+
+          {audit && audit.length > 0 && (
+            <motion.section variants={fade} className="card p-5">
+              <div className="flex items-center justify-between mb-3 gap-3 flex-wrap">
+                <div><h3 className="font-display text-[15px] font-bold text-ink-hi">{t("admin.audit.title", "Audit trail")}</h3><p className="text-[11px] text-ink-lo mt-0.5">{t("admin.audit.sub", "Recent administrative actions.")}</p></div>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead><tr className="text-left eyebrow border-b border-line/60"><th className="py-2 pl-1 font-semibold">{t("admin.audit.when", "When")}</th><th className="font-semibold">{t("admin.audit.actor", "Actor")}</th><th className="font-semibold">{t("admin.audit.action", "Action")}</th><th className="font-semibold">{t("admin.audit.summary", "Summary")}</th></tr></thead>
+                  <tbody>
+                    {audit.map((e) => (
+                      <tr key={e.id} className="border-b border-line/30">
+                        <td className="py-2 pl-1 text-[11px] text-ink-lo num whitespace-nowrap">{new Date(e.occurredAt).toLocaleString()}</td>
+                        <td className="text-[12px] text-ink-mid">{e.actor}</td>
+                        <td><span className="chip !text-[10px] !text-brand-bright !border-brand/30">{e.action}</span></td>
+                        <td className="text-[12px] text-ink-mid">{e.summary}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </motion.section>
           )}
 

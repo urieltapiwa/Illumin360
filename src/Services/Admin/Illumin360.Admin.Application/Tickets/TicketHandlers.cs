@@ -45,11 +45,13 @@ public sealed class GetTicketsQueryHandler(ITicketRepository repository)
 /// <summary>Handles <see cref="TriageTicketCommand"/>.</summary>
 /// <param name="repository">The ticket repository.</param>
 /// <param name="publisher">The integration-event publisher (outbox-backed).</param>
-public sealed class TriageTicketCommandHandler(ITicketRepository repository, IIntegrationEventPublisher publisher)
+/// <param name="audit">The audit-trail repository.</param>
+public sealed class TriageTicketCommandHandler(ITicketRepository repository, IIntegrationEventPublisher publisher, IAuditRepository audit)
     : ICommandHandler<TriageTicketCommand, TicketDto>
 {
     private readonly ITicketRepository _repository = repository;
     private readonly IIntegrationEventPublisher _publisher = publisher;
+    private readonly IAuditRepository _audit = audit;
 
     /// <inheritdoc />
     public async Task<Result<TicketDto>> HandleAsync(TriageTicketCommand command, CancellationToken cancellationToken)
@@ -82,6 +84,16 @@ public sealed class TriageTicketCommandHandler(ITicketRepository repository, IIn
         }
 
         ticket.ClearDomainEvents();
+
+        var verb = command.Action == TicketAction.Assign ? "assigned" : "resolved";
+        _audit.Add(AuditEntry.Record(
+            command.ActingAdmin,
+            $"ticket.{verb}",
+            "ticket",
+            command.Id.ToString(),
+            $"Ticket {verb} by {command.ActingAdmin}.",
+            DateTimeOffset.UtcNow));
+
         await _repository.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         return TicketDto.FromDomain(ticket);
     }
