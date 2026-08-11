@@ -6,6 +6,7 @@ import { logout, type Session } from "./auth";
 import { useTranslation } from "react-i18next";
 import { LanguageSwitcher, ThemeSwitcher } from "@illumin360/ui";
 import TalentApplications from "./TalentApplications";
+import ApplyForm, { type FormQuestion } from "./ApplyForm";
 import { registerServiceWorker, pushPermission, enablePush, showPush } from "./push";
 
 interface Match { role: string; company: string; city: string; industry: string; match: number; salaryLo: number; salaryHi: number; posted: string; type: string; id?: string; status?: string; }
@@ -98,6 +99,8 @@ export default function Professional(_props: { session: Session }) {
   const [ssForm, setSsForm] = useState({ label: "", city: "", keyword: "" });
   // Open-roles the professional has applied to this session (marketplace panel is otherwise stateless).
   const [appliedRoles, setAppliedRoles] = useState<Record<string, "pending" | "done" | "error">>({});
+  // Apply-time screening form (only opens for roles that have application-form questions).
+  const [applyForm, setApplyForm] = useState<{ roleId: string; roleTitle: string; questions: FormQuestion[] } | null>(null);
   const [cv, setCv] = useState<{ fileName: string; uploadedAt: string } | null>(null);
   const [cvBusy, setCvBusy] = useState<"idle" | "uploading" | "error">("idle");
   const [cvSkills, setCvSkills] = useState<string[] | null>(null);
@@ -259,8 +262,8 @@ export default function Professional(_props: { session: Session }) {
     }
   };
   // Apply to a live marketplace open role — records a real application in the Recruitment service.
-  const applyToRole = async (roleId: string) => {
-    if (!d.id || appliedRoles[roleId]) return;
+  const doApply = async (roleId: string) => {
+    if (!d.id) return;
     setAppliedRoles((prev) => ({ ...prev, [roleId]: "pending" }));
     try {
       const r = await fetch(`/api/recruitment/requests/${roleId}/apply`, {
@@ -274,6 +277,20 @@ export default function Professional(_props: { session: Session }) {
     } catch {
       setAppliedRoles((prev) => ({ ...prev, [roleId]: "error" }));
     }
+  };
+  // If the role has application-form questions, collect them first (modal); otherwise apply directly.
+  const applyToRole = async (roleId: string) => {
+    if (!d.id || appliedRoles[roleId]) return;
+    try {
+      const fr = await fetch(`/api/recruitment/requests/${roleId}/form`);
+      const questions = fr.ok ? await fr.json() : [];
+      if (Array.isArray(questions) && questions.length > 0) {
+        const role = openRoles?.find((x) => x.id === roleId);
+        setApplyForm({ roleId, roleTitle: role?.title ?? "role", questions });
+        return;
+      }
+    } catch { /* form unavailable — fall through to a direct apply */ }
+    await doApply(roleId);
   };
   const markAllNotificationsRead = async () => {
     const r = await fetch("/api/professionals/me/notifications/read-all", { method: "POST", credentials: "same-origin" });
@@ -666,6 +683,17 @@ export default function Professional(_props: { session: Session }) {
           </footer>
         </motion.div>
       </main>
+      {applyForm && d.id && (
+        <ApplyForm
+          roleId={applyForm.roleId}
+          roleTitle={applyForm.roleTitle}
+          talentId={d.id}
+          talentType="professional"
+          questions={applyForm.questions}
+          onClose={() => setApplyForm(null)}
+          onApplied={(state) => setAppliedRoles((prev) => ({ ...prev, [applyForm.roleId]: state }))}
+        />
+      )}
     </div>
   );
 }
