@@ -17,6 +17,11 @@ public interface ICandidateRepository
     /// <returns>The matching candidates.</returns>
     Task<IReadOnlyList<Candidate>> ListAsync(string? city, int skip, int take, CancellationToken cancellationToken);
 
+    /// <summary>Lists every candidate (no-tracking) — used for import dedupe.</summary>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>All candidates.</returns>
+    Task<IReadOnlyList<Candidate>> ListAllAsync(CancellationToken cancellationToken);
+
     /// <summary>Faceted search: a page of candidates matching the criteria, plus the total match count.</summary>
     /// <param name="criteria">The active filter set.</param>
     /// <param name="skip">Number of records to skip.</param>

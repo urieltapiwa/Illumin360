@@ -150,6 +150,10 @@ export default function Admin({ session }: { session: Session }) {
   const [poolOpen, setPoolOpen] = useState<string | null>(null);
   const [poolMembers, setPoolMembers] = useState<PoolMember[]>([]);
   const [poolBusy, setPoolBusy] = useState(false);
+  // Bulk CSV candidate import.
+  const [importCsv, setImportCsv] = useState("");
+  const [importBusy, setImportBusy] = useState(false);
+  const [importResult, setImportResult] = useState<{ created: number; skipped: number; errors: string[] } | null>(null);
   // Requisition enrichment (salary/type/remote/tags) for the selected pipeline role.
   type ReqDetail = { salaryMin: number | null; salaryMax: number | null; currency: string; employmentType: string; remote: boolean; internal: boolean; tags: string[] };
   const [reqDetail, setReqDetail] = useState<ReqDetail | null>(null);
@@ -586,6 +590,17 @@ export default function Admin({ session }: { session: Session }) {
       const r = await fetch("/api/candidates/pools", { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: JSON.stringify({ name }) });
       if (r.ok) { const p: Pool = await r.json(); setPools((ps) => [...(ps ?? []), p]); setNewPoolName(""); }
     } finally { setPoolBusy(false); }
+  };
+  // Bulk-import candidates from pasted/uploaded CSV.
+  const runImport = async () => {
+    if (!importCsv.trim()) return;
+    setImportBusy(true);
+    setImportResult(null);
+    try {
+      const r = await fetch("/api/candidates/import", { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: JSON.stringify({ csv: importCsv }) });
+      if (r.ok) { setImportResult(await r.json()); }
+      else { setImportResult({ created: 0, skipped: 0, errors: [t("admin.import.failed", "Import failed — check your permissions and try again.")] }); }
+    } finally { setImportBusy(false); }
   };
   const addToPool = async (poolId: string, candidateId: string) => {
     const r = await fetch(`/api/candidates/pools/${poolId}/members/${candidateId}`, { method: "POST", credentials: "same-origin" });
@@ -1385,6 +1400,29 @@ export default function Admin({ session }: { session: Session }) {
               </div>
             </motion.section>
           )}
+
+          <motion.section variants={fade} className="card p-5">
+            <div className="mb-3"><h3 className="font-display text-[15px] font-bold text-ink-hi">{t("admin.import.title", "Bulk import candidates")}</h3><p className="text-[11px] text-ink-lo mt-0.5">{t("admin.import.sub", "Paste or upload CSV — header: firstName,lastName,city,nationality[,availability,headline]. Duplicates (name+city) are skipped.")}</p></div>
+            <div className="flex items-center gap-3 mb-2">
+              <label className="rounded-lg bg-panel2/70 px-2.5 py-1 text-[11px] font-semibold text-ink-mid hover:text-ink-hi transition cursor-pointer">
+                {t("admin.import.file", "Choose CSV file")}
+                <input type="file" accept=".csv,text/csv" className="hidden" onChange={async (e) => { const f = e.target.files?.[0]; if (f) setImportCsv(await f.text()); }} />
+              </label>
+              <span className="text-[10px] text-ink-lo">{t("admin.import.or", "or paste below")}</span>
+            </div>
+            <textarea value={importCsv} onChange={(e) => setImportCsv(e.target.value)} placeholder={"firstName,lastName,city,nationality,availability,headline"} className="w-full min-h-[90px] resize-y rounded-lg border border-line/70 bg-panel2/50 px-2.5 py-1.5 text-[12px] font-mono text-ink-hi placeholder:text-ink-lo focus:border-brand/50 focus:outline-none" />
+            <div className="mt-2 flex items-center gap-3">
+              <button onClick={runImport} disabled={importBusy || !importCsv.trim()} className="rounded-lg bg-brand/15 px-3 py-1.5 text-[12px] font-semibold text-brand-bright hover:bg-brand/25 transition disabled:opacity-50">{importBusy ? t("admin.import.importing", "Importing…") : t("admin.import.run", "Import")}</button>
+              {importResult && (
+                <span className="text-[11px] text-ink-mid">{t("admin.import.result", "{{created}} created · {{skipped}} skipped", { created: importResult.created, skipped: importResult.skipped })}{importResult.errors.length > 0 ? ` · ${importResult.errors.length} ${t("admin.import.issues", "issue(s)")}` : ""}</span>
+              )}
+            </div>
+            {importResult && importResult.errors.length > 0 && (
+              <ul className="mt-2 space-y-0.5 max-h-32 overflow-y-auto">
+                {importResult.errors.map((e, i) => <li key={i} className="text-[11px] text-pink">{e}</li>)}
+              </ul>
+            )}
+          </motion.section>
 
           {pools && (
             <motion.section variants={fade} className="card p-5">
