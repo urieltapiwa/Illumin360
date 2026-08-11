@@ -88,7 +88,7 @@ export default function Admin({ session }: { session: Session }) {
   const [liveAccounts, setLiveAccounts] = useState<{ id: string; name: string; kind: string; email: string; status: string }[] | null>(null);
   const [pipelineReqs, setPipelineReqs] = useState<{ id: string; title: string; city: string }[] | null>(null);
   const [pipelineReqId, setPipelineReqId] = useState<string | null>(null);
-  const [pipelineApps, setPipelineApps] = useState<{ id: string; talentType: string; matchScore: number; status: string }[] | null>(null);
+  const [pipelineApps, setPipelineApps] = useState<{ id: string; talentType: string; matchScore: number; status: string; rejectReason?: string | null }[] | null>(null);
   const [selectedApps, setSelectedApps] = useState<Set<string>>(new Set());
   // Recruiter CRM (clients + contacts).
   type CrmClient = { id: string; name: string; industry: string | null; city: string | null; status: string; contactCount: number };
@@ -339,10 +339,15 @@ export default function Admin({ session }: { session: Session }) {
     }
   };
   const transitionApp = async (id: string, action: "advance" | "reject") => {
-    const r = await fetch(`/api/recruitment/applications/${id}/${action}`, { method: "POST", credentials: "same-origin" });
+    let init: RequestInit = { method: "POST", credentials: "same-origin" };
+    if (action === "reject") {
+      const reason = window.prompt(t("admin.pipeline.rejectReason", "Rejection reason (optional):")) ?? "";
+      init = { ...init, headers: { "Content-Type": "application/json" }, body: JSON.stringify({ reason: reason.trim() || null, rejectedBy: session.name || "Recruiter" }) };
+    }
+    const r = await fetch(`/api/recruitment/applications/${id}/${action}`, init);
     if (r.ok) {
       const u = await r.json().catch(() => null);
-      setPipelineApps((prev) => (prev ? prev.map((a) => (a.id === id ? { ...a, status: u?.status ?? (action === "reject" ? "rejected" : a.status) } : a)) : prev));
+      setPipelineApps((prev) => (prev ? prev.map((a) => (a.id === id ? { ...a, status: u?.status ?? (action === "reject" ? "rejected" : a.status), rejectReason: u?.rejectReason ?? a.rejectReason } : a)) : prev));
     }
   };
   const createClient = async () => {
@@ -792,6 +797,7 @@ export default function Admin({ session }: { session: Session }) {
                         {cards.map((a) => (
                           <div key={a.id} className={`rounded-lg border p-2 ${stage === "hired" ? "border-brand/40 bg-brand/[0.06]" : stage === "rejected" ? "border-pink/30 bg-pink/[0.05]" : "border-line/50 bg-panel/40"}`}>
                             <div className="flex items-center justify-between gap-1"><label className="flex items-center gap-1.5 min-w-0"><input type="checkbox" checked={selectedApps.has(a.id)} onChange={() => toggleAppSelect(a.id)} /><span className="text-[11px] text-ink-hi capitalize truncate">{a.talentType}</span></label><span className="num text-[11px] text-brand-bright">{Math.round(a.matchScore)}%</span></div>
+                            {stage === "rejected" && a.rejectReason && <div className="mt-1 text-[10px] text-ink-lo italic">“{a.rejectReason}”</div>}
                             {!terminal && (
                               <div className="mt-1.5 flex gap-1.5">
                                 <button onClick={() => transitionApp(a.id, "advance")} className="rounded bg-brand/15 px-2 py-0.5 text-[10px] font-semibold text-brand-bright hover:bg-brand/25 transition">{t("admin.pipeline.advance", "Advance")}</button>

@@ -58,6 +58,9 @@ public sealed class RecruitmentDbContext(DbContextOptions<RecruitmentDbContext> 
     /// <summary>Application conversation messages set.</summary>
     public DbSet<ApplicationMessage> ApplicationMessages => Set<ApplicationMessage>();
 
+    /// <summary>Application rejection reasons set.</summary>
+    public DbSet<ApplicationRejection> ApplicationRejections => Set<ApplicationRejection>();
+
     /// <summary>Bulk email campaigns set.</summary>
     public DbSet<EmailCampaign> EmailCampaigns => Set<EmailCampaign>();
 
@@ -367,6 +370,19 @@ public sealed class RecruitmentDbContext(DbContextOptions<RecruitmentDbContext> 
             b.Property(r => r.CampaignId).HasColumnName("campaign_id");
             b.Property(r => r.Email).HasColumnName("email").HasMaxLength(200);
             b.HasIndex(r => new { r.CampaignId, r.Email }).IsUnique();
+            b.Ignore(r => r.DomainEvents);
+        });
+
+        modelBuilder.Entity<ApplicationRejection>(b =>
+        {
+            b.ToTable("application_rejections");
+            b.HasKey(r => r.Id);
+            b.Property(r => r.Id).HasColumnName("id");
+            b.Property(r => r.ApplicationId).HasColumnName("application_id");
+            b.Property(r => r.Reason).HasColumnName("reason").HasMaxLength(1000);
+            b.Property(r => r.RejectedBy).HasColumnName("rejected_by").HasMaxLength(160);
+            b.Property(r => r.RejectedAt).HasColumnName("rejected_at");
+            b.HasIndex(r => r.ApplicationId).IsUnique();
             b.Ignore(r => r.DomainEvents);
         });
 

@@ -72,6 +72,31 @@ public sealed class RecruitmentRepository(RecruitmentDbContext db) : IRecruitmen
         => await _db.Applications.FirstOrDefaultAsync(a => a.Id == id, cancellationToken).ConfigureAwait(false);
 
     /// <inheritdoc />
+    public void AddApplicationRejection(ApplicationRejection rejection) => _db.ApplicationRejections.Add(rejection);
+
+    /// <inheritdoc />
+    public async Task<ApplicationRejection?> GetRejectionForApplicationAsync(Guid applicationId, CancellationToken cancellationToken)
+        => await _db.ApplicationRejections.FirstOrDefaultAsync(r => r.ApplicationId == applicationId, cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyDictionary<Guid, string>> GetRejectionReasonsAsync(IReadOnlyList<Guid> applicationIds, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(applicationIds);
+        if (applicationIds.Count == 0)
+        {
+            return new Dictionary<Guid, string>();
+        }
+
+        var rows = await _db.ApplicationRejections.AsNoTracking()
+            .Where(r => applicationIds.Contains(r.ApplicationId))
+            .Select(r => new { r.ApplicationId, r.Reason })
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return rows.ToDictionary(r => r.ApplicationId, r => r.Reason);
+    }
+
+    /// <inheritdoc />
     public void AddSavedSearch(SavedSearch savedSearch) => _db.SavedSearches.Add(savedSearch);
 
     /// <inheritdoc />

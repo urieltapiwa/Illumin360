@@ -10,9 +10,11 @@ namespace Illumin360.Recruitment.Application.Recruitment;
 /// <param name="ApplicationId">The application id.</param>
 public sealed record AdvanceApplicationCommand(Guid ApplicationId) : ICommand<ApplicationDto>;
 
-/// <summary>Rejects an application (terminal).</summary>
+/// <summary>Rejects an application (terminal), optionally with a free-text reason.</summary>
 /// <param name="ApplicationId">The application id.</param>
-public sealed record RejectApplicationCommand(Guid ApplicationId) : ICommand<ApplicationDto>;
+/// <param name="Reason">Optional free-text rejection reason.</param>
+/// <param name="RejectedBy">Who rejected, if known.</param>
+public sealed record RejectApplicationCommand(Guid ApplicationId, string? Reason = null, string? RejectedBy = null) : ICommand<ApplicationDto>;
 
 /// <summary>Handles <see cref="AdvanceApplicationCommand"/>.</summary>
 /// <param name="repository">The recruitment repository.</param>
@@ -75,11 +77,25 @@ public sealed class RejectApplicationCommandHandler(IRecruitmentRepository repos
             return rejected.Error!;
         }
 
+        // Record a free-text reason if given (only when the application isn't already rejected).
+        string? storedReason = null;
+        if (!string.IsNullOrWhiteSpace(command.Reason))
+        {
+            var creation = ApplicationRejection.Create(command.ApplicationId, command.Reason, command.RejectedBy, DateTimeOffset.UtcNow);
+            if (creation.IsFailure)
+            {
+                return creation.Error!;
+            }
+
+            _repository.AddApplicationRejection(creation.Value!);
+            storedReason = creation.Value!.Reason;
+        }
+
         await _eventPublisher.PublishAsync(
             new IntegrationEvents.ApplicationStatusChanged(
                 application.Id.Value, application.TalentId, application.TalentType, application.Status, DateTimeOffset.UtcNow),
             cancellationToken).ConfigureAwait(false);
         await _repository.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-        return ApplicationDto.FromDomain(application);
+        return ApplicationDto.FromDomain(application, storedReason);
     }
 }
