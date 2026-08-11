@@ -158,6 +158,13 @@ public static class DependencyInjection
         services.AddScoped<IQueryHandler<ListNurtureSequencesQuery, IReadOnlyList<NurtureSequenceDto>>, ListNurtureSequencesQueryHandler>();
         services.AddScoped<IQueryHandler<GetNurtureSequenceQuery, NurtureSequenceDetailDto>, GetNurtureSequenceQueryHandler>();
         services.AddScoped<NurtureRunner>();
+        services.AddScoped<ICommandHandler<CreateInterviewKitCommand, InterviewKitDto>, CreateInterviewKitCommandHandler>();
+        services.AddScoped<ICommandHandler<AddKitQuestionCommand, InterviewKitQuestionDto>, AddKitQuestionCommandHandler>();
+        services.AddScoped<IQueryHandler<ListInterviewKitsQuery, IReadOnlyList<InterviewKitDto>>, ListInterviewKitsQueryHandler>();
+        services.AddScoped<IQueryHandler<GetInterviewKitQuery, InterviewKitDetailDto>, GetInterviewKitQueryHandler>();
+        services.AddScoped<ICommandHandler<OfferBookingSlotCommand, BookingSlotDto>, OfferBookingSlotCommandHandler>();
+        services.AddScoped<ICommandHandler<BookSlotCommand, BookingSlotDto>, BookSlotCommandHandler>();
+        services.AddScoped<IQueryHandler<ListBookingSlotsQuery, IReadOnlyList<BookingSlotDto>>, ListBookingSlotsQueryHandler>();
         services.AddScoped<
             IQueryHandler<GetApplicationThreadQuery, IReadOnlyList<MessageDto>>,
             GetApplicationThreadQueryHandler>();

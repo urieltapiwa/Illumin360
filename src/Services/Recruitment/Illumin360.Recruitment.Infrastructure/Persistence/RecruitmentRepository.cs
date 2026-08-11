@@ -696,6 +696,47 @@ public sealed class RecruitmentRepository(RecruitmentDbContext db) : IRecruitmen
             .ToListAsync(cancellationToken).ConfigureAwait(false);
 
     /// <inheritdoc />
+    public void AddInterviewKit(InterviewKit kit) => _db.InterviewKits.Add(kit);
+
+    /// <inheritdoc />
+    public async Task<InterviewKit?> GetInterviewKitAsync(Guid id, CancellationToken cancellationToken)
+        => await _db.InterviewKits.FirstOrDefaultAsync(k => k.Id == id, cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<InterviewKit>> ListInterviewKitsAsync(CancellationToken cancellationToken)
+        => await _db.InterviewKits.AsNoTracking().OrderByDescending(k => k.CreatedAt).ToListAsync(cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
+    public void AddKitQuestion(InterviewKitQuestion question) => _db.InterviewKitQuestions.Add(question);
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<InterviewKitQuestion>> ListKitQuestionsAsync(Guid kitId, CancellationToken cancellationToken)
+        => await _db.InterviewKitQuestions.AsNoTracking()
+            .Where(q => q.KitId == kitId)
+            .OrderBy(q => q.QuestionOrder)
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
+    public void AddBookingSlot(InterviewBookingSlot slot) => _db.InterviewBookingSlots.Add(slot);
+
+    /// <inheritdoc />
+    public async Task<InterviewBookingSlot?> GetBookingSlotAsync(Guid id, CancellationToken cancellationToken)
+        => await _db.InterviewBookingSlots.FirstOrDefaultAsync(s => s.Id == id, cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<InterviewBookingSlot>> ListBookingSlotsForApplicationAsync(Guid applicationId, CancellationToken cancellationToken)
+        => await _db.InterviewBookingSlots.AsNoTracking()
+            .Where(s => s.ApplicationId == applicationId)
+            .OrderBy(s => s.ProposedAt)
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<InterviewBookingSlot>> ListOfferedSlotsForApplicationAsync(Guid applicationId, CancellationToken cancellationToken)
+        => await _db.InterviewBookingSlots
+            .Where(s => s.ApplicationId == applicationId && s.Status == BookingSlotStatus.Offered)
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
     public async Task SaveChangesAsync(CancellationToken cancellationToken)
         => await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 

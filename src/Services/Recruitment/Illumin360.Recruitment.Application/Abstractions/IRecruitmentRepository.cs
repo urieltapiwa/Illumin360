@@ -527,6 +527,47 @@ public interface IRecruitmentRepository
     /// <param name="cancellationToken">Cancellation token.</param>
     Task<IReadOnlyList<NurtureEnrollment>> ListDueEnrollmentsAsync(DateTimeOffset now, CancellationToken cancellationToken);
 
+    /// <summary>Stages a new interview kit for insertion.</summary>
+    /// <param name="kit">The kit to add.</param>
+    void AddInterviewKit(InterviewKit kit);
+
+    /// <summary>Loads an interview kit by id, or null if not present.</summary>
+    /// <param name="id">The kit id.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<InterviewKit?> GetInterviewKitAsync(Guid id, CancellationToken cancellationToken);
+
+    /// <summary>Lists all interview kits, newest first.</summary>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<IReadOnlyList<InterviewKit>> ListInterviewKitsAsync(CancellationToken cancellationToken);
+
+    /// <summary>Stages a new kit question for insertion.</summary>
+    /// <param name="question">The question to add.</param>
+    void AddKitQuestion(InterviewKitQuestion question);
+
+    /// <summary>Lists a kit's questions in order.</summary>
+    /// <param name="kitId">The kit id.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<IReadOnlyList<InterviewKitQuestion>> ListKitQuestionsAsync(Guid kitId, CancellationToken cancellationToken);
+
+    /// <summary>Stages a new booking slot for insertion.</summary>
+    /// <param name="slot">The slot to add.</param>
+    void AddBookingSlot(InterviewBookingSlot slot);
+
+    /// <summary>Loads a booking slot for update (change-tracked), or null if not present.</summary>
+    /// <param name="id">The slot id.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<InterviewBookingSlot?> GetBookingSlotAsync(Guid id, CancellationToken cancellationToken);
+
+    /// <summary>Lists an application's booking slots (no-tracking), soonest first.</summary>
+    /// <param name="applicationId">The application id.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<IReadOnlyList<InterviewBookingSlot>> ListBookingSlotsForApplicationAsync(Guid applicationId, CancellationToken cancellationToken);
+
+    /// <summary>Lists an application's still-offered booking slots for update (change-tracked).</summary>
+    /// <param name="applicationId">The application id.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<IReadOnlyList<InterviewBookingSlot>> ListOfferedSlotsForApplicationAsync(Guid applicationId, CancellationToken cancellationToken);
+
     /// <summary>Commits staged changes to the data store.</summary>
     /// <param name="cancellationToken">Cancellation token.</param>
     Task SaveChangesAsync(CancellationToken cancellationToken);

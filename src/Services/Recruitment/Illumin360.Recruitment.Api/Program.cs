@@ -1296,6 +1296,104 @@ v1.MapGet("/metrics/outcomes", async (
     .ProducesProblem(StatusCodes.Status401Unauthorized)
     .ProducesProblem(StatusCodes.Status403Forbidden);
 
+// --- Interview kits / question banks (admin) ---
+v1.MapGet("/interview-kits", async (
+        IQueryHandler<ListInterviewKitsQuery, IReadOnlyList<InterviewKitDto>> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new ListInterviewKitsQuery(), ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminPolicy)
+    .WithName("ListInterviewKits")
+    .WithSummary("List reusable interview kits. Requires an admin role.")
+    .Produces<IReadOnlyList<InterviewKitDto>>(StatusCodes.Status200OK);
+
+v1.MapGet("/interview-kits/{id:guid}", async (
+        Guid id,
+        IQueryHandler<GetInterviewKitQuery, InterviewKitDetailDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new GetInterviewKitQuery(id), ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminPolicy)
+    .WithName("GetInterviewKit")
+    .WithSummary("Get an interview kit with its questions. Requires an admin role.")
+    .Produces<InterviewKitDetailDto>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status404NotFound);
+
+v1.MapPost("/interview-kits", async (
+        CreateInterviewKitBody body,
+        ICommandHandler<CreateInterviewKitCommand, InterviewKitDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new CreateInterviewKitCommand(body.Name), ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminWritePolicy)
+    .WithName("CreateInterviewKit")
+    .WithSummary("Create a reusable interview kit. Requires an admin-write role.")
+    .Produces<InterviewKitDto>(StatusCodes.Status200OK);
+
+v1.MapPost("/interview-kits/{id:guid}/questions", async (
+        Guid id,
+        AddKitQuestionBody body,
+        ICommandHandler<AddKitQuestionCommand, InterviewKitQuestionDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new AddKitQuestionCommand(id, body.Text, body.Skill), ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminWritePolicy)
+    .WithName("AddKitQuestion")
+    .WithSummary("Add a question to an interview kit. Requires an admin-write role.")
+    .Produces<InterviewKitQuestionDto>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status404NotFound);
+
+// --- Self-schedule interview booking ---
+v1.MapGet("/applications/{id:guid}/booking-slots", async (
+        Guid id,
+        IQueryHandler<ListBookingSlotsQuery, IReadOnlyList<BookingSlotDto>> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new ListBookingSlotsQuery(id), ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization()
+    .WithName("ListBookingSlots")
+    .WithSummary("List an application's self-schedule interview slots.")
+    .Produces<IReadOnlyList<BookingSlotDto>>(StatusCodes.Status200OK);
+
+v1.MapPost("/applications/{id:guid}/booking-slots", async (
+        Guid id,
+        OfferSlotBody body,
+        ICommandHandler<OfferBookingSlotCommand, BookingSlotDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new OfferBookingSlotCommand(id, body.ProposedAt, body.DurationMinutes, body.Location), ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminWritePolicy)
+    .WithName("OfferBookingSlot")
+    .WithSummary("Offer a self-schedule interview slot for an application. Requires an admin-write role.")
+    .Produces<BookingSlotDto>(StatusCodes.Status200OK);
+
+v1.MapPost("/booking-slots/{slotId:guid}/book", async (
+        Guid slotId,
+        ICommandHandler<BookSlotCommand, BookingSlotDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new BookSlotCommand(slotId), ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization()
+    .WithName("BookSlot")
+    .WithSummary("Book a proposed interview slot (schedules the interview + expires the siblings).")
+    .Produces<BookingSlotDto>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status404NotFound)
+    .ProducesProblem(StatusCodes.Status409Conflict);
+
 // --- Nurture / drip sequences (admin) ---
 v1.MapGet("/nurture", async (
         IQueryHandler<ListNurtureSequencesQuery, IReadOnlyList<NurtureSequenceDto>> handler,
@@ -1810,6 +1908,21 @@ internal sealed record AddNurtureStepBody(int DelayDays, string Subject, string 
 /// <param name="Email">Recipient email.</param>
 /// <param name="Name">Recipient name (optional).</param>
 internal sealed record EnrollRecipientBody(string Email, string? Name);
+
+/// <summary>Request body for creating an interview kit.</summary>
+/// <param name="Name">Kit name.</param>
+internal sealed record CreateInterviewKitBody(string Name);
+
+/// <summary>Request body for adding a kit question.</summary>
+/// <param name="Text">Question text.</param>
+/// <param name="Skill">Skill assessed (optional).</param>
+internal sealed record AddKitQuestionBody(string Text, string? Skill);
+
+/// <summary>Request body for offering a self-schedule interview slot.</summary>
+/// <param name="ProposedAt">Proposed start (UTC).</param>
+/// <param name="DurationMinutes">Duration in minutes.</param>
+/// <param name="Location">Location/mode.</param>
+internal sealed record OfferSlotBody(DateTimeOffset ProposedAt, int DurationMinutes, string Location);
 
 /// <summary>Request body for creating an email campaign.</summary>
 /// <param name="Name">Internal name.</param>
