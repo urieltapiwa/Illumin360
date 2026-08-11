@@ -86,11 +86,12 @@ flip the status to ✅ (add the commit/PR ref).
 | Feature | Status | Notes |
 |---|---|---|
 | Interview scheduling | ✅ | Schedule/list/cancel interviews per application (`interviews` table + admin-gated endpoints) |
-| Calendar integration (ICS/Google) | 🟡 | `.ics` invite download (`/interviews/{id}/ics`, importable to Google/Outlook); no direct calendar-API sync |
+| Calendar integration (ICS/Google) | ✅ | Per-interview `.ics` invite + a subscribable per-talent calendar feed `GET /v1/recruitment/talents/{id}/calendar.ics` (multi-VEVENT, cancelled marked STATUS:CANCELLED) that Google/Outlook can subscribe to by URL |
 | Interview scorecards / feedback | ✅ | Rating (1–5) + comment completes an interview |
 | Panel interviews | ✅ | `interview_attendees` table + `GET/POST/DELETE /v1/recruitment/interviews/{id}/attendees`; the `.ics` invite lists the panel as ATTENDEE lines. Admin attendee-management UI is a follow-up |
 
 - [x] Schedule interview (slot, location/mode, `.ics` invite) — schedule/list/cancel + `/interviews/{id}/ics`
+- [x] Calendar sync — subscribable iCalendar feed `GET /v1/recruitment/talents/{id}/calendar.ics` (`Ics.BuildFeed` multi-VEVENT VCALENDAR with X-WR-CALNAME; cancelled interviews → STATUS:CANCELLED) that Google/Outlook subscribe to by URL and poll; repository joins interviews across the talent's applications; unit tests. A one-click "add to calendar" UI link is a follow-up
 - [x] Panel interviews — `InterviewAttendee` aggregate + `interview_attendees` table; `GET/POST/DELETE /v1/recruitment/interviews/{id}/attendees` (writes admin-gated, name+email validation), and the `.ics` invite now emits an ATTENDEE line per panellist (mailto or invalid:nomail); domain/handler unit tests. Admin attendee-management UI is a follow-up
 - [x] Interview scorecard + feedback capture — rating (1–5) + comment completes the interview
 
@@ -179,7 +180,7 @@ flip the status to ✅ (add the commit/PR ref).
 
 ### Progress
 - Total build items: 48
-- Done: 47
+- Done: 48
 - In progress: 0
 
 **Changelog of ticks**

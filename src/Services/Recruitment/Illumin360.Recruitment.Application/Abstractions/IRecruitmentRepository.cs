@@ -89,6 +89,11 @@ public interface IRecruitmentRepository
     /// <param name="cancellationToken">Cancellation token.</param>
     Task<IReadOnlyList<Interview>> ListInterviewsForApplicationAsync(Guid applicationId, CancellationToken cancellationToken);
 
+    /// <summary>Lists all interviews across a talent's applications, soonest first (for their calendar feed).</summary>
+    /// <param name="talentId">The talent id.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<IReadOnlyList<Interview>> ListInterviewsForTalentAsync(Guid talentId, CancellationToken cancellationToken);
+
     /// <summary>Lists a talent's applications, most recent first.</summary>
     /// <param name="talentId">The talent id.</param>
     /// <param name="skip">Number of records to skip.</param>

@@ -540,6 +540,20 @@ v1.MapGet("/interviews/{id:guid}/ics", async (
     .Produces(StatusCodes.Status200OK)
     .ProducesProblem(StatusCodes.Status404NotFound);
 
+v1.MapGet("/talents/{talentId:guid}/calendar.ics", async (
+        Guid talentId,
+        IQueryHandler<GetTalentCalendarFeedQuery, string> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new GetTalentCalendarFeedQuery(talentId), ct);
+        return result.IsSuccess
+            ? Results.Text(result.Value!, "text/calendar")
+            : result.ToHttpResult();
+    })
+    .WithName("GetTalentCalendarFeed")
+    .WithSummary("Subscribable iCalendar feed of a talent's interviews (add to Google/Outlook by URL).")
+    .Produces(StatusCodes.Status200OK, contentType: "text/calendar");
+
 // --- Panel interviews: interview attendees ---
 v1.MapGet("/interviews/{id:guid}/attendees", async (
         Guid id,

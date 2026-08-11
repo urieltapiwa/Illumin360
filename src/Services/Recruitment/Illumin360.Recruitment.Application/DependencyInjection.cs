@@ -74,6 +74,9 @@ public static class DependencyInjection
             IQueryHandler<GetInterviewIcsQuery, string>,
             GetInterviewIcsQueryHandler>();
         services.AddScoped<
+            IQueryHandler<GetTalentCalendarFeedQuery, string>,
+            GetTalentCalendarFeedQueryHandler>();
+        services.AddScoped<
             IQueryHandler<GetInterviewAttendeesQuery, IReadOnlyList<InterviewAttendeeDto>>,
             GetInterviewAttendeesQueryHandler>();
         services.AddScoped<
