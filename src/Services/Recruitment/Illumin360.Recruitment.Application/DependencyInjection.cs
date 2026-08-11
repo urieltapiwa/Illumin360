@@ -140,6 +140,9 @@ public static class DependencyInjection
             IQueryHandler<GetMatchOutcomesQuery, MatchOutcomeSummaryDto>,
             GetMatchOutcomesQueryHandler>();
         services.AddScoped<
+            IQueryHandler<GetOutcomesCsvQuery, string>,
+            GetOutcomesCsvQueryHandler>();
+        services.AddScoped<
             IQueryHandler<GetApplicationThreadQuery, IReadOnlyList<MessageDto>>,
             GetApplicationThreadQueryHandler>();
         services.AddScoped<

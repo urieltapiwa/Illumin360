@@ -477,6 +477,27 @@ public sealed class RecruitmentRepository(RecruitmentDbContext db) : IRecruitmen
         => await _db.MatchOutcomes.AsNoTracking().OrderByDescending(o => o.DecidedAt).ToListAsync(cancellationToken).ConfigureAwait(false);
 
     /// <inheritdoc />
+    public async Task<OutcomeFeatureSnapshot> GetOutcomeFeaturesAsync(Guid applicationId, Guid requestId, CancellationToken cancellationToken)
+    {
+        var source = await _db.ApplicationSources.AsNoTracking()
+            .Where(s => s.ApplicationId == applicationId).Select(s => s.Channel)
+            .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false) ?? "direct";
+        var remote = await _db.RequisitionDetails.AsNoTracking()
+            .Where(d => d.RequestId == requestId).Select(d => d.Remote)
+            .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+        var interviews = await _db.Interviews.AsNoTracking()
+            .Where(i => i.ApplicationId == applicationId)
+            .Select(i => i.FeedbackRating)
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+        var hadOffer = await _db.Offers.AsNoTracking()
+            .AnyAsync(o => o.ApplicationId == applicationId, cancellationToken).ConfigureAwait(false);
+
+        var rated = interviews.Where(r => r.HasValue).Select(r => r!.Value).ToList();
+        decimal? avg = rated.Count == 0 ? null : Math.Round((decimal)rated.Average(), 2);
+        return new OutcomeFeatureSnapshot(source, remote, interviews.Count, avg, hadOffer);
+    }
+
+    /// <inheritdoc />
     public void AddApplicationSource(ApplicationSource source) => _db.ApplicationSources.Add(source);
 
     /// <inheritdoc />

@@ -1290,6 +1290,20 @@ v1.MapGet("/metrics/outcomes", async (
     .ProducesProblem(StatusCodes.Status401Unauthorized)
     .ProducesProblem(StatusCodes.Status403Forbidden);
 
+v1.MapGet("/metrics/outcomes/export.csv", async (
+        IQueryHandler<GetOutcomesCsvQuery, string> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new GetOutcomesCsvQuery(), ct);
+        return result.IsSuccess ? Results.Text(result.Value!, "text/csv") : result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminPolicy)
+    .WithName("ExportMatchOutcomes")
+    .WithSummary("Export the labelled hiring-outcome feature rows as CSV (LTR training set). Requires an admin role.")
+    .Produces(StatusCodes.Status200OK, contentType: "text/csv")
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden);
+
 v1.MapGet("/metrics/careers-views", async (
         IQueryHandler<GetCareerViewsQuery, IReadOnlyList<CareerViewDto>> handler,
         CancellationToken ct) =>

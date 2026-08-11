@@ -24,19 +24,33 @@ public class MatchOutcomeTests
     }
 
     [Fact]
-    public async Task Reject_captures_a_rejection_outcome_once()
+    public void Capture_snapshots_recruitment_features()
+    {
+        var o = MatchOutcome.Capture(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), "professional", 70m, true, DateTimeOffset.UnixEpoch, "Referral", remote: true, interviewCount: 3, avgInterviewRating: 4.5m, hadOffer: true, daysToDecision: 12).Value!;
+        o.Source.Should().Be("referral"); // normalised
+        o.Remote.Should().BeTrue();
+        o.InterviewCount.Should().Be(3);
+        o.AvgInterviewRating.Should().Be(4.5m);
+        o.HadOffer.Should().BeTrue();
+        o.DaysToDecision.Should().Be(12);
+    }
+
+    [Fact]
+    public async Task Reject_captures_a_rejection_outcome_once_with_features()
     {
         var app = RecruitmentApplication.Apply(RequestId.New(), Guid.NewGuid(), "professional", DateTimeOffset.UnixEpoch);
         var repo = Substitute.For<IRecruitmentRepository>();
         var publisher = Substitute.For<IIntegrationEventPublisher>();
         repo.GetApplicationAsync(Arg.Any<ApplicationId>(), Arg.Any<CancellationToken>()).Returns(app);
         repo.GetMatchOutcomeAsync(app.Id.Value, Arg.Any<CancellationToken>()).Returns((MatchOutcome?)null);
+        repo.GetOutcomeFeaturesAsync(app.Id.Value, Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+            .Returns(new OutcomeFeatureSnapshot("careers", true, 2, 3.5m, true));
         var handler = new RejectApplicationCommandHandler(repo, publisher);
 
         var result = await handler.HandleAsync(new RejectApplicationCommand(app.Id.Value, "Not a fit", "Recruiter"), CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();
-        repo.Received(1).AddMatchOutcome(Arg.Is<MatchOutcome>(o => o.Outcome == "rejected" && o.ApplicationId == app.Id.Value));
+        repo.Received(1).AddMatchOutcome(Arg.Is<MatchOutcome>(o => o.Outcome == "rejected" && o.Source == "careers" && o.Remote && o.InterviewCount == 2 && o.HadOffer));
     }
 
     [Fact]
@@ -75,5 +89,20 @@ public class MatchOutcomeTests
         result.Value!.Rejected.Should().Be(1);
         result.Value!.AvgScoreHired.Should().Be(85.0);   // (80+90)/2
         result.Value!.AvgScoreRejected.Should().Be(40.0);
+    }
+
+    [Fact]
+    public void Csv_export_has_header_and_label_last()
+    {
+        var rows = new[]
+        {
+            MatchOutcome.Capture(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), "professional", 88m, true, DateTimeOffset.UnixEpoch, "careers", true, 2, 4m, true, 9).Value!,
+        };
+
+        var csv = OutcomesCsv.Render(rows);
+
+        var lines = csv.Replace("\r\n", "\n", StringComparison.Ordinal).TrimEnd('\n').Split('\n');
+        lines[0].Should().StartWith("application_id,").And.EndWith(",hired"); // features first, label last
+        lines[1].Should().Contain(",careers,1,2,4,1,").And.EndWith(",1");     // remote=1, hadOffer=1, hired=1
     }
 }
