@@ -5,8 +5,10 @@ import { useTranslation } from "react-i18next";
 import { Chart, sparkOption, C } from "@illumin360/ui";
 import { logout, type Session } from "./auth";
 import { LanguageSwitcher, ThemeSwitcher } from "@illumin360/ui";
+import TalentApplications from "./TalentApplications";
 
 interface StudentData {
+  id?: string;
   persona: { name: string; field: string; school: string; year: string; graduating: string; readiness: number; program: string; city: string; availability?: string };
   kpis: { profileViews: number; viewsDelta: number; internshipMatches: number; applications: number; skillsDone: number; mentorSessions: number; readiness: number };
   viewsTrend: number[];
@@ -253,6 +255,8 @@ export default function Student(_props: { session: Session }) {
               <div className="space-y-3">{d.learning.map((l, i) => (<div key={i}><div className="flex items-center justify-between text-xs mb-1"><span className="text-ink-hi font-medium">{l.name}</span><span className={`text-[10px] uppercase tracking-wide ${tagColor[l.tag]}`}>{l.tag}</span></div><div className="h-2 rounded-full bg-panel2/70 overflow-hidden"><div className="h-full rounded-full bg-gradient-to-r from-brand-deep to-brand-bright" style={{ width: l.progress + "%" }} /></div></div>))}</div>
             </motion.section>
           </div>
+          {/* my applications: live status + offers (accept/decline/e-sign) + employer messaging */}
+          {d.id && <TalentApplications talentId={d.id} senderName={p.name} live={live} />}
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
             <motion.section variants={fade} className="card p-5">
               <h3 className="font-display text-[15px] font-bold text-ink-hi">{t("student.pipeline.title")}</h3><p className="text-[11px] text-ink-lo mt-0.5 mb-4">{t("student.pipeline.sub")}</p>
