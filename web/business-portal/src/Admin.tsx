@@ -115,6 +115,15 @@ export default function Admin({ session }: { session: Session }) {
   type Message = { id: string; sender: string; senderName: string; body: string; sentAt: string; read: boolean };
   const [messages, setMessages] = useState<Message[]>([]);
   const [msgDraft, setMsgDraft] = useState("");
+  // Interviews + panel attendees (per selected application).
+  type Interview = { id: string; applicationId: string; scheduledAt: string; durationMinutes: number; location: string; status: string; feedbackRating: number | null; feedbackComment: string | null };
+  type Attendee = { id: string; name: string; email: string | null; role: string };
+  const [interviews, setInterviews] = useState<Interview[]>([]);
+  const [newInterview, setNewInterview] = useState({ scheduledAt: "", durationMinutes: 45, location: "" });
+  const [ivOpen, setIvOpen] = useState<string | null>(null);
+  const [attendees, setAttendees] = useState<Attendee[]>([]);
+  const [newAttendee, setNewAttendee] = useState({ name: "", email: "", role: "interviewer" });
+  const [ivBusy, setIvBusy] = useState(false);
   // Faceted candidate search.
   type SearchCandidate = { id: string; firstName: string; lastName: string; city: string; availability: string; publicHeadline: string | null };
   type FacetCount = { label: string; count: number };
@@ -321,9 +330,9 @@ export default function Admin({ session }: { session: Session }) {
     fetch(`/api/candidates/${csOpen}/tags`).then((r) => (r.ok ? r.json() : [])).then((v) => Array.isArray(v) && setCsTags(v)).catch(() => { /* offline */ });
   }, [csOpen]);
 
-  // Offers + onboarding for the application selected on a pipeline card.
+  // Offers + onboarding + interviews for the application selected on a pipeline card.
   useEffect(() => {
-    if (!offerAppId) { setOffers(null); setOnboarding(null); setMessages([]); return; }
+    if (!offerAppId) { setOffers(null); setOnboarding(null); setMessages([]); setInterviews([]); setIvOpen(null); return; }
     fetch(`/api/recruitment/applications/${offerAppId}/messages`, { credentials: "same-origin" })
       .then((r) => (r.ok ? r.json() : null))
       .then((v) => { if (Array.isArray(v)) setMessages(v); })
@@ -336,7 +345,20 @@ export default function Admin({ session }: { session: Session }) {
       .then((r) => (r.ok ? r.json() : r.status === 404 ? "none" : null))
       .then((v) => { if (v === "none") setOnboarding("none"); else if (v?.id) setOnboarding(v); })
       .catch(() => { /* keep null */ });
+    fetch(`/api/recruitment/applications/${offerAppId}/interviews`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((v) => { if (Array.isArray(v)) setInterviews(v); })
+      .catch(() => { /* keep empty */ });
   }, [offerAppId]);
+
+  // Panel attendees for the expanded interview.
+  useEffect(() => {
+    if (!ivOpen) { setAttendees([]); return; }
+    fetch(`/api/recruitment/interviews/${ivOpen}/attendees`)
+      .then((r) => (r.ok ? r.json() : []))
+      .then((v) => { if (Array.isArray(v)) setAttendees(v); })
+      .catch(() => { /* offline */ });
+  }, [ivOpen]);
   if (!d) return <div className="grid place-items-center h-screen text-ink-mid font-mono text-sm animate-pulse">{t("admin.loading")}</div>;
 
   const k = d.kpis;
@@ -447,6 +469,30 @@ export default function Admin({ session }: { session: Session }) {
   const withdrawOffer = async (id: string) => {
     const r = await fetch(`/api/recruitment/offers/${id}/withdraw`, { method: "POST", credentials: "same-origin" });
     if (r.ok) { const u = await r.json().catch(() => null); setOffers((os) => os?.map((o) => (o.id === id ? { ...o, status: u?.status ?? "withdrawn" } : o)) ?? os); }
+  };
+  // Interviews + panel attendees.
+  const scheduleInterview = async () => {
+    if (!offerAppId || !newInterview.scheduledAt || !newInterview.location.trim()) return;
+    setIvBusy(true);
+    try {
+      // datetime-local yields "yyyy-MM-ddTHH:mm" (no zone); send as an ISO instant.
+      const r = await fetch(`/api/recruitment/applications/${offerAppId}/interviews`, { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: JSON.stringify({ scheduledAt: new Date(newInterview.scheduledAt).toISOString(), durationMinutes: Number(newInterview.durationMinutes) || 45, location: newInterview.location.trim() }) });
+      if (r.ok) { const iv: Interview = await r.json(); setInterviews((xs) => [...xs, iv]); setNewInterview({ scheduledAt: "", durationMinutes: 45, location: "" }); }
+    } finally { setIvBusy(false); }
+  };
+  const cancelInterview = async (id: string) => {
+    const r = await fetch(`/api/recruitment/interviews/${id}/cancel`, { method: "POST", credentials: "same-origin" });
+    if (r.ok) { const u = await r.json().catch(() => null); setInterviews((xs) => xs.map((iv) => (iv.id === id ? { ...iv, status: u?.status ?? "cancelled" } : iv))); }
+  };
+  const addAttendee = async (interviewId: string) => {
+    const name = newAttendee.name.trim();
+    if (!name) return;
+    const r = await fetch(`/api/recruitment/interviews/${interviewId}/attendees`, { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: JSON.stringify({ name, email: newAttendee.email.trim() || null, role: newAttendee.role.trim() || "interviewer" }) });
+    if (r.ok) { const at: Attendee = await r.json(); setAttendees((as) => [...as, at]); setNewAttendee({ name: "", email: "", role: "interviewer" }); }
+  };
+  const removeAttendee = async (attendeeId: string) => {
+    const r = await fetch(`/api/recruitment/interviews/attendees/${attendeeId}`, { method: "DELETE", credentials: "same-origin" });
+    if (r.ok || r.status === 204) setAttendees((as) => as.filter((a) => a.id !== attendeeId));
   };
   const startOnboarding = async (roleTitle: string) => {
     if (!offerAppId) return;
@@ -895,8 +941,8 @@ export default function Admin({ session }: { session: Session }) {
                                 <button onClick={() => transitionApp(a.id, "reject")} className="rounded bg-pink/15 px-2 py-0.5 text-[10px] font-semibold text-pink hover:bg-pink/25 transition">{t("admin.pipeline.reject", "Reject")}</button>
                               </div>
                             )}
-                            {(stage === "shortlisted" || stage === "hired") && (
-                              <button onClick={() => setOfferAppId(a.id)} className={`mt-1.5 w-full rounded px-2 py-0.5 text-[10px] font-semibold transition ${offerAppId === a.id ? "bg-gold/25 text-gold" : "bg-panel/60 text-ink-lo hover:text-ink-hi"}`}>{t("admin.offer.manage", "Offer")}</button>
+                            {(stage === "reviewed" || stage === "shortlisted" || stage === "hired") && (
+                              <button onClick={() => setOfferAppId(offerAppId === a.id ? null : a.id)} className={`mt-1.5 w-full rounded px-2 py-0.5 text-[10px] font-semibold transition ${offerAppId === a.id ? "bg-gold/25 text-gold" : "bg-panel/60 text-ink-lo hover:text-ink-hi"}`}>{t("admin.manage.open", "Manage")}</button>
                             )}
                           </div>
                         ))}
@@ -966,6 +1012,53 @@ export default function Admin({ session }: { session: Session }) {
                     <div className="flex gap-2">
                       <input value={msgDraft} onChange={(e) => setMsgDraft(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") sendMessage(); }} placeholder={t("admin.msg.placeholder", "Message the candidate…")} className="flex-1 rounded-lg border border-line/70 bg-panel2/50 px-2.5 py-1.5 text-[12px] text-ink-hi placeholder:text-ink-lo focus:border-brand/50 focus:outline-none" />
                       <button onClick={sendMessage} disabled={!msgDraft.trim()} className="rounded-lg bg-brand/15 px-3 py-1.5 text-[11px] font-semibold text-brand-bright hover:bg-brand/25 transition disabled:opacity-50">{t("admin.msg.send", "Send")}</button>
+                    </div>
+                  </div>
+                  {/* Interviews + panel attendees */}
+                  <div className="mt-4 border-t border-line/40 pt-4">
+                    <div className="eyebrow mb-2">{t("admin.iv.title", "Interviews & panel")}</div>
+                    <div className="flex flex-wrap items-end gap-2 mb-3">
+                      <input type="datetime-local" value={newInterview.scheduledAt} onChange={(e) => setNewInterview((f) => ({ ...f, scheduledAt: e.target.value }))} className="rounded-lg border border-line/70 bg-panel2/50 px-2.5 py-1.5 text-[12px] text-ink-hi focus:border-brand/50 focus:outline-none" />
+                      <input type="number" min={15} step={15} value={newInterview.durationMinutes} onChange={(e) => setNewInterview((f) => ({ ...f, durationMinutes: Number(e.target.value) }))} title={t("admin.iv.duration", "Duration (min)")} className="w-20 rounded-lg border border-line/70 bg-panel2/50 px-2 py-1.5 text-[12px] text-ink-hi focus:border-brand/50 focus:outline-none" />
+                      <input value={newInterview.location} onChange={(e) => setNewInterview((f) => ({ ...f, location: e.target.value }))} placeholder={t("admin.iv.location", "Location / link")} className="flex-1 min-w-[140px] rounded-lg border border-line/70 bg-panel2/50 px-2.5 py-1.5 text-[12px] text-ink-hi placeholder:text-ink-lo focus:border-brand/50 focus:outline-none" />
+                      <button onClick={scheduleInterview} disabled={ivBusy || !newInterview.scheduledAt || !newInterview.location.trim()} className="rounded-lg bg-brand/15 px-3 py-1.5 text-[11px] font-semibold text-brand-bright hover:bg-brand/25 transition disabled:opacity-50">{t("admin.iv.schedule", "Schedule")}</button>
+                    </div>
+                    <div className="space-y-2">
+                      {interviews.map((iv) => (
+                        <div key={iv.id} className="rounded-lg border border-line/50 bg-panel2/40">
+                          <div className="flex items-center gap-3 px-3 py-2">
+                            <button onClick={() => setIvOpen(ivOpen === iv.id ? null : iv.id)} className="min-w-0 flex-1 text-left">
+                              <div className="text-[12px] text-ink-hi truncate">{new Date(iv.scheduledAt).toLocaleString()} · {iv.durationMinutes}m</div>
+                              <div className="text-[10px] text-ink-lo truncate">{iv.location}</div>
+                            </button>
+                            <span className={`chip !text-[10px] capitalize ${iv.status === "cancelled" ? "!text-pink !border-pink/30" : iv.status === "completed" ? "!text-brand-bright !border-brand/30" : "!text-gold !border-gold/30"}`}>{iv.status}</span>
+                            <a href={`/api/recruitment/interviews/${iv.id}/ics`} target="_blank" rel="noreferrer" className="text-[10px] font-semibold text-ink-lo hover:text-brand-bright transition">{t("admin.iv.ics", ".ics")}</a>
+                            {iv.status !== "cancelled" && iv.status !== "completed" && <button onClick={() => cancelInterview(iv.id)} className="text-[10px] font-semibold text-ink-lo hover:text-pink transition">{t("admin.iv.cancel", "Cancel")}</button>}
+                            <button onClick={() => setIvOpen(ivOpen === iv.id ? null : iv.id)} className="text-ink-lo text-[11px]">{ivOpen === iv.id ? "▲" : "▼"}</button>
+                          </div>
+                          {ivOpen === iv.id && (
+                            <div className="border-t border-line/40 px-3 py-2.5">
+                              <div className="eyebrow mb-1.5">{t("admin.iv.panel", "Panel attendees")}</div>
+                              <div className="space-y-1.5 mb-2">
+                                {attendees.map((at) => (
+                                  <div key={at.id} className="flex items-center gap-2 rounded-lg border border-line/50 bg-panel/40 px-2.5 py-1.5">
+                                    <div className="min-w-0 flex-1"><div className="text-[12px] text-ink-hi truncate">{at.name} <span className="text-[10px] text-ink-lo capitalize">· {at.role}</span></div>{at.email && <div className="text-[10px] text-ink-lo truncate">{at.email}</div>}</div>
+                                    <button onClick={() => removeAttendee(at.id)} className="text-ink-lo hover:text-pink text-[11px]" title={t("admin.iv.removeAttendee", "Remove")}>✕</button>
+                                  </div>
+                                ))}
+                                {attendees.length === 0 && <div className="text-[11px] text-ink-lo">{t("admin.iv.noPanel", "No panellists yet.")}</div>}
+                              </div>
+                              <div className="flex flex-wrap items-center gap-2">
+                                <input value={newAttendee.name} onChange={(e) => setNewAttendee((f) => ({ ...f, name: e.target.value }))} placeholder={t("admin.iv.attName", "Name")} className="flex-1 min-w-[120px] rounded-lg border border-line/70 bg-panel2/50 px-2.5 py-1 text-[12px] text-ink-hi placeholder:text-ink-lo focus:border-brand/50 focus:outline-none" />
+                                <input value={newAttendee.email} onChange={(e) => setNewAttendee((f) => ({ ...f, email: e.target.value }))} placeholder={t("admin.iv.attEmail", "Email (optional)")} className="flex-1 min-w-[120px] rounded-lg border border-line/70 bg-panel2/50 px-2.5 py-1 text-[12px] text-ink-hi placeholder:text-ink-lo focus:border-brand/50 focus:outline-none" />
+                                <input value={newAttendee.role} onChange={(e) => setNewAttendee((f) => ({ ...f, role: e.target.value }))} placeholder={t("admin.iv.attRole", "Role")} className="w-28 rounded-lg border border-line/70 bg-panel2/50 px-2.5 py-1 text-[12px] text-ink-hi placeholder:text-ink-lo focus:border-brand/50 focus:outline-none" />
+                                <button onClick={() => addAttendee(iv.id)} disabled={!newAttendee.name.trim()} className="rounded-lg bg-brand/15 px-3 py-1 text-[11px] font-semibold text-brand-bright hover:bg-brand/25 transition disabled:opacity-50">{t("admin.iv.addAttendee", "Add")}</button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                      {interviews.length === 0 && <div className="text-[12px] text-ink-lo">{t("admin.iv.none", "No interviews scheduled.")}</div>}
                     </div>
                   </div>
                 </div>
