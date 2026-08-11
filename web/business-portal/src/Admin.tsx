@@ -179,6 +179,9 @@ export default function Admin({ session }: { session: Session }) {
   const [appSource, setAppSource] = useState<string>("direct");
   type ChannelMetric = { source: string; applications: number; hires: number };
   const [channels, setChannels] = useState<ChannelMetric[] | null>(null);
+  // Per-role careers-page view analytics.
+  type CareerView = { requestId: string; title: string; city: string; views: number; lastViewedAt: string | null };
+  const [careerViews, setCareerViews] = useState<CareerView[] | null>(null);
   const SOURCE_CHANNELS = ["direct", "careers", "referral", "campaign", "board", "agency", "walk-in"];
   // Job templates.
   type JobTemplate = { id: string; name: string; title: string; city: string | null; positions: number; employmentType: string; remote: boolean; tags: string[] };
@@ -351,6 +354,10 @@ export default function Admin({ session }: { session: Session }) {
     fetch("/api/recruitment/metrics/channels", { credentials: "same-origin" })
       .then((r) => (r.ok ? r.json() : null))
       .then((v) => { if (Array.isArray(v)) setChannels(v); })
+      .catch(() => { /* offline */ });
+    fetch("/api/recruitment/metrics/careers-views", { credentials: "same-origin" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((v) => { if (Array.isArray(v)) setCareerViews(v); })
       .catch(() => { /* offline */ });
   }, []);
 
@@ -1342,6 +1349,23 @@ export default function Admin({ session }: { session: Session }) {
                     <div key={c.source}>
                       <div className="flex justify-between text-xs mb-1"><span className="text-ink-hi font-medium capitalize">{c.source}</span><span className="num text-[11px] text-ink-mid">{c.applications} {t("admin.channels.apps", "apps")} · {c.hires} {t("admin.channels.hires", "hires")}</span></div>
                       <div className="h-2 rounded-full bg-panel2/70 overflow-hidden"><div className="h-full rounded-full bg-gradient-to-r from-brand-deep to-brand-bright" style={{ width: Math.round((c.applications / max) * 100) + "%" }} /></div>
+                    </div>
+                  ));
+                })()}
+              </div>
+            </motion.section>
+          )}
+
+          {careerViews && careerViews.length > 0 && (
+            <motion.section variants={fade} className="card p-5">
+              <div className="mb-3"><h3 className="font-display text-[15px] font-bold text-ink-hi">{t("admin.views.title", "Careers page views")}</h3><p className="text-[11px] text-ink-lo mt-0.5">{t("admin.views.sub", "How often each role's public careers page was viewed.")}</p></div>
+              <div className="space-y-2">
+                {(() => {
+                  const max = Math.max(...careerViews.map((v) => v.views), 1);
+                  return careerViews.slice(0, 12).map((v) => (
+                    <div key={v.requestId}>
+                      <div className="flex justify-between text-xs mb-1"><span className="text-ink-hi font-medium truncate">{v.title}<span className="text-ink-lo"> · {v.city}</span></span><span className="num text-[11px] text-ink-mid whitespace-nowrap">{v.views} {t("admin.views.views", "views")}{v.lastViewedAt ? ` · ${new Date(v.lastViewedAt).toLocaleDateString()}` : ""}</span></div>
+                      <div className="h-2 rounded-full bg-panel2/70 overflow-hidden"><div className="h-full rounded-full bg-gradient-to-r from-brand-deep to-brand-bright" style={{ width: Math.round((v.views / max) * 100) + "%" }} /></div>
                     </div>
                   ));
                 })()}

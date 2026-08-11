@@ -70,6 +70,9 @@ public sealed class RecruitmentDbContext(DbContextOptions<RecruitmentDbContext> 
     /// <summary>Per-application arrival-channel source attribution.</summary>
     public DbSet<ApplicationSource> ApplicationSources => Set<ApplicationSource>();
 
+    /// <summary>Per-role careers-page view counters.</summary>
+    public DbSet<CareerView> CareerViews => Set<CareerView>();
+
     /// <summary>Application conversation messages set.</summary>
     public DbSet<ApplicationMessage> ApplicationMessages => Set<ApplicationMessage>();
 
@@ -404,6 +407,18 @@ public sealed class RecruitmentDbContext(DbContextOptions<RecruitmentDbContext> 
             b.Property(r => r.CreatedAt).HasColumnName("created_at");
             b.HasIndex(r => r.RequestId);
             b.Ignore(r => r.DomainEvents);
+        });
+
+        modelBuilder.Entity<CareerView>(b =>
+        {
+            b.ToTable("career_views");
+            b.HasKey(v => v.Id);
+            b.Property(v => v.Id).HasColumnName("id");
+            b.Property(v => v.RequestId).HasColumnName("request_id");
+            b.Property(v => v.Views).HasColumnName("views");
+            b.Property(v => v.LastViewedAt).HasColumnName("last_viewed_at");
+            b.HasIndex(v => v.RequestId).IsUnique();
+            b.Ignore(v => v.DomainEvents);
         });
 
         modelBuilder.Entity<ApplicationSource>(b =>

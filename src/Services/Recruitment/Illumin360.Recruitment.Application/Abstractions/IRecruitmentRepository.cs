@@ -361,6 +361,20 @@ public interface IRecruitmentRepository
     /// <param name="cancellationToken">Cancellation token.</param>
     Task<IReadOnlyList<Guid>> ListInternalRequestIdsAsync(CancellationToken cancellationToken);
 
+    /// <summary>Lists the request ids currently flagged remote (for careers filtering).</summary>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<IReadOnlyList<Guid>> ListRemoteRequestIdsAsync(CancellationToken cancellationToken);
+
+    /// <summary>Upserts + increments the careers view counter for a role.</summary>
+    /// <param name="requestId">The requisition id.</param>
+    /// <param name="viewedAt">The view timestamp (UTC).</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task RecordCareerViewAsync(Guid requestId, DateTimeOffset viewedAt, CancellationToken cancellationToken);
+
+    /// <summary>Per-role careers view counts (descending), joined to role titles/cities.</summary>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<IReadOnlyList<CareerViewDto>> GetCareerViewsAsync(CancellationToken cancellationToken);
+
     /// <summary>Stages an application's arrival-channel source for insertion.</summary>
     /// <param name="source">The source to add.</param>
     void AddApplicationSource(ApplicationSource source);

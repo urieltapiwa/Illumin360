@@ -128,6 +128,12 @@ public static class DependencyInjection
             IQueryHandler<GetInterviewSummaryQuery, InterviewSummaryDto>,
             GetInterviewSummaryQueryHandler>();
         services.AddScoped<
+            ICommandHandler<RecordCareerViewCommand, bool>,
+            RecordCareerViewCommandHandler>();
+        services.AddScoped<
+            IQueryHandler<GetCareerViewsQuery, IReadOnlyList<CareerViewDto>>,
+            GetCareerViewsQueryHandler>();
+        services.AddScoped<
             IQueryHandler<GetApplicationThreadQuery, IReadOnlyList<MessageDto>>,
             GetApplicationThreadQueryHandler>();
         services.AddScoped<

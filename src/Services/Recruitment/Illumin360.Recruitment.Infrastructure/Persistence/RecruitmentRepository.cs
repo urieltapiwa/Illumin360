@@ -414,6 +414,51 @@ public sealed class RecruitmentRepository(RecruitmentDbContext db) : IRecruitmen
             .ToListAsync(cancellationToken).ConfigureAwait(false);
 
     /// <inheritdoc />
+    public async Task<IReadOnlyList<Guid>> ListRemoteRequestIdsAsync(CancellationToken cancellationToken)
+        => await _db.RequisitionDetails.AsNoTracking()
+            .Where(d => d.Remote)
+            .Select(d => d.RequestId)
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
+    public async Task RecordCareerViewAsync(Guid requestId, DateTimeOffset viewedAt, CancellationToken cancellationToken)
+    {
+        var existing = await _db.CareerViews.FirstOrDefaultAsync(v => v.RequestId == requestId, cancellationToken).ConfigureAwait(false);
+        if (existing is null)
+        {
+            _db.CareerViews.Add(CareerView.First(requestId, viewedAt));
+        }
+        else
+        {
+            existing.Record(viewedAt);
+        }
+
+        await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<CareerViewDto>> GetCareerViewsAsync(CancellationToken cancellationToken)
+    {
+        var views = await _db.CareerViews.AsNoTracking()
+            .Select(v => new { v.RequestId, v.Views, v.LastViewedAt })
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+        var requests = await _db.Requests.AsNoTracking()
+            .Select(r => new { Id = r.Id.Value, r.Title, r.City })
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+
+        var titles = requests.ToDictionary(r => r.Id, r => (r.Title, r.City));
+        return views
+            .Select(v => new CareerViewDto(
+                v.RequestId,
+                titles.TryGetValue(v.RequestId, out var t) ? t.Title : "(removed role)",
+                titles.TryGetValue(v.RequestId, out var c) ? c.City : string.Empty,
+                v.Views,
+                v.LastViewedAt))
+            .OrderByDescending(v => v.Views)
+            .ToList();
+    }
+
+    /// <inheritdoc />
     public void AddApplicationSource(ApplicationSource source) => _db.ApplicationSources.Add(source);
 
     /// <inheritdoc />
