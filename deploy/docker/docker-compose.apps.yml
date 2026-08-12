@@ -144,6 +144,22 @@ services:
       postgres: { condition: service_healthy }
     networks: [illumin360]
 
+  billing-api:
+    build:
+      context: ../..
+      dockerfile: src/Services/Billing/Illumin360.Billing.Api/Dockerfile
+    container_name: illumin360-billing-api
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__billing: "Host=postgres;Port=5432;Database=illumin360_billing;Username=${POSTGRES_USER:-illumin};Password=${POSTGRES_PASSWORD:-illumin_dev_pw}"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://alloy:4317"
+    expose: ["8080"]
+    ports: ["5208:8080"]
+    depends_on:
+      postgres: { condition: service_healthy }
+    networks: [illumin360]
+
   # Dev mail catcher for the self-registration email-verification flow (SMTP in, web UI + API on 8025).
   # The illumin360 realm's SMTP is pointed here; verification emails are caught, not delivered externally.
   mailpit:
@@ -185,7 +201,7 @@ services:
       ASPNETCORE_ENVIRONMENT: Production
       OTEL_EXPORTER_OTLP_ENDPOINT: "http://alloy:4317"
     ports: ["8088:8080"]
-    depends_on: [candidates-api, recruitment-api, students-api, professionals-api, admin-api, employers-api, payments-api]
+    depends_on: [candidates-api, recruitment-api, students-api, professionals-api, admin-api, employers-api, payments-api, billing-api]
     networks: [illumin360]
 
   # Business portal SPA — static build served by nginx, fronted by the BFF (never exposed directly).

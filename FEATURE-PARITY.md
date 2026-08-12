@@ -364,11 +364,14 @@ live ranking**. The commercial gap is concentrated in four themes below.
 | App marketplace / partner catalog | ⬜ | Greenhouse 500+, SmartRecruiters 350+ |
 | Enterprise SSO (SAML) + SCIM provisioning | 🟡 OIDC (Keycloak) | enterprise ATS |
 | **Marketplace-native (Upwork/Eightfold axis)** | | |
-| Payments / escrow / milestones / contracts | ⬜ (deliberate) | Upwork |
-| Two-sided reviews / reputation score | ⬜ | Upwork JSS |
+| Payments / escrow / milestones / contracts | ✅ (Fake PSP default) | Upwork |
+| Two-sided reviews / reputation score | ✅ | Upwork JSS |
 | Worker classification / compliance / EOR | ⬜ | Upwork Enterprise |
 | Contingent-workforce visibility / VMS / pay-bill | ⬜ | Bullhorn, Workday VNDLY, Eightfold Flex |
 | Skill badges / assessments / vetting | 🟡 endorsements | Upwork badges |
+| **Monetization** | | |
+| SaaS subscription billing (plans / invoices / entitlements) | ✅ (Fake PSP default) | SpotAxis SaaS billing |
+| Marketplace commission take-rate | ✅ | Upwork service fee |
 
 ### v0.3.0 committed scope (decisions locked 2026-08-12)
 Three directional forks were decided by the product owner:
@@ -438,6 +441,37 @@ provider's sales, or collect via DPO + disburse via a separate bank/mobile-money
 Adapters corrected to the real APIs (Flutterwave `/payments` returns a checkout link not an id + `/transfers`
 with account_bank/number + major units; Stripe capture-then-transfer; DPO `createToken` Services block +
 `refundToken` refundAmount/refundDetails; N-Genius vendor content-types + base URLs). Payments 15 unit tests.
+
+**Monetization — subscription billing + commission take-rate shipped (2026-08-12):** the platform's two
+revenue mechanics are now real. **(1) Marketplace commission take-rate** — `MarketplaceOptions.PlatformFeePercent`
+(config `Payments:PlatformFeePercent`, default **0%** = no behaviour change): on milestone Approve the platform
+fee is withheld, only the **net** is released to the talent's payout account, and the fee is recorded as a new
+`MovementKind.Fee` ledger movement (so escrow still balances). Integer minor-units, floor-rounded, clamped to
+the milestone amount. (Payments 16 unit tests; merged #128.) **(2) SaaS subscription billing** — new
+**`Illumin360.Billing` service** (own DB `billing`, gateway `/api/billing`, port 5208): `Plan` (code/price/
+interval Monthly|Annual/feature list) → `Subscription` (Trialing/Active/PastDue/Canceled + period window +
+provider ref) → `Invoice` (Open/Paid/Failed/Void), with recurring **collection** behind an **`IBillingProvider`**
+port whose only implementation today is a deterministic **`FakeBillingProvider`** (no real money). `Subscribe`
+starts a first active period + records a paid invoice; `GetEntitlements` gates features by active status; a
+`BillingScheduler` background service renews due subscriptions (charge → MarkPaid+Renew, else MarkFailed+
+MarkPastDue). Endpoints `GET/POST /plans`, `POST /subscriptions`, `GET /subscriptions/{customer}`,
+`.../cancel`, `.../invoices`, `GET /entitlements/{customer}`; migration `InitialBilling`; 7 unit + 1 real-Postgres
+lifecycle integration test. **Subscriptions are recurring collection *from* the customer, not third-party
+payout — so the N-Genius/DPO payout gap does not block them; the real constraint is recurring/tokenization +
+NAD support.** Real recurring adapters (DPO NAD, Flutterwave ZAR/USD, N-Genius AED) are the follow-up, same
+Fake-default gating (D2 legal + live credentials before real money).
+
+**Monetization — real recurring billing adapters (2026-08-12):** the three real recurring collectors are
+implemented behind `IBillingProvider`, config-selectable via `Billing:Provider`, **default `Fake`/off** (a real
+adapter is used only when `Provider` names one **and** `Billing:ProviderEnabled=true` **and** a `BaseUrl` is set —
+`ProviderEnabled` is deliberately separate from `Billing:Enabled`, the scheduler switch, so turning the renewal
+scheduler on never implies real money). **DPO** (`createToken` with `<AllowRecurrent>` → `chargeTokenAuth` per
+cycle → `cancelToken`; XML API3G v6) — **the only NAD-capable option**. **Flutterwave** (hosted first payment →
+`/tokenized-charges` per cycle; v3 major units) — **ZAR/USD, no NAD**. **N-Genius** (OAuth access-token → vaulted
+`savedCard.recapture` order → merchant-initiated recurring charge) — **AED-centric, no NAD/ZAR rail**. PCI: no raw
+card data — provider-held tokens/hosted pages only (SAQ-A). 8 stub-handler unit tests assert the gate, auth,
+endpoints, request bodies, response parse + error surfacing (Billing 15). Still gated for go-live on D2 (legal) +
+each provider's recurring feature + live credentials.
 
 ### Proposed v0.3.0 backlog (tiered)
 
