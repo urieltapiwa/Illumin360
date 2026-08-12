@@ -33,12 +33,26 @@ public sealed class StripeConnectPaymentProvider(HttpClient http, PaymentProvide
     }
 
     /// <inheritdoc />
-    public Task<PaymentResult> ReleaseAsync(string idempotencyKey, string holdReference, CancellationToken cancellationToken)
-        => PostAsync($"/v1/payment_intents/{holdReference}/capture", idempotencyKey, cancellationToken);
+    public Task<PaymentResult> ReleaseAsync(ReleaseInstruction instruction, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(instruction);
+
+        // Capture the manual-capture PaymentIntent. Payout to the connected account (destination) is set on the
+        // charge at hold time via Stripe Connect (on_behalf_of / transfer_data) — validate that wiring in test mode.
+        return PostAsync($"/v1/payment_intents/{instruction.HoldReference}/capture", instruction.IdempotencyKey, cancellationToken);
+    }
 
     /// <inheritdoc />
-    public Task<PaymentResult> RefundAsync(string idempotencyKey, string holdReference, CancellationToken cancellationToken)
-        => PostAsync("/v1/refunds", idempotencyKey, cancellationToken, ("payment_intent", holdReference));
+    public Task<PaymentResult> RefundAsync(RefundInstruction instruction, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(instruction);
+        var form = new[]
+        {
+            ("payment_intent", instruction.HoldReference),
+            ("amount", instruction.AmountMinor.ToString(System.Globalization.CultureInfo.InvariantCulture)),
+        };
+        return PostAsync("/v1/refunds", instruction.IdempotencyKey, cancellationToken, form);
+    }
 
     private async Task<PaymentResult> PostAsync(string path, string idempotencyKey, CancellationToken cancellationToken, params (string Key, string Value)[] form)
     {

@@ -15,10 +15,16 @@ public sealed class FakePaymentProvider : IPaymentProvider
         => Task.FromResult(new PaymentResult(true, $"fake-hold-{idempotencyKey}"));
 
     /// <inheritdoc />
-    public Task<PaymentResult> ReleaseAsync(string idempotencyKey, string holdReference, CancellationToken cancellationToken)
-        => Task.FromResult(new PaymentResult(true, $"fake-release-{idempotencyKey}"));
+    public Task<PaymentResult> ReleaseAsync(ReleaseInstruction instruction, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(instruction);
+        return Task.FromResult(new PaymentResult(true, $"fake-release-{instruction.IdempotencyKey}"));
+    }
 
     /// <inheritdoc />
-    public Task<PaymentResult> RefundAsync(string idempotencyKey, string holdReference, CancellationToken cancellationToken)
-        => Task.FromResult(new PaymentResult(true, $"fake-refund-{idempotencyKey}"));
+    public Task<PaymentResult> RefundAsync(RefundInstruction instruction, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(instruction);
+        return Task.FromResult(new PaymentResult(true, $"fake-refund-{instruction.IdempotencyKey}"));
+    }
 }

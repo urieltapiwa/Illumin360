@@ -24,13 +24,29 @@ public sealed class FlutterwavePaymentProvider(HttpClient http, PaymentProviderO
         => PostAsync("/payments", idempotencyKey, new { tx_ref = idempotencyKey, amount = amountMinor / 100.0m, currency }, cancellationToken);
 
     /// <inheritdoc />
-    // Real release is a /transfers call needing the talent's account + amount (see the port-extension note).
-    public Task<PaymentResult> ReleaseAsync(string idempotencyKey, string holdReference, CancellationToken cancellationToken)
-        => PostAsync("/transfers", idempotencyKey, new { reference = idempotencyKey, meta = new { holdReference } }, cancellationToken);
+    public Task<PaymentResult> ReleaseAsync(ReleaseInstruction instruction, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(instruction);
+
+        // Transfer the released amount to the talent's subaccount/beneficiary (DestinationAccount).
+        var body = new
+        {
+            account_bank = "subaccount",
+            account_number = instruction.DestinationAccount,
+            amount = instruction.AmountMinor / 100.0m,
+            currency = instruction.Currency,
+            reference = instruction.IdempotencyKey,
+            meta = new { holdReference = instruction.HoldReference },
+        };
+        return PostAsync("/transfers", instruction.IdempotencyKey, body, cancellationToken);
+    }
 
     /// <inheritdoc />
-    public Task<PaymentResult> RefundAsync(string idempotencyKey, string holdReference, CancellationToken cancellationToken)
-        => PostAsync($"/transactions/{holdReference}/refund", idempotencyKey, new { }, cancellationToken);
+    public Task<PaymentResult> RefundAsync(RefundInstruction instruction, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(instruction);
+        return PostAsync($"/transactions/{instruction.HoldReference}/refund", instruction.IdempotencyKey, new { amount = instruction.AmountMinor / 100.0m }, cancellationToken);
+    }
 
     private async Task<PaymentResult> PostAsync(string path, string idempotencyKey, object body, CancellationToken cancellationToken)
     {

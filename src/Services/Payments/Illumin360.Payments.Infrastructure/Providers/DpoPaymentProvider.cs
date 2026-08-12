@@ -38,25 +38,31 @@ public sealed class DpoPaymentProvider(HttpClient http, PaymentProviderOptions o
     }
 
     /// <inheritdoc />
-    public Task<PaymentResult> ReleaseAsync(string idempotencyKey, string holdReference, CancellationToken cancellationToken)
+    public Task<PaymentResult> ReleaseAsync(ReleaseInstruction instruction, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(instruction);
+
+        // Settle the held token. DPO is collection-first; disbursing to the talent (DestinationAccount) is a
+        // separate payout step — validate against the DPO sandbox.
         var xml = new XElement(
             "API3G",
             new XElement("CompanyToken", _options.Extra),
             new XElement("Request", "verifyToken"),
-            new XElement("TransactionToken", holdReference));
-        return PostAsync(xml, "Result", idempotencyKey, cancellationToken);
+            new XElement("TransactionToken", instruction.HoldReference));
+        return PostAsync(xml, "Result", instruction.IdempotencyKey, cancellationToken);
     }
 
     /// <inheritdoc />
-    public Task<PaymentResult> RefundAsync(string idempotencyKey, string holdReference, CancellationToken cancellationToken)
+    public Task<PaymentResult> RefundAsync(RefundInstruction instruction, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(instruction);
         var xml = new XElement(
             "API3G",
             new XElement("CompanyToken", _options.Extra),
             new XElement("Request", "refundToken"),
-            new XElement("TransactionToken", holdReference));
-        return PostAsync(xml, "Result", idempotencyKey, cancellationToken);
+            new XElement("TransactionToken", instruction.HoldReference),
+            new XElement("refundAmount", (instruction.AmountMinor / 100.0m).ToString(System.Globalization.CultureInfo.InvariantCulture)));
+        return PostAsync(xml, "Result", instruction.IdempotencyKey, cancellationToken);
     }
 
     private async Task<PaymentResult> PostAsync(XElement xml, string readElement, string idempotencyKey, CancellationToken cancellationToken)

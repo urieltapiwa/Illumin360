@@ -54,6 +54,11 @@ public class ContractLifecycleTests
         repo.GetContractAsync(contract.Id, Arg.Any<CancellationToken>()).Returns(contract);
         repo.GetMilestoneAsync(milestone.Id, Arg.Any<CancellationToken>()).Returns(milestone);
         repo.ListMilestonesAsync(contract.Id, Arg.Any<CancellationToken>()).Returns(new[] { milestone });
+
+        // A verified payout account so release can pay out to the talent.
+        var payout = PayoutAccount.Register(contract.TalentId, "sub_talent", DateTimeOffset.UnixEpoch).Value!;
+        payout.Verify(DateTimeOffset.UnixEpoch);
+        repo.GetPayoutAccountAsync(contract.TalentId, Arg.Any<CancellationToken>()).Returns(payout);
         return (repo, contract, milestone);
     }
 

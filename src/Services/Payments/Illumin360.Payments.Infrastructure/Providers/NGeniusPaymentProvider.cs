@@ -35,21 +35,28 @@ public sealed class NGeniusPaymentProvider(HttpClient http, PaymentProviderOptio
     }
 
     /// <inheritdoc />
-    public async Task<PaymentResult> ReleaseAsync(string idempotencyKey, string holdReference, CancellationToken cancellationToken)
+    public async Task<PaymentResult> ReleaseAsync(ReleaseInstruction instruction, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(instruction);
         var token = await AccessTokenAsync(cancellationToken).ConfigureAwait(false);
+
+        // Capture the authorised amount. N-Genius is card acquiring — paying the talent out to DestinationAccount
+        // is a separate disbursement step (validate the payout rail against the sandbox).
+        var body = new { amount = new { currencyCode = instruction.Currency, value = instruction.AmountMinor } };
         return token is null
             ? new PaymentResult(false, string.Empty, "N-Genius: could not obtain an access token.")
-            : await SendAsync(HttpMethod.Post, $"/transactions/outlets/{_options.Extra}/orders/{holdReference}/captures", token, new { }, idempotencyKey, cancellationToken).ConfigureAwait(false);
+            : await SendAsync(HttpMethod.Post, $"/transactions/outlets/{_options.Extra}/orders/{instruction.HoldReference}/captures", token, body, instruction.IdempotencyKey, cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
-    public async Task<PaymentResult> RefundAsync(string idempotencyKey, string holdReference, CancellationToken cancellationToken)
+    public async Task<PaymentResult> RefundAsync(RefundInstruction instruction, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(instruction);
         var token = await AccessTokenAsync(cancellationToken).ConfigureAwait(false);
+        var body = new { amount = new { currencyCode = instruction.Currency, value = instruction.AmountMinor } };
         return token is null
             ? new PaymentResult(false, string.Empty, "N-Genius: could not obtain an access token.")
-            : await SendAsync(HttpMethod.Post, $"/transactions/outlets/{_options.Extra}/orders/{holdReference}/refunds", token, new { }, idempotencyKey, cancellationToken).ConfigureAwait(false);
+            : await SendAsync(HttpMethod.Post, $"/transactions/outlets/{_options.Extra}/orders/{instruction.HoldReference}/refunds", token, body, instruction.IdempotencyKey, cancellationToken).ConfigureAwait(false);
     }
 
     private async Task<string?> AccessTokenAsync(CancellationToken cancellationToken)

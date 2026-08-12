@@ -15,9 +15,17 @@ provider-agnostic. See [`03-architecture/marketplace-transactions-design.md`](..
 ```jsonc
 "Payments": { "Provider": "Fake", "Enabled": false, "BaseUrl": "", "SecretKey": "", "Extra": "" }
 ```
-`Extra` carries provider-specifics (N-Genius outlet reference; DPO company token). **Port gap:** Release/Refund
-take only `(idempotencyKey, holdReference)` — capture/refund-by-id PSPs (Stripe) fit; transfer-to-destination
-PSPs (Flutterwave/N-Genius/DPO payouts) need a destination-account + amount port extension before go-live.
+`Extra` carries provider-specifics (N-Genius outlet reference; DPO company token).
+
+## Payout accounts + the release transfer path
+The port now carries `ReleaseInstruction` (hold ref + amount + currency + **destination account**) and
+`RefundInstruction` (hold ref + amount + currency), so transfer-to-destination payouts are code-complete:
+- A talent registers a payout destination — `POST /v1/payments/payout-accounts` — which starts **Pending** and
+  is made **Verified** via `.../{talentId}/verify` (KYC gate). We store only the provider's reference, never raw
+  bank details.
+- **Approve** looks up the talent's payout account and **refuses to release** unless it is Verified, then passes
+  its provider reference as the transfer destination. Flutterwave does a real `/transfers`; Stripe captures the
+  connected-account charge; N-Genius/DPO capture + note the separate disbursement rail (validate in sandbox).
 
 ## Layers
 - `Illumin360.Payments.Domain` · `Illumin360.Payments.Application` · `Illumin360.Payments.Infrastructure` · `Illumin360.Payments.Api`

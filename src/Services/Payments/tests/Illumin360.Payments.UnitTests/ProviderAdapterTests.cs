@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text;
 using FluentAssertions;
+using Illumin360.Payments.Application.Abstractions;
 using Illumin360.Payments.Infrastructure.Providers;
 using Xunit;
 
@@ -55,7 +56,7 @@ public class ProviderAdapterTests
         var recorder = new Recorder(_ => (HttpStatusCode.OK, """{"id":"pi_123","status":"succeeded"}"""));
         var provider = new StripeConnectPaymentProvider(new HttpClient(recorder), new PaymentProviderOptions { BaseUrl = "https://api.stripe.com", SecretKey = "sk_test" });
 
-        await provider.ReleaseAsync("ms-1", "pi_123", CancellationToken.None);
+        await provider.ReleaseAsync(new ReleaseInstruction("ms-1", "pi_123", 500000, "NAD", "acct_talent"), CancellationToken.None);
 
         recorder.Requests[0].RequestUri!.AbsolutePath.Should().Be("/v1/payment_intents/pi_123/capture");
     }
@@ -66,7 +67,7 @@ public class ProviderAdapterTests
         var recorder = new Recorder(_ => (HttpStatusCode.BadRequest, """{"error":{"message":"no such intent"}}"""));
         var provider = new StripeConnectPaymentProvider(new HttpClient(recorder), new PaymentProviderOptions { BaseUrl = "https://api.stripe.com", SecretKey = "sk_test" });
 
-        var result = await provider.RefundAsync("ms-1", "pi_x", CancellationToken.None);
+        var result = await provider.RefundAsync(new RefundInstruction("ms-1", "pi_x", 500000, "NAD"), CancellationToken.None);
 
         result.Success.Should().BeFalse();
         result.Error.Should().Contain("400");
@@ -85,5 +86,19 @@ public class ProviderAdapterTests
         recorder.Requests[0].RequestUri!.AbsolutePath.Should().Be("/v3/payments");
         recorder.Requests[0].Headers.Authorization!.ToString().Should().Be("Bearer FLWSECK");
         recorder.Bodies[0].Should().Contain("\"tx_ref\":\"ms-1\"").And.Contain("\"currency\":\"NAD\"");
+    }
+
+    [Fact]
+    public async Task Flutterwave_release_transfers_the_amount_to_the_destination_account()
+    {
+        var recorder = new Recorder(_ => (HttpStatusCode.OK, """{"status":"success","data":{"id":"tr-7"}}"""));
+        var provider = new FlutterwavePaymentProvider(new HttpClient(recorder), new PaymentProviderOptions { BaseUrl = "https://api.flutterwave.com/v3", SecretKey = "FLWSECK" });
+
+        var result = await provider.ReleaseAsync(new ReleaseInstruction("ms-1", "flw-9", 300000, "NAD", "sub_talent_42"), CancellationToken.None);
+
+        result.Success.Should().BeTrue();
+        result.Reference.Should().Be("tr-7");
+        recorder.Requests[0].RequestUri!.AbsolutePath.Should().Be("/v3/transfers");
+        recorder.Bodies[0].Should().Contain("sub_talent_42").And.Contain("\"amount\":3000");
     }
 }

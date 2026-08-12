@@ -120,7 +120,15 @@ public sealed class ApproveMilestoneCommandHandler(IPaymentsRepository repositor
             return Error.NotFound("contract.not_found", "Contract not found.");
         }
 
-        var release = await _provider.ReleaseAsync(milestone.Id.ToString(), milestone.HoldReference ?? string.Empty, cancellationToken).ConfigureAwait(false);
+        var payout = await _repository.GetPayoutAccountAsync(contract.TalentId, cancellationToken).ConfigureAwait(false);
+        if (payout is null || payout.Status != Domain.PayoutAccountStatus.Verified)
+        {
+            return Error.Validation("payments.no_verified_payout_account", "The talent has no verified payout account.");
+        }
+
+        var release = await _provider.ReleaseAsync(
+            new ReleaseInstruction(milestone.Id.ToString(), milestone.HoldReference ?? string.Empty, milestone.AmountMinor, contract.Currency, payout.ProviderAccount),
+            cancellationToken).ConfigureAwait(false);
         if (!release.Success)
         {
             return new Error("payment.release_failed", release.Error ?? "The payment provider declined the release.");
@@ -178,7 +186,9 @@ public sealed class RefundMilestoneCommandHandler(IPaymentsRepository repository
             return Error.NotFound("contract.not_found", "Contract not found.");
         }
 
-        var refund = await _provider.RefundAsync(milestone.Id.ToString(), milestone.HoldReference ?? string.Empty, cancellationToken).ConfigureAwait(false);
+        var refund = await _provider.RefundAsync(
+            new RefundInstruction(milestone.Id.ToString(), milestone.HoldReference ?? string.Empty, milestone.AmountMinor, contract.Currency),
+            cancellationToken).ConfigureAwait(false);
         if (!refund.Success)
         {
             return new Error("payment.refund_failed", refund.Error ?? "The payment provider declined the refund.");

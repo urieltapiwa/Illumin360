@@ -22,6 +22,9 @@ public static class DependencyInjection
         services.AddScoped<ICommandHandler<RefundMilestoneCommand, MilestoneDto>, RefundMilestoneCommandHandler>();
         services.AddScoped<IQueryHandler<ListContractsQuery, IReadOnlyList<ContractDto>>, ListContractsQueryHandler>();
         services.AddScoped<IQueryHandler<GetContractQuery, ContractDetailDto>, GetContractQueryHandler>();
+        services.AddScoped<ICommandHandler<RegisterPayoutAccountCommand, PayoutAccountDto>, RegisterPayoutAccountCommandHandler>();
+        services.AddScoped<ICommandHandler<VerifyPayoutAccountCommand, PayoutAccountDto>, VerifyPayoutAccountCommandHandler>();
+        services.AddScoped<IQueryHandler<GetPayoutAccountQuery, PayoutAccountDto>, GetPayoutAccountQueryHandler>();
         return services;
     }
 }

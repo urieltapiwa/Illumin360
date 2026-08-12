@@ -19,6 +19,9 @@ public sealed class PaymentsDbContext(DbContextOptions<PaymentsDbContext> option
     /// <summary>Ledger movements (append-only audit).</summary>
     public DbSet<LedgerMovement> LedgerMovements => Set<LedgerMovement>();
 
+    /// <summary>Talent payout accounts.</summary>
+    public DbSet<PayoutAccount> PayoutAccounts => Set<PayoutAccount>();
+
     /// <inheritdoc />
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -61,6 +64,20 @@ public sealed class PaymentsDbContext(DbContextOptions<PaymentsDbContext> option
             b.Property(m => m.DecidedAt).HasColumnName("decided_at");
             b.HasIndex(m => m.ContractId);
             b.Ignore(m => m.DomainEvents);
+        });
+
+        modelBuilder.Entity<PayoutAccount>(b =>
+        {
+            b.ToTable("payout_accounts");
+            b.HasKey(p => p.Id);
+            b.Property(p => p.Id).HasColumnName("id");
+            b.Property(p => p.TalentId).HasColumnName("talent_id");
+            b.Property(p => p.ProviderAccount).HasColumnName("provider_account").HasMaxLength(200);
+            b.Property(p => p.Status).HasColumnName("status").HasMaxLength(20).HasConversion(v => v.ToString(), s => Enum.Parse<PayoutAccountStatus>(s));
+            b.Property(p => p.CreatedAt).HasColumnName("created_at");
+            b.Property(p => p.UpdatedAt).HasColumnName("updated_at");
+            b.HasIndex(p => p.TalentId).IsUnique();
+            b.Ignore(p => p.DomainEvents);
         });
 
         modelBuilder.Entity<LedgerMovement>(b =>
