@@ -233,9 +233,13 @@ Workstream C.
   visible) + pure `ReputationScorer` in `Illumin360.Matching` (Bayesian-shrunk 0–100). Endpoints
   `POST/GET /applications/{id}/review[s]` + `GET /talents/{id}/reputation`; talent- and employer-side review
   surfaces. When the Payments service lands, reviews extend to contract completion behind the same scorer.
-- **Phase 1 — Contracts & milestones as agreements** *(no money).* `Illumin360.Payments` service scaffold,
-  `Contract`/`Milestone`/`TimeEntry` domain + state machines, `FakePaymentProvider`, endpoints, portal UI.
-  Everything except real fund movement — fully testable. *(Gated only by D4, D5.)*
+- **Phase 1 — Contracts & milestones as agreements** *(no money).* ✅ **Shipped (2026-08-12).** New
+  `Illumin360.Payments` service (own DB `illumin360_payments`, gateway `/api/payments`, port 5207):
+  `Contract` + `Milestone` state machines, append-only `LedgerMovement`, `IPaymentProvider` port +
+  **`FakePaymentProvider`** (no real money), full fund → submit → approve/refund flow, contract auto-completes
+  when all milestones settle. Unit + Testcontainers integration tests (full lifecycle over HTTP). *(D4 defaulted
+  — `payments` added to the init script; D5 defaulted — fixed-price + milestones first, hourly deferred. Portal
+  UI + real PSP adapter are the follow-ups.)*
 - **Phase 2 — Fund escrow** *(gated: D1, D2).* `IPaymentProvider` real adapter, provider-hosted funding,
   `charge.*` webhooks, ledger `ClientFunding → EscrowHold`. Money can go *in*.
 - **Phase 3 — Release / refund / payouts** *(gated: D1, D2, D3).* Transfers/disbursements to talent subaccounts,
