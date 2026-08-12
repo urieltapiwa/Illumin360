@@ -461,6 +461,18 @@ payout — so the N-Genius/DPO payout gap does not block them; the real constrai
 NAD support.** Real recurring adapters (DPO NAD, Flutterwave ZAR/USD, N-Genius AED) are the follow-up, same
 Fake-default gating (D2 legal + live credentials before real money).
 
+**Monetization — real recurring billing adapters (2026-08-12):** the three real recurring collectors are
+implemented behind `IBillingProvider`, config-selectable via `Billing:Provider`, **default `Fake`/off** (a real
+adapter is used only when `Provider` names one **and** `Billing:ProviderEnabled=true` **and** a `BaseUrl` is set —
+`ProviderEnabled` is deliberately separate from `Billing:Enabled`, the scheduler switch, so turning the renewal
+scheduler on never implies real money). **DPO** (`createToken` with `<AllowRecurrent>` → `chargeTokenAuth` per
+cycle → `cancelToken`; XML API3G v6) — **the only NAD-capable option**. **Flutterwave** (hosted first payment →
+`/tokenized-charges` per cycle; v3 major units) — **ZAR/USD, no NAD**. **N-Genius** (OAuth access-token → vaulted
+`savedCard.recapture` order → merchant-initiated recurring charge) — **AED-centric, no NAD/ZAR rail**. PCI: no raw
+card data — provider-held tokens/hosted pages only (SAQ-A). 8 stub-handler unit tests assert the gate, auth,
+endpoints, request bodies, response parse + error surfacing (Billing 15). Still gated for go-live on D2 (legal) +
+each provider's recurring feature + live credentials.
+
 ### Proposed v0.3.0 backlog (tiered)
 
 **Tier 1 — headliners (high fit; build largely on what we have).** Ordered by fit×leverage:

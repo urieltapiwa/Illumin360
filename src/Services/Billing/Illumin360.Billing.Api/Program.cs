@@ -19,9 +19,27 @@ builder.Services.AddHealthChecks()
 builder.Services.AddBillingApplication();
 builder.Services.AddBillingInfrastructure(builder.Configuration);
 
-// Recurring-billing provider — Fake by default (no real money). Real adapters (DPO/Flutterwave/N-Genius) are a
-// follow-up; they register here as typed HttpClients when Billing:Provider opts in.
-builder.Services.AddSingleton<IBillingProvider, FakeBillingProvider>();
+// Recurring-billing provider — Fake by default (no real money). A real adapter is used ONLY when
+// Billing:Provider names one, Enabled=true, and a BaseUrl is set — and going live still requires the D2 legal
+// sign-off + the provider's recurring feature enabled + credentials. NAD note: DPO is the only NAD-capable one;
+// Flutterwave bills ZAR/USD (no NAD); N-Genius is AED-centric.
+var billingOptions = builder.Configuration.GetSection("Billing").Get<BillingProviderOptions>() ?? new BillingProviderOptions();
+builder.Services.AddSingleton(billingOptions);
+switch (billingOptions.UseReal ? billingOptions.Provider : BillingProviderKind.Fake)
+{
+    case BillingProviderKind.Dpo:
+        builder.Services.AddHttpClient<IBillingProvider, DpoBillingProvider>();
+        break;
+    case BillingProviderKind.Flutterwave:
+        builder.Services.AddHttpClient<IBillingProvider, FlutterwaveBillingProvider>();
+        break;
+    case BillingProviderKind.NGenius:
+        builder.Services.AddHttpClient<IBillingProvider, NGeniusBillingProvider>();
+        break;
+    default:
+        builder.Services.AddSingleton<IBillingProvider, FakeBillingProvider>();
+        break;
+}
 
 // Charge due renewals on a timer (enabled by default; interval via Billing:IntervalSeconds).
 if (builder.Configuration.GetValue<bool?>("Billing:Enabled") ?? true)

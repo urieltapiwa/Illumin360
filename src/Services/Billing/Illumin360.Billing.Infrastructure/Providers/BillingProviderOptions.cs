@@ -26,8 +26,12 @@ public sealed record BillingProviderOptions
     /// <summary>The provider.</summary>
     public BillingProviderKind Provider { get; init; } = BillingProviderKind.Fake;
 
-    /// <summary>Master switch — a real adapter is used only when true AND a <see cref="BaseUrl"/> is set.</summary>
-    public bool Enabled { get; init; }
+    /// <summary>
+    /// Master switch for using a REAL provider adapter — used only when true AND a <see cref="BaseUrl"/> is set.
+    /// Deliberately distinct from <c>Billing:Enabled</c> (which toggles the renewal scheduler) so turning the
+    /// scheduler on never implies real money moves.
+    /// </summary>
+    public bool ProviderEnabled { get; init; }
 
     /// <summary>Provider API base URL.</summary>
     public string? BaseUrl { get; init; }
@@ -39,5 +43,5 @@ public sealed record BillingProviderOptions
     public string? Extra { get; init; }
 
     /// <summary>Whether a real provider adapter should be used.</summary>
-    public bool UseReal => Provider != BillingProviderKind.Fake && Enabled && !string.IsNullOrWhiteSpace(BaseUrl);
+    public bool UseReal => Provider != BillingProviderKind.Fake && ProviderEnabled && !string.IsNullOrWhiteSpace(BaseUrl);
 }
