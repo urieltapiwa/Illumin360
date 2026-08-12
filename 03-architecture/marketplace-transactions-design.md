@@ -216,7 +216,7 @@ Workstream C.
 
 | # | Decision | Blocks | Recommendation |
 |---|---|---|---|
-| **D1** | **Launch market** (Namibia/SADC vs US/EU pilot) → **payment provider** | Phase 2+ | Decide market first; then **Flutterwave** (NAM/SADC) or **Stripe Connect** (US/EU). Design the port against the chosen one. |
+| **D1** | **Launch market** (Namibia/SADC vs US/EU pilot) → **payment provider** | Phase 2+ | **Resolved (2026-08-12): Namibia/SADC first; Flutterwave recommended.** All four adapters (Flutterwave, Stripe, N-Genius, DPO) scaffolded behind the port, config-selectable, default **Fake** / off. Flutterwave + Stripe are the tested reference pair; N-Genius (OAuth) + DPO (XML) are structured scaffolds needing sandbox validation. **Port gap to close before real transfers:** Release/Refund carry only `(idempotencyKey, holdReference)` — transfer-to-destination PSPs also need the talent's payout account + amount, so the port needs a destination/amount extension (fine for Stripe capture-by-id; required for Flutterwave/N-Genius/DPO payouts). |
 | **D2** | **Legal/regulatory sign-off** on the escrow-via-provider model, T&Cs, money-transmission posture | Phase 2+ | Engage counsel now, in parallel with Phase 0–1. Hard gate. |
 | **D3** | **Platform take-rate** model + value (flat %? tiered? who pays — client, talent, or split?) | Phase 3 (release splits) | Model as a versioned `PlatformFee` ledger split; value is a business call. |
 | **D4** | **`illumin360_payments` database** provisioning (the init script lists `billing` but not `payments`) | Phase 1 | Add `payments` to `deploy/docker/init/01-create-databases.sh`; or, if we instead extend `Billing`, revisit §3. |

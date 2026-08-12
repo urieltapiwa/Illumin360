@@ -4,10 +4,20 @@ Marketplace **transaction layer** — fixed-price **contracts**, **milestones** 
 and an append-only **ledger**. Money movement runs through the `IPaymentProvider` port; the domain/ledger stay
 provider-agnostic. See [`03-architecture/marketplace-transactions-design.md`](../../../03-architecture/marketplace-transactions-design.md).
 
-> **Status:** Phase 1 (contracts & milestones as agreements). The only `IPaymentProvider` today is the
-> deterministic **`FakePaymentProvider`** — it moves **no real money**. A real PSP adapter
-> (Flutterwave / Stripe Connect, per decision **D1** — note Stripe isn't available in Namibia) is Phase 2,
-> swapped in DI with no change to the domain or flows.
+> **Status:** Phase 1 (contracts & milestones as agreements). Default `IPaymentProvider` is the deterministic
+> **`FakePaymentProvider`** — **no real money**. Four real adapters are **scaffolded** behind the port and
+> config-selectable via `Payments:Provider` (D1 resolved: Namibia/SADC first, **Flutterwave** recommended):
+> `Flutterwave` + `Stripe` (tested reference pair) and `NGenius` + `Dpo` (structured scaffolds — validate
+> against each provider's sandbox before enabling). A real adapter is used only when `Provider` names one,
+> `Enabled=true`, and a `BaseUrl` is set — **and going live still requires the D2 legal sign-off + credentials.**
+
+## Provider config (`Payments` section, default off)
+```jsonc
+"Payments": { "Provider": "Fake", "Enabled": false, "BaseUrl": "", "SecretKey": "", "Extra": "" }
+```
+`Extra` carries provider-specifics (N-Genius outlet reference; DPO company token). **Port gap:** Release/Refund
+take only `(idempotencyKey, holdReference)` — capture/refund-by-id PSPs (Stripe) fit; transfer-to-destination
+PSPs (Flutterwave/N-Genius/DPO payouts) need a destination-account + amount port extension before go-live.
 
 ## Layers
 - `Illumin360.Payments.Domain` · `Illumin360.Payments.Application` · `Illumin360.Payments.Infrastructure` · `Illumin360.Payments.Api`
