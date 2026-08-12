@@ -397,7 +397,15 @@ trust layer), realized in Recruitment against **hired applications** (the engage
 pre-contracts): `EngagementReview` (double-blind reveal) + pure `ReputationScorer` in `Illumin360.Matching`
 (Bayesian-shrunk 0–100) + `POST/GET /applications/{id}/review[s]` + `GET /talents/{id}/reputation` + talent/
 employer review surfaces; migration `EngagementReviews`; 10 unit tests (Matching 54, Recruitment 170) +
-integration green. Money-movement phases (2–4) remain gated on the provider (D1) + legal (D2) decisions.
+integration green.
+
+**Marketplace (C) — Phase 1 shipped (2026-08-12):** new **`Illumin360.Payments` service** (own DB, gateway
+`/api/payments`, port 5207) — fixed-price **contracts** + **milestones** (fund → submit → approve/refund) +
+append-only **ledger**, with money movement behind an **`IPaymentProvider`** port whose only implementation
+today is a deterministic **`FakePaymentProvider`** (no real money). Full state machine + contract
+auto-completion; migration `InitialPayments`; 6 unit + 1 real-Postgres integration test (full lifecycle over
+HTTP). D4/D5 defaulted (payments DB added; fixed-price first). **Money-movement Phases 2–4 (real PSP adapter,
+provider-hosted funding, webhooks) remain gated on the provider (D1) + legal (D2) decisions.**
 
 ### Proposed v0.3.0 backlog (tiered)
 
