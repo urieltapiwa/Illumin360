@@ -92,11 +92,13 @@ public sealed class SubmitMilestoneCommandHandler(IPaymentsRepository repository
 /// </summary>
 /// <param name="repository">The payments repository.</param>
 /// <param name="provider">The payment provider.</param>
-public sealed class ApproveMilestoneCommandHandler(IPaymentsRepository repository, IPaymentProvider provider)
+/// <param name="marketplace">Marketplace settings (the platform take-rate).</param>
+public sealed class ApproveMilestoneCommandHandler(IPaymentsRepository repository, IPaymentProvider provider, MarketplaceOptions marketplace)
     : ICommandHandler<ApproveMilestoneCommand, MilestoneDto>
 {
     private readonly IPaymentsRepository _repository = repository;
     private readonly IPaymentProvider _provider = provider;
+    private readonly MarketplaceOptions _marketplace = marketplace;
 
     /// <inheritdoc />
     public async Task<Result<MilestoneDto>> HandleAsync(ApproveMilestoneCommand command, CancellationToken cancellationToken)
@@ -126,8 +128,12 @@ public sealed class ApproveMilestoneCommandHandler(IPaymentsRepository repositor
             return Error.Validation("payments.no_verified_payout_account", "The talent has no verified payout account.");
         }
 
+        // Platform take-rate: the talent is paid the amount minus the commission; the fee stays with the platform.
+        var fee = _marketplace.FeeFor(milestone.AmountMinor);
+        var net = milestone.AmountMinor - fee;
+
         var release = await _provider.ReleaseAsync(
-            new ReleaseInstruction(milestone.Id.ToString(), milestone.HoldReference ?? string.Empty, milestone.AmountMinor, contract.Currency, payout.ProviderAccount),
+            new ReleaseInstruction(milestone.Id.ToString(), milestone.HoldReference ?? string.Empty, net, contract.Currency, payout.ProviderAccount),
             cancellationToken).ConfigureAwait(false);
         if (!release.Success)
         {
@@ -141,7 +147,11 @@ public sealed class ApproveMilestoneCommandHandler(IPaymentsRepository repositor
             return approved.Error!;
         }
 
-        _repository.AddMovement(LedgerMovement.Record(contract.Id, milestone.Id, MovementKind.Release, milestone.AmountMinor, contract.Currency, release.Reference, now));
+        _repository.AddMovement(LedgerMovement.Record(contract.Id, milestone.Id, MovementKind.Release, net, contract.Currency, release.Reference, now));
+        if (fee > 0)
+        {
+            _repository.AddMovement(LedgerMovement.Record(contract.Id, milestone.Id, MovementKind.Fee, fee, contract.Currency, $"fee-{milestone.Id}", now));
+        }
 
         // Complete the contract once every milestone is settled.
         var milestones = await _repository.ListMilestonesAsync(contract.Id, cancellationToken).ConfigureAwait(false);

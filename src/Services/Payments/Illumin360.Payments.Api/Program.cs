@@ -21,6 +21,11 @@ builder.Services.AddHealthChecks()
 builder.Services.AddPaymentsApplication();
 builder.Services.AddPaymentsInfrastructure(builder.Configuration);
 
+// --- Marketplace settings (platform take-rate / commission) ---
+builder.Services.AddSingleton(
+    builder.Configuration.GetSection("Payments").Get<Illumin360.Payments.Application.Abstractions.MarketplaceOptions>()
+    ?? new Illumin360.Payments.Application.Abstractions.MarketplaceOptions());
+
 // --- Payment provider (decision D1) ---
 // Default = Fake (Phase 1, no real money). A real PSP adapter is used ONLY when Payments:Provider names one,
 // Enabled=true, and a BaseUrl is set — and going live still requires the D2 legal sign-off + credentials.

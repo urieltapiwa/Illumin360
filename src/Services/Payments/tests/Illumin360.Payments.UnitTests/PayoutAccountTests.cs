@@ -40,7 +40,7 @@ public class PayoutAccountTests
         repo.GetContractAsync(contract.Id, Arg.Any<CancellationToken>()).Returns(contract);
         repo.GetPayoutAccountAsync(contract.TalentId, Arg.Any<CancellationToken>()).Returns((PayoutAccount?)null);
 
-        var result = await new ApproveMilestoneCommandHandler(repo, new FakePaymentProvider()).HandleAsync(new ApproveMilestoneCommand(milestone.Id.Value), CancellationToken.None);
+        var result = await new ApproveMilestoneCommandHandler(repo, new FakePaymentProvider(), new MarketplaceOptions()).HandleAsync(new ApproveMilestoneCommand(milestone.Id.Value), CancellationToken.None);
 
         result.IsFailure.Should().BeTrue();
         result.Error!.Code.Should().Be("payments.no_verified_payout_account");

@@ -74,12 +74,32 @@ public class ContractLifecycleTests
         (await new SubmitMilestoneCommandHandler(repo).HandleAsync(new SubmitMilestoneCommand(milestone.Id.Value), CancellationToken.None)).IsSuccess.Should().BeTrue();
         milestone.Status.Should().Be(MilestoneStatus.Submitted);
 
-        (await new ApproveMilestoneCommandHandler(repo, provider).HandleAsync(new ApproveMilestoneCommand(milestone.Id.Value), CancellationToken.None)).IsSuccess.Should().BeTrue();
+        (await new ApproveMilestoneCommandHandler(repo, provider, new MarketplaceOptions()).HandleAsync(new ApproveMilestoneCommand(milestone.Id.Value), CancellationToken.None)).IsSuccess.Should().BeTrue();
         milestone.Status.Should().Be(MilestoneStatus.Approved);
 
-        // A Fund + a Release movement recorded; contract auto-completed (its only milestone is settled).
+        // A Fund + a Release movement recorded (no fee at 0%); contract auto-completed.
         repo.Received(2).AddMovement(Arg.Any<LedgerMovement>());
         contract.Status.Should().Be(ContractStatus.Completed);
+    }
+
+    [Fact]
+    public async Task Take_rate_pays_the_talent_net_and_records_a_fee_movement()
+    {
+        var (repo, _, milestone) = ActiveContractWithMilestone(); // amount 50000 minor
+        var provider = new FakePaymentProvider();
+        await new FundMilestoneCommandHandler(repo, provider).HandleAsync(new FundMilestoneCommand(milestone.Id.Value), CancellationToken.None);
+        await new SubmitMilestoneCommandHandler(repo).HandleAsync(new SubmitMilestoneCommand(milestone.Id.Value), CancellationToken.None);
+
+        var movements = new List<LedgerMovement>();
+        repo.When(r => r.AddMovement(Arg.Any<LedgerMovement>())).Do(ci => movements.Add(ci.Arg<LedgerMovement>()));
+
+        // 10% commission on 50000 = 5000 fee; talent nets 45000.
+        var result = await new ApproveMilestoneCommandHandler(repo, provider, new MarketplaceOptions { PlatformFeePercent = 10m })
+            .HandleAsync(new ApproveMilestoneCommand(milestone.Id.Value), CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        movements.Should().Contain(m => m.Kind == MovementKind.Release && m.AmountMinor == 45000);
+        movements.Should().Contain(m => m.Kind == MovementKind.Fee && m.AmountMinor == 5000);
     }
 
     [Fact]
