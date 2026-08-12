@@ -37,8 +37,8 @@ public static class DependencyInjection
         services.AddScoped<ICommandHandler<SetCandidateCustomValuesCommand, int>, SetCandidateCustomValuesCommandHandler>();
         services.AddScoped<IQueryHandler<GetSimilarCandidatesQuery, IReadOnlyList<SimilarCandidateDto>>, GetSimilarCandidatesQueryHandler>();
 
-        // Semantic matching v1: deterministic hashing embeddings (no external calls, no data egress).
-        services.AddSingleton<IEmbeddingProvider>(new HashingEmbeddingProvider(256));
+        // Semantic matching: the IEmbeddingClient backend (hashing by default; hosted when opted in) is
+        // registered in the Api layer, where IConfiguration + AddHttpClient are available.
         services.AddScoped<IQueryHandler<GetSemanticSimilarCandidatesQuery, IReadOnlyList<SimilarCandidateDto>>, GetSemanticSimilarCandidatesQueryHandler>();
         services.AddScoped<ICommandHandler<UploadCandidateCvCommand, CvDto>, UploadCandidateCvCommandHandler>();
         services.AddScoped<IQueryHandler<GetCandidateCvMetadataQuery, CvDto>, GetCandidateCvMetadataQueryHandler>();

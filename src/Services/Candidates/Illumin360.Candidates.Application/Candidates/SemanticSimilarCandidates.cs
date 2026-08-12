@@ -16,12 +16,12 @@ public sealed record GetSemanticSimilarCandidatesQuery(Guid CandidateId, int Tak
 
 /// <summary>Handles <see cref="GetSemanticSimilarCandidatesQuery"/>.</summary>
 /// <param name="repository">The candidate repository.</param>
-/// <param name="embeddings">The embedding provider (hashing by default).</param>
-public sealed class GetSemanticSimilarCandidatesQueryHandler(ICandidateRepository repository, IEmbeddingProvider embeddings)
+/// <param name="embeddings">The embedding client (hashing by default; a hosted model when opted in).</param>
+public sealed class GetSemanticSimilarCandidatesQueryHandler(ICandidateRepository repository, IEmbeddingClient embeddings)
     : IQueryHandler<GetSemanticSimilarCandidatesQuery, IReadOnlyList<SimilarCandidateDto>>
 {
     private readonly ICandidateRepository _repository = repository;
-    private readonly IEmbeddingProvider _embeddings = embeddings;
+    private readonly IEmbeddingClient _embeddings = embeddings;
 
     // The descriptive text embedded for a candidate (candidates carry no structured skills).
     private static string Text(Candidate c) => $"{c.PublicHeadline} {c.City}".Trim();
@@ -40,12 +40,13 @@ public sealed class GetSemanticSimilarCandidatesQueryHandler(ICandidateRepositor
         var pool = await _repository.ListAllAsync(cancellationToken).ConfigureAwait(false);
         var take = Math.Clamp(query.Take <= 0 ? 5 : query.Take, 1, 20);
 
-        var ranked = SemanticRanker.Rank(
+        var ranked = await SemanticRanker.RankAsync(
             _embeddings,
             Text(seed),
             pool.Select(c => (c.Id.Value, (string?)Text(c))),
             query.CandidateId,
-            take);
+            take,
+            cancellationToken: cancellationToken).ConfigureAwait(false);
 
         var byId = pool.ToDictionary(c => c.Id.Value);
         return ranked
