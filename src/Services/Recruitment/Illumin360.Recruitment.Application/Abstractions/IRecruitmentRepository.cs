@@ -568,6 +568,26 @@ public interface IRecruitmentRepository
     /// <param name="cancellationToken">Cancellation token.</param>
     Task<IReadOnlyList<InterviewBookingSlot>> ListOfferedSlotsForApplicationAsync(Guid applicationId, CancellationToken cancellationToken);
 
+    /// <summary>Stages a new engagement review for insertion.</summary>
+    /// <param name="review">The review to add.</param>
+    void AddEngagementReview(EngagementReview review);
+
+    /// <summary>Loads a review for an application from a given side (change-tracked), or null if none.</summary>
+    /// <param name="applicationId">The application id.</param>
+    /// <param name="reviewer">The reviewing side.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<EngagementReview?> GetReviewAsync(Guid applicationId, ReviewerSide reviewer, CancellationToken cancellationToken);
+
+    /// <summary>Lists an application's reviews (change-tracked, so reveal persists).</summary>
+    /// <param name="applicationId">The application id.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<IReadOnlyList<EngagementReview>> ListReviewsForApplicationAsync(Guid applicationId, CancellationToken cancellationToken);
+
+    /// <summary>Lists a talent's reviews (no-tracking, for reputation).</summary>
+    /// <param name="talentId">The talent id.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<IReadOnlyList<EngagementReview>> ListReviewsForTalentAsync(Guid talentId, CancellationToken cancellationToken);
+
     /// <summary>Commits staged changes to the data store.</summary>
     /// <param name="cancellationToken">Cancellation token.</param>
     Task SaveChangesAsync(CancellationToken cancellationToken);

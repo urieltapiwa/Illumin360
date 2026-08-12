@@ -388,9 +388,16 @@ Three directional forks were decided by the product owner:
    interview kits, skills taxonomy v1.
 
 **v0.3.0 = three workstreams:** (A) AI-native — embeddings+pgvector, GenAI assistant [hosted opt-in];
-(B) Recruiting depth — rediscovery, nurture sequences, self-schedule + interview kits, skills taxonomy v1;
+(B) Recruiting depth — rediscovery, nurture sequences, self-schedule + interview kits, skills taxonomy v1 — **all shipped**;
 (C) Transactional marketplace — payments/escrow, milestones, contracts, reviews/reputation [design-doc first].
 Tracked as GitHub milestone **v0.3.0** with one issue per item.
+
+**Marketplace (C) — Phase 0 shipped (2026-08-12):** two-sided **reviews & reputation** (the regulation-free
+trust layer), realized in Recruitment against **hired applications** (the engagement primitive that exists
+pre-contracts): `EngagementReview` (double-blind reveal) + pure `ReputationScorer` in `Illumin360.Matching`
+(Bayesian-shrunk 0–100) + `POST/GET /applications/{id}/review[s]` + `GET /talents/{id}/reputation` + talent/
+employer review surfaces; migration `EngagementReviews`; 10 unit tests (Matching 54, Recruitment 170) +
+integration green. Money-movement phases (2–4) remain gated on the provider (D1) + legal (D2) decisions.
 
 ### Proposed v0.3.0 backlog (tiered)
 

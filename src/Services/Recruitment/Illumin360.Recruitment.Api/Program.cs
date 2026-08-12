@@ -1296,6 +1296,48 @@ v1.MapGet("/metrics/outcomes", async (
     .ProducesProblem(StatusCodes.Status401Unauthorized)
     .ProducesProblem(StatusCodes.Status403Forbidden);
 
+// --- Engagement reviews & reputation (marketplace trust, Phase 0) ---
+v1.MapPost("/applications/{id:guid}/review", async (
+        Guid id,
+        LeaveReviewBody body,
+        ICommandHandler<LeaveReviewCommand, ReviewDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new LeaveReviewCommand(id, body.Reviewer, body.Rating, body.Comment), ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization()
+    .WithName("LeaveEngagementReview")
+    .WithSummary("Leave a two-sided review for a hired application (employer or talent). Reveals both once both sides review.")
+    .Produces<ReviewDto>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status404NotFound)
+    .ProducesProblem(StatusCodes.Status409Conflict);
+
+v1.MapGet("/applications/{id:guid}/reviews", async (
+        Guid id,
+        IQueryHandler<GetApplicationReviewsQuery, IReadOnlyList<ReviewDto>> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new GetApplicationReviewsQuery(id), ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization()
+    .WithName("GetApplicationReviews")
+    .WithSummary("List the visible reviews for an application.")
+    .Produces<IReadOnlyList<ReviewDto>>(StatusCodes.Status200OK);
+
+v1.MapGet("/talents/{talentId:guid}/reputation", async (
+        Guid talentId,
+        IQueryHandler<GetTalentReputationQuery, ReputationDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new GetTalentReputationQuery(talentId), ct);
+        return result.ToHttpResult();
+    })
+    .WithName("GetTalentReputation")
+    .WithSummary("Get a talent's reputation score (Bayesian-shrunk from employer reviews).")
+    .Produces<ReputationDto>(StatusCodes.Status200OK);
+
 // --- Interview kits / question banks (admin) ---
 v1.MapGet("/interview-kits", async (
         IQueryHandler<ListInterviewKitsQuery, IReadOnlyList<InterviewKitDto>> handler,
@@ -1923,6 +1965,12 @@ internal sealed record AddKitQuestionBody(string Text, string? Skill);
 /// <param name="DurationMinutes">Duration in minutes.</param>
 /// <param name="Location">Location/mode.</param>
 internal sealed record OfferSlotBody(DateTimeOffset ProposedAt, int DurationMinutes, string Location);
+
+/// <summary>Request body for leaving an engagement review.</summary>
+/// <param name="Reviewer">Which side (employer/talent).</param>
+/// <param name="Rating">Rating (1–5).</param>
+/// <param name="Comment">Optional comment.</param>
+internal sealed record LeaveReviewBody(string Reviewer, int Rating, string? Comment);
 
 /// <summary>Request body for creating an email campaign.</summary>
 /// <param name="Name">Internal name.</param>

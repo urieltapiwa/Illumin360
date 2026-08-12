@@ -242,6 +242,10 @@ export default function Admin({ session }: { session: Session }) {
   type Slot = { id: string; applicationId: string; proposedAt: string; durationMinutes: number; location: string; status: string };
   const [slots, setSlots] = useState<Slot[] | null>(null);
   const [slotDraft, setSlotDraft] = useState({ proposedAt: "", durationMinutes: 45, location: "Video call" });
+  // Engagement reviews for the drawer application (employer side).
+  type ReviewRow = { id: string; reviewer: string; rating: number; comment: string | null; createdAt: string };
+  const [drawerReviews, setDrawerReviews] = useState<ReviewRow[] | null>(null);
+  const [reviewDraft, setReviewDraft] = useState({ rating: 5, comment: "" });
   // Audit trail.
   type AuditEntry = { id: string; actor: string; action: string; entityType: string; entityId: string | null; summary: string; occurredAt: string };
   const [audit, setAudit] = useState<AuditEntry[] | null>(null);
@@ -466,10 +470,14 @@ export default function Admin({ session }: { session: Session }) {
 
   // Offers + onboarding + interviews for the application selected on a pipeline card.
   useEffect(() => {
-    if (!offerAppId) { setOffers(null); setOnboarding(null); setMessages([]); setInterviews([]); setIvOpen(null); setAppAnswers([]); setAppSource("direct"); setSlots(null); return; }
+    if (!offerAppId) { setOffers(null); setOnboarding(null); setMessages([]); setInterviews([]); setIvOpen(null); setAppAnswers([]); setAppSource("direct"); setSlots(null); setDrawerReviews(null); return; }
     fetch(`/api/recruitment/applications/${offerAppId}/booking-slots`, { credentials: "same-origin" })
       .then((r) => (r.ok ? r.json() : null))
       .then((v) => { if (Array.isArray(v)) setSlots(v); })
+      .catch(() => { /* keep empty */ });
+    fetch(`/api/recruitment/applications/${offerAppId}/reviews`, { credentials: "same-origin" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((v) => { if (Array.isArray(v)) setDrawerReviews(v); })
       .catch(() => { /* keep empty */ });
     fetch(`/api/recruitment/applications/${offerAppId}/answers`, { credentials: "same-origin" })
       .then((r) => (r.ok ? r.json() : null))
@@ -932,6 +940,16 @@ export default function Admin({ session }: { session: Session }) {
     const iso = new Date(slotDraft.proposedAt).toISOString();
     const r = await fetch(`/api/recruitment/applications/${offerAppId}/booking-slots`, { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: JSON.stringify({ proposedAt: iso, durationMinutes: slotDraft.durationMinutes, location: slotDraft.location.trim() }) });
     if (r.ok) { const s: Slot = await r.json(); setSlots((xs) => [...(xs ?? []), s].sort((a, b) => a.proposedAt.localeCompare(b.proposedAt))); setSlotDraft({ proposedAt: "", durationMinutes: 45, location: "Video call" }); }
+  };
+  // Employer review of the hired talent.
+  const submitEmployerReview = async () => {
+    if (!offerAppId) return;
+    const r = await fetch(`/api/recruitment/applications/${offerAppId}/review`, { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: JSON.stringify({ reviewer: "employer", rating: reviewDraft.rating, comment: reviewDraft.comment.trim() || null }) });
+    if (r.ok) {
+      const rev = await fetch(`/api/recruitment/applications/${offerAppId}/reviews`, { credentials: "same-origin" });
+      if (rev.ok) setDrawerReviews(await rev.json());
+      setReviewDraft({ rating: 5, comment: "" });
+    }
   };
   const createTemplate = async () => {
     if (!newTemplate.name.trim() || !newTemplate.title.trim()) return;
@@ -1499,6 +1517,34 @@ export default function Admin({ session }: { session: Session }) {
                         <button onClick={offerSlot} disabled={!slotDraft.proposedAt || !slotDraft.location.trim()} className="rounded-lg bg-brand/15 px-3 py-1 text-[11px] font-semibold text-brand-bright hover:bg-brand/25 transition disabled:opacity-50">{t("admin.slots.offer", "Offer slot")}</button>
                       </div>
                     </div>
+                    {(pipelineApps ?? []).find((a) => a.id === offerAppId)?.status === "hired" && (
+                      <div className="mt-3 border-t border-line/40 pt-2.5">
+                        <div className="eyebrow mb-1.5">{t("admin.review.title", "Engagement review")}</div>
+                        {(drawerReviews ?? []).length > 0 && (
+                          <div className="space-y-1 mb-2">
+                            {(drawerReviews ?? []).map((r) => (
+                              <div key={r.id} className="flex items-center justify-between gap-2 text-[12px]">
+                                <span className="text-ink-mid capitalize">{r.reviewer}</span>
+                                <span className="text-gold">{"★".repeat(r.rating)}<span className="text-ink-lo">{"★".repeat(5 - r.rating)}</span></span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        {!(drawerReviews ?? []).some((r) => r.reviewer === "Employer") && (
+                          <div>
+                            <div className="flex items-center gap-1 mb-1.5">
+                              {[1, 2, 3, 4, 5].map((n) => (
+                                <button key={n} onClick={() => setReviewDraft((f) => ({ ...f, rating: n }))} className={`text-[15px] transition ${reviewDraft.rating >= n ? "text-gold" : "text-ink-lo hover:text-gold/60"}`}>★</button>
+                              ))}
+                              <span className="ml-1 text-[11px] text-ink-lo">{t("admin.review.rate", "Rate the talent")}</span>
+                            </div>
+                            <textarea value={reviewDraft.comment} onChange={(e) => setReviewDraft((f) => ({ ...f, comment: e.target.value }))} placeholder={t("admin.review.comment", "Comment (optional)")} className="w-full min-h-[40px] resize-y rounded-lg border border-line/70 bg-panel2/50 px-2.5 py-1.5 text-[12px] text-ink-hi placeholder:text-ink-lo focus:border-brand/50 focus:outline-none" />
+                            <button onClick={submitEmployerReview} className="mt-1.5 rounded-lg bg-brand/15 px-3 py-1 text-[11px] font-semibold text-brand-bright hover:bg-brand/25 transition">{t("admin.review.submit", "Submit review")}</button>
+                            <p className="text-[10px] text-ink-lo mt-1">{t("admin.review.blind", "Hidden until the talent also reviews.")}</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               )}

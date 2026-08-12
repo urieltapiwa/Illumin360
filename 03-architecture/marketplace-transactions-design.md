@@ -227,8 +227,12 @@ Workstream C.
 
 ## 10. Phasing (each phase is shippable; money is last)
 
-- **Phase 0 — Reviews & reputation** *(no provider, no legal gate).* `Review` + `ReputationSnapshot` +
-  `ReputationScorer` in `Illumin360.Matching`, endpoints, portal surfaces, feed into matching. **Start here.**
+- **Phase 0 — Reviews & reputation** *(no provider, no legal gate).* ✅ **Shipped (2026-08-12).** Realized in
+  Recruitment against the engagement primitive that exists today — a **hired application** — rather than a
+  contract (contracts arrive in Phase 1). `EngagementReview` (double-blind: both sides submit before either is
+  visible) + pure `ReputationScorer` in `Illumin360.Matching` (Bayesian-shrunk 0–100). Endpoints
+  `POST/GET /applications/{id}/review[s]` + `GET /talents/{id}/reputation`; talent- and employer-side review
+  surfaces. When the Payments service lands, reviews extend to contract completion behind the same scorer.
 - **Phase 1 — Contracts & milestones as agreements** *(no money).* `Illumin360.Payments` service scaffold,
   `Contract`/`Milestone`/`TimeEntry` domain + state machines, `FakePaymentProvider`, endpoints, portal UI.
   Everything except real fund movement — fully testable. *(Gated only by D4, D5.)*
