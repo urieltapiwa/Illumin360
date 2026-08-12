@@ -427,6 +427,18 @@ payout account** and passes its reference as the transfer destination. +3 unit t
 Flutterwave transfer test) + the lifecycle integration test now registers+verifies a payout account. Only D2 +
 live credentials remain before real money can flow.
 
+**Marketplace (C) — adapters verified against live docs (2026-08-12), D1 reopened:** the four adapters were
+re-checked against each provider's real developer documentation and corrected. **Key finding (design doc §12):**
+payout capability is split — **Flutterwave + Stripe can pay a third party (transfers); N-Genius + DPO cannot**
+(collection/refund-to-payer only — their `Release` now returns an explicit not-supported result). And **no
+provider has a documented NAD/Namibia payout rail** (Flutterwave: NAD not a market; Stripe: Namibia excluded;
+DPO: NAM collection only; N-Genius: MEA) — so a Namibia-first marketplace paying talent in NAD is **not
+achievable on these four as documented**. This reopens **D1** as a corridor/rail question (confirm with a
+provider's sales, or collect via DPO + disburse via a separate bank/mobile-money rail), not a code choice.
+Adapters corrected to the real APIs (Flutterwave `/payments` returns a checkout link not an id + `/transfers`
+with account_bank/number + major units; Stripe capture-then-transfer; DPO `createToken` Services block +
+`refundToken` refundAmount/refundDetails; N-Genius vendor content-types + base URLs). Payments 15 unit tests.
+
 ### Proposed v0.3.0 backlog (tiered)
 
 **Tier 1 — headliners (high fit; build largely on what we have).** Ordered by fit×leverage:

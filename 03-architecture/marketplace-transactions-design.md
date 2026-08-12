@@ -216,7 +216,7 @@ Workstream C.
 
 | # | Decision | Blocks | Recommendation |
 |---|---|---|---|
-| **D1** | **Launch market** (Namibia/SADC vs US/EU pilot) → **payment provider** | Phase 2+ | **Resolved (2026-08-12): Namibia/SADC first; Flutterwave recommended.** All four adapters (Flutterwave, Stripe, N-Genius, DPO) scaffolded behind the port, config-selectable, default **Fake** / off. Flutterwave + Stripe are the tested reference pair; N-Genius (OAuth) + DPO (XML) are structured scaffolds needing sandbox validation. **Port gap to close before real transfers:** Release/Refund carry only `(idempotencyKey, holdReference)` — transfer-to-destination PSPs also need the talent's payout account + amount, so the port needs a destination/amount extension (fine for Stripe capture-by-id; required for Flutterwave/N-Genius/DPO payouts). |
+| **D1** | **Launch market** (Namibia/SADC vs US/EU pilot) → **payment provider** | Phase 2+ | **REOPENED (2026-08-12) after verifying the real docs — see §12.** No candidate offers a documented **NAD/Namibia payout** rail. All four adapters exist behind the port (default **Fake**/off) and the port now carries destination+amount, but the *provider* choice for a Namibia-first marketplace is unresolved: it needs a corridor/rail confirmed with a provider, not a code choice. |
 | **D2** | **Legal/regulatory sign-off** on the escrow-via-provider model, T&Cs, money-transmission posture | Phase 2+ | Engage counsel now, in parallel with Phase 0–1. Hard gate. |
 | **D3** | **Platform take-rate** model + value (flat %? tiered? who pays — client, talent, or split?) | Phase 3 (release splits) | Model as a versioned `PlatformFee` ledger split; value is a business call. |
 | **D4** | **`illumin360_payments` database** provisioning (the init script lists `billing` but not `payments`) | Phase 1 | Add `payments` to `deploy/docker/init/01-create-databases.sh`; or, if we instead extend `Billing`, revisit §3. |
@@ -257,3 +257,51 @@ decisions and starts delivering the marketplace-trust layer now, while D1/D2 are
 A licence to move money in code. Nothing in Phases 2–4 is built until D1 (provider) and D2 (legal) are signed
 off. Phases 0–1 are pure product/engineering and safe to start. The ledger + port design means the provider can
 be chosen — or changed — late without reworking the domain.
+
+---
+
+## 12. Provider verification findings (2026-08-12) — read this before Phase 2
+
+The four adapters were re-checked against each provider's **live developer documentation** (not memory). Two
+things changed materially.
+
+### 12.1 Payout capability is split — only two can pay a third party
+The marketplace's core money move is **paying the talent** (release escrow to a seller). Verified:
+
+| Provider | Collect / hold | Refund to payer | **Pay out to talent (third party)** | NAD / Namibia |
+|---|---|---|---|---|
+| **Flutterwave** v3 | ✅ `/payments` (hosted link; async verify) | ✅ `/transactions/{id}/refund` | ✅ **Subaccounts (split) / `/transfers`** | ❌ **not a Flutterwave market/currency** |
+| **Stripe** | ✅ manual-capture PaymentIntent | ✅ `/refunds` (+ reverse_transfer) | ✅ **Connect transfers / destination charges** | ❌ **Stripe unavailable for Namibia** |
+| **N-Genius** (Network Intl) | ✅ order `AUTH` | ✅ (to payer, HATEOAS-scoped) | ❌ **no third-party payout API** (card acquiring) | MEA-focused |
+| **DPO Group** | ✅ `createToken` (payment request) | ✅ `refundToken` | ❌ **no third-party payout API** (collection-only) | ✅ **operates in NAM — for collection** |
+
+So **N-Genius and DPO cannot pay the talent at all** via their public APIs — their adapters now return an
+explicit not-supported result on `Release` (settle-to-merchant + disburse out-of-band). Only **Flutterwave** and
+**Stripe** have a real payout primitive.
+
+### 12.2 The blocker: no verified NAD payout rail
+- **Flutterwave** — Namibia/NAD is **not** in its settlement/payout markets (NGN, GHS, KES, ZAR, UGX, TZS, RWF,
+  ZMW, XAF, XOF, EGP, MWK; card acquiring in UK/US/EU). NAD collection/payout is **not documented as supported**.
+- **Stripe** — **not available** for platforms or connected accounts based in Namibia (supported-countries list).
+- **DPO** — *collects* in Namibia (NAD acquiring), but has **no payout API** to pay the talent.
+- **N-Genius** — MEA card acquiring; no payout.
+
+**Net: a Namibia-first marketplace that pays talent in NAD cannot be built on any of these four's documented
+payout APIs today.** This is a go/no-go input for the transactional-marketplace direction — it is not something
+more code fixes.
+
+### 12.3 Recommended next steps (business, then build)
+1. **Confirm corridors with sales, not docs** — ask Flutterwave and DPO directly whether NAD collection +
+   (crucially) **payout/settlement to Namibian talent** is available under a commercial/settlement arrangement
+   (these often exist off the public API).
+2. **If payout stays unavailable via PSP:** collect via **DPO** (NAD acquiring) into the platform balance, and
+   disburse to talent via a **separate rail** — Namibian **bank EFT** and/or **mobile money** — with our ledger
+   as the source of truth. That means adding a *disbursement* port distinct from the *acquiring* port.
+3. **If the beachhead can be non-Namibian:** Stripe Connect (US/EU) or Flutterwave (NGN/KES/ZAR/GHS…) both work
+   end-to-end today — a market-selection decision, not a technical one.
+4. Until one of the above is confirmed, **keep `Payments:Provider=Fake`** — the domain, ledger, contracts,
+   milestones, payout-account KYC gate, and reviews all work; only the real money leg is blocked.
+
+The adapter code is faithful to each provider's documented API for what it *can* do; the collection-only
+providers are labelled and fail loudly on payout rather than pretending. Nothing here is a substitute for a
+sandbox integration + the D2 legal sign-off.

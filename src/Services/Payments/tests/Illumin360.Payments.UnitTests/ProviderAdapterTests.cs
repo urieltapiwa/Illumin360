@@ -74,18 +74,34 @@ public class ProviderAdapterTests
     }
 
     [Fact]
-    public async Task Flutterwave_hold_posts_json_and_parses_the_nested_data_id()
+    public async Task Flutterwave_hold_starts_a_checkout_and_returns_the_hosted_link()
     {
-        var recorder = new Recorder(_ => (HttpStatusCode.OK, """{"status":"success","data":{"id":"flw-9","tx_ref":"ms-1"}}"""));
+        // /payments returns only data.link (a hosted checkout URL) — no transaction id at creation.
+        var recorder = new Recorder(_ => (HttpStatusCode.OK, """{"status":"success","message":"Hosted Link","data":{"link":"https://checkout.flutterwave.com/pay/flwlnk-01"}}"""));
         var provider = new FlutterwavePaymentProvider(new HttpClient(recorder), new PaymentProviderOptions { BaseUrl = "https://api.flutterwave.com/v3", SecretKey = "FLWSECK" });
 
         var result = await provider.CreateHoldAsync("ms-1", 500000, "NAD", CancellationToken.None);
 
         result.Success.Should().BeTrue();
-        result.Reference.Should().Be("flw-9");
+        result.Reference.Should().Be("https://checkout.flutterwave.com/pay/flwlnk-01");
         recorder.Requests[0].RequestUri!.AbsolutePath.Should().Be("/v3/payments");
         recorder.Requests[0].Headers.Authorization!.ToString().Should().Be("Bearer FLWSECK");
-        recorder.Bodies[0].Should().Contain("\"tx_ref\":\"ms-1\"").And.Contain("\"currency\":\"NAD\"");
+        // v3 amounts are major units (500000 minor -> 5000.00).
+        recorder.Bodies[0].Should().Contain("\"tx_ref\":\"ms-1\"").And.Contain("\"currency\":\"NAD\"").And.Contain("5000");
+    }
+
+    [Fact]
+    public async Task Collection_only_providers_report_no_third_party_payout_on_release()
+    {
+        var release = new ReleaseInstruction("ms-1", "hold-1", 300000, "NAD", "acct_talent");
+
+        var ngenius = await new NGeniusPaymentProvider(new HttpClient(new Recorder(_ => (HttpStatusCode.OK, "{}"))), new PaymentProviderOptions { BaseUrl = "https://api-gateway.sandbox.ngenius-payments.com", SecretKey = "k", Extra = "outlet" }).ReleaseAsync(release, CancellationToken.None);
+        ngenius.Success.Should().BeFalse();
+        ngenius.Error.Should().Contain("no third-party payout");
+
+        var dpo = await new DpoPaymentProvider(new HttpClient(new Recorder(_ => (HttpStatusCode.OK, "<API3G><Result>000</Result></API3G>"))), new PaymentProviderOptions { BaseUrl = "https://secure.3gdirectpay.com", SecretKey = "k", Extra = "ct" }).ReleaseAsync(release, CancellationToken.None);
+        dpo.Success.Should().BeFalse();
+        dpo.Error.Should().Contain("collection-only");
     }
 
     [Fact]
