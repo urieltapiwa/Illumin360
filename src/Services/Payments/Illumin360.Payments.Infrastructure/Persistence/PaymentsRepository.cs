@@ -59,6 +59,13 @@ public sealed class PaymentsRepository(PaymentsDbContext db) : IPaymentsReposito
             .ToListAsync(cancellationToken).ConfigureAwait(false);
 
     /// <inheritdoc />
+    public void AddPayoutAccount(PayoutAccount account) => _db.PayoutAccounts.Add(account);
+
+    /// <inheritdoc />
+    public async Task<PayoutAccount?> GetPayoutAccountAsync(Guid talentId, CancellationToken cancellationToken)
+        => await _db.PayoutAccounts.FirstOrDefaultAsync(p => p.TalentId == talentId, cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
     public async Task SaveChangesAsync(CancellationToken cancellationToken)
         => await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 }

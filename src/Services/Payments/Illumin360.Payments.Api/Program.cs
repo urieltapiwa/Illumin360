@@ -181,6 +181,49 @@ MapMilestoneAction(v1, "submit", "SubmitMilestone", "Submit a funded milestone (
 MapMilestoneAction(v1, "approve", "ApproveMilestone", "Approve a submitted milestone, releasing escrow to the talent.", id => new ApproveMilestoneCommand(id));
 MapMilestoneAction(v1, "refund", "RefundMilestone", "Refund a funded/submitted milestone to the client.", id => new RefundMilestoneCommand(id));
 
+// --- Talent payout accounts (destination for milestone releases) ---
+v1.MapGet("/payout-accounts/{talentId:guid}", async (
+        Guid talentId,
+        IQueryHandler<GetPayoutAccountQuery, PayoutAccountDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new GetPayoutAccountQuery(talentId), ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization()
+    .WithName("GetPayoutAccount")
+    .WithSummary("Get a talent's payout account.")
+    .Produces<PayoutAccountDto>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status404NotFound);
+
+v1.MapPost("/payout-accounts", async (
+        RegisterPayoutAccountCommand command,
+        ICommandHandler<RegisterPayoutAccountCommand, PayoutAccountDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(command, ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization()
+    .WithName("RegisterPayoutAccount")
+    .WithSummary("Register or update a talent's payout account (starts Pending verification).")
+    .Produces<PayoutAccountDto>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status400BadRequest);
+
+v1.MapPost("/payout-accounts/{talentId:guid}/verify", async (
+        Guid talentId,
+        ICommandHandler<VerifyPayoutAccountCommand, PayoutAccountDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new VerifyPayoutAccountCommand(talentId), ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization()
+    .WithName("VerifyPayoutAccount")
+    .WithSummary("Mark a talent's payout account verified (KYC passed).")
+    .Produces<PayoutAccountDto>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status404NotFound);
+
 app.Run();
 
 /// <summary>Exposed so integration tests can use <c>WebApplicationFactory</c> (charter Part 14).</summary>

@@ -415,8 +415,17 @@ behind the `IPaymentProvider` port, config-selectable via `Payments:Provider`, *
 Flutterwave + Stripe are the tested reference pair (stub-handler tests assert auth, endpoint, request body,
 response parse, error surfacing); N-Genius (OAuth) + DPO (XML) are structured scaffolds to validate against
 each sandbox. 5 new unit tests (Payments 11) + integration green. **Still gated for go-live on D2 (legal) +
-live credentials; and a port extension (destination account + amount on Release/Refund) is needed for
-transfer-based payouts (Stripe capture-by-id already fits).**
+live credentials.**
+
+**Marketplace (C) — payout path completed (2026-08-12):** the port gap is closed — `IPaymentProvider` now takes
+`ReleaseInstruction`/`RefundInstruction` (hold ref + amount + currency + destination account), so the
+transfer-to-destination payout path is code-complete for **Flutterwave** (real `/transfers`), Stripe (capture),
+and the N-Genius/DPO scaffolds. New **`PayoutAccount`** aggregate + `payout_accounts` table (migration
+`PayoutAccounts`): a talent registers a payout destination (Pending → Verified KYC gate) via
+`GET/POST /payout-accounts`, `.../{id}/verify`; **milestone Approve refuses to release without a verified
+payout account** and passes its reference as the transfer destination. +3 unit tests (Payments 14, incl. a
+Flutterwave transfer test) + the lifecycle integration test now registers+verifies a payout account. Only D2 +
+live credentials remain before real money can flow.
 
 ### Proposed v0.3.0 backlog (tiered)
 

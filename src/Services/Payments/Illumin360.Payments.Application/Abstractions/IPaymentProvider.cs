@@ -6,6 +6,21 @@ namespace Illumin360.Payments.Application.Abstractions;
 /// <param name="Error">A short failure reason when <paramref name="Success"/> is false.</param>
 public sealed record PaymentResult(bool Success, string Reference, string? Error = null);
 
+/// <summary>Instruction to release held funds to the talent (transfer-to-destination).</summary>
+/// <param name="IdempotencyKey">Caller-generated key (safe to retry).</param>
+/// <param name="HoldReference">The reference returned by <c>CreateHoldAsync</c>.</param>
+/// <param name="AmountMinor">Amount to release, in minor units.</param>
+/// <param name="Currency">ISO-4217 currency.</param>
+/// <param name="DestinationAccount">The talent's provider payout account (subaccount / connected id / bank ref).</param>
+public sealed record ReleaseInstruction(string IdempotencyKey, string HoldReference, long AmountMinor, string Currency, string DestinationAccount);
+
+/// <summary>Instruction to refund held funds to the client.</summary>
+/// <param name="IdempotencyKey">Caller-generated key (safe to retry).</param>
+/// <param name="HoldReference">The reference returned by <c>CreateHoldAsync</c>.</param>
+/// <param name="AmountMinor">Amount to refund, in minor units.</param>
+/// <param name="Currency">ISO-4217 currency.</param>
+public sealed record RefundInstruction(string IdempotencyKey, string HoldReference, long AmountMinor, string Currency);
+
 /// <summary>
 /// Port for the licensed payment provider (PSP) that actually moves money — held behind an interface so the
 /// domain/ledger stay provider-agnostic (see the transaction-layer design doc). Phase 1 ships a deterministic
@@ -21,15 +36,13 @@ public interface IPaymentProvider
     /// <param name="cancellationToken">Cancellation token.</param>
     Task<PaymentResult> CreateHoldAsync(string idempotencyKey, long amountMinor, string currency, CancellationToken cancellationToken);
 
-    /// <summary>Releases a held amount to the talent (minus any platform fee handled by the caller).</summary>
-    /// <param name="idempotencyKey">Caller-generated key — safe to retry.</param>
-    /// <param name="holdReference">The reference returned by <see cref="CreateHoldAsync"/>.</param>
+    /// <summary>Releases held funds to the talent's payout account (transfer-to-destination).</summary>
+    /// <param name="instruction">The release instruction (hold ref + amount + currency + destination).</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    Task<PaymentResult> ReleaseAsync(string idempotencyKey, string holdReference, CancellationToken cancellationToken);
+    Task<PaymentResult> ReleaseAsync(ReleaseInstruction instruction, CancellationToken cancellationToken);
 
-    /// <summary>Refunds a held amount back to the client.</summary>
-    /// <param name="idempotencyKey">Caller-generated key — safe to retry.</param>
-    /// <param name="holdReference">The reference returned by <see cref="CreateHoldAsync"/>.</param>
+    /// <summary>Refunds held funds back to the client.</summary>
+    /// <param name="instruction">The refund instruction (hold ref + amount + currency).</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    Task<PaymentResult> RefundAsync(string idempotencyKey, string holdReference, CancellationToken cancellationToken);
+    Task<PaymentResult> RefundAsync(RefundInstruction instruction, CancellationToken cancellationToken);
 }

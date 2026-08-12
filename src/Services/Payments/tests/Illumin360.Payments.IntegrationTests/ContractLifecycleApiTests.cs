@@ -53,8 +53,13 @@ public sealed class ContractLifecycleApiTests : IAsyncLifetime
         var client = _factory.CreateClient();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", TestJwt.ForRoles(["client.user"]));
 
-        var contract = await (await client.PostAsJsonAsync("/v1/payments/contracts", new { clientId = Guid.NewGuid(), talentId = Guid.NewGuid(), requestId = (Guid?)null, title = "Website build", currency = "NAD" })).Content.ReadFromJsonAsync<ContractDto>();
+        var talentId = Guid.NewGuid();
+        var contract = await (await client.PostAsJsonAsync("/v1/payments/contracts", new { clientId = Guid.NewGuid(), talentId, requestId = (Guid?)null, title = "Website build", currency = "NAD" })).Content.ReadFromJsonAsync<ContractDto>();
         contract!.Status.Should().Be("Draft");
+
+        // The talent needs a verified payout account before a release can pay out.
+        (await client.PostAsJsonAsync("/v1/payments/payout-accounts", new { talentId, providerAccount = "sub_talent_1" })).StatusCode.Should().Be(HttpStatusCode.OK);
+        (await client.PostAsync($"/v1/payments/payout-accounts/{talentId}/verify", content: null)).StatusCode.Should().Be(HttpStatusCode.OK);
 
         var milestone = await (await client.PostAsJsonAsync($"/v1/payments/contracts/{contract.Id}/milestones", new { title = "Phase 1", amountMinor = 500000L })).Content.ReadFromJsonAsync<MilestoneDto>();
         milestone!.Status.Should().Be("Pending");

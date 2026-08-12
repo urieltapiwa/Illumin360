@@ -43,6 +43,15 @@ public interface IPaymentsRepository
     /// <param name="cancellationToken">Cancellation token.</param>
     Task<IReadOnlyList<LedgerMovement>> ListMovementsAsync(ContractId contractId, CancellationToken cancellationToken);
 
+    /// <summary>Stages a new payout account for insertion.</summary>
+    /// <param name="account">The payout account.</param>
+    void AddPayoutAccount(PayoutAccount account);
+
+    /// <summary>Loads a talent's payout account (change-tracked), or null.</summary>
+    /// <param name="talentId">The talent id.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<PayoutAccount?> GetPayoutAccountAsync(Guid talentId, CancellationToken cancellationToken);
+
     /// <summary>Commits staged changes.</summary>
     /// <param name="cancellationToken">Cancellation token.</param>
     Task SaveChangesAsync(CancellationToken cancellationToken);
