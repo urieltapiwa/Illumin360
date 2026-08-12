@@ -33,6 +33,20 @@ if (builder.Configuration.GetValue<bool?>("Nurture:Enabled") ?? true)
     builder.Services.AddHostedService<Illumin360.Recruitment.Api.NurtureScheduler>();
 }
 
+// --- GenAI writing assistant backend ---
+// Default: DISABLED — handlers use their deterministic local templates (no external calls, no data egress).
+// A hosted LLM is used ONLY when a tenant opts in via Ai (Provider=Hosted, Enabled=true, Endpoint set).
+var aiOptions = builder.Configuration.GetSection("Ai").Get<Illumin360.Ai.AiOptions>() ?? new Illumin360.Ai.AiOptions();
+if (aiOptions.UseHosted)
+{
+    builder.Services.AddSingleton(aiOptions);
+    builder.Services.AddHttpClient<Illumin360.Ai.ITextCompletionClient, Illumin360.Ai.HostedTextCompletionClient>();
+}
+else
+{
+    builder.Services.AddSingleton<Illumin360.Ai.ITextCompletionClient, Illumin360.Ai.DisabledTextCompletionClient>();
+}
+
 // --- AuthN/AuthZ: validate Keycloak JWTs relayed by the BFF; expose admin role policies (charter Part 7) ---
 builder.Services.AddIllumin360Auth(builder.Configuration);
 
@@ -1296,6 +1310,48 @@ v1.MapGet("/metrics/outcomes", async (
     .ProducesProblem(StatusCodes.Status401Unauthorized)
     .ProducesProblem(StatusCodes.Status403Forbidden);
 
+// --- GenAI writing assistant (admin) — hosted model when opted in, else deterministic local templates ---
+v1.MapPost("/ai/job-description", async (
+        GenerateJdBody body,
+        ICommandHandler<GenerateJobDescriptionCommand, AssistantResultDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new GenerateJobDescriptionCommand(body.Title, body.City, body.Skills), ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminPolicy)
+    .WithName("GenerateJobDescription")
+    .WithSummary("Generate a job description (hosted model when enabled, else a local template). Requires an admin role.")
+    .Produces<AssistantResultDto>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status400BadRequest);
+
+v1.MapPost("/ai/summarize", async (
+        SummarizeBody body,
+        ICommandHandler<SummarizeTextCommand, AssistantResultDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new SummarizeTextCommand(body.Text), ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminPolicy)
+    .WithName("SummarizeText")
+    .WithSummary("Summarise a block of text (e.g. a CV). Requires an admin role.")
+    .Produces<AssistantResultDto>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status400BadRequest);
+
+v1.MapPost("/ai/draft-message", async (
+        DraftMessageBody body,
+        ICommandHandler<DraftMessageCommand, AssistantResultDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new DraftMessageCommand(body.Context, body.Intent), ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.AdminPolicy)
+    .WithName("DraftMessage")
+    .WithSummary("Draft a candidate message for a context + intent. Requires an admin role.")
+    .Produces<AssistantResultDto>(StatusCodes.Status200OK);
+
 // --- Engagement reviews & reputation (marketplace trust, Phase 0) ---
 v1.MapPost("/applications/{id:guid}/review", async (
         Guid id,
@@ -1971,6 +2027,21 @@ internal sealed record OfferSlotBody(DateTimeOffset ProposedAt, int DurationMinu
 /// <param name="Rating">Rating (1–5).</param>
 /// <param name="Comment">Optional comment.</param>
 internal sealed record LeaveReviewBody(string Reviewer, int Rating, string? Comment);
+
+/// <summary>Request body for generating a job description.</summary>
+/// <param name="Title">Role title.</param>
+/// <param name="City">Role city.</param>
+/// <param name="Skills">Required skills.</param>
+internal sealed record GenerateJdBody(string Title, string? City, IReadOnlyList<string>? Skills);
+
+/// <summary>Request body for summarising text.</summary>
+/// <param name="Text">The text to summarise.</param>
+internal sealed record SummarizeBody(string Text);
+
+/// <summary>Request body for drafting a message.</summary>
+/// <param name="Context">Who/what the message is about.</param>
+/// <param name="Intent">The message intent.</param>
+internal sealed record DraftMessageBody(string? Context, string? Intent);
 
 /// <summary>Request body for creating an email campaign.</summary>
 /// <param name="Name">Internal name.</param>

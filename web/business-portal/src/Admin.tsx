@@ -246,6 +246,11 @@ export default function Admin({ session }: { session: Session }) {
   type ReviewRow = { id: string; reviewer: string; rating: number; comment: string | null; createdAt: string };
   const [drawerReviews, setDrawerReviews] = useState<ReviewRow[] | null>(null);
   const [reviewDraft, setReviewDraft] = useState({ rating: 5, comment: "" });
+  // GenAI writing assistant.
+  const [aiTool, setAiTool] = useState<"jd" | "summarize" | "draft">("jd");
+  const [aiIn, setAiIn] = useState({ title: "", city: "", skills: "", text: "", context: "", intent: "" });
+  const [aiOut, setAiOut] = useState<{ text: string; source: string } | null>(null);
+  const [aiBusy, setAiBusy] = useState(false);
   // Audit trail.
   type AuditEntry = { id: string; actor: string; action: string; entityType: string; entityId: string | null; summary: string; occurredAt: string };
   const [audit, setAudit] = useState<AuditEntry[] | null>(null);
@@ -940,6 +945,19 @@ export default function Admin({ session }: { session: Session }) {
     const iso = new Date(slotDraft.proposedAt).toISOString();
     const r = await fetch(`/api/recruitment/applications/${offerAppId}/booking-slots`, { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: JSON.stringify({ proposedAt: iso, durationMinutes: slotDraft.durationMinutes, location: slotDraft.location.trim() }) });
     if (r.ok) { const s: Slot = await r.json(); setSlots((xs) => [...(xs ?? []), s].sort((a, b) => a.proposedAt.localeCompare(b.proposedAt))); setSlotDraft({ proposedAt: "", durationMinutes: 45, location: "Video call" }); }
+  };
+  // GenAI writing assistant (hosted model when enabled, else deterministic local templates).
+  const runAi = async () => {
+    setAiBusy(true);
+    setAiOut(null);
+    try {
+      let url = "", body: unknown = {};
+      if (aiTool === "jd") { url = "/api/recruitment/ai/job-description"; body = { title: aiIn.title.trim(), city: aiIn.city.trim() || null, skills: aiIn.skills.split(",").map((s) => s.trim()).filter(Boolean) }; }
+      else if (aiTool === "summarize") { url = "/api/recruitment/ai/summarize"; body = { text: aiIn.text.trim() }; }
+      else { url = "/api/recruitment/ai/draft-message"; body = { context: aiIn.context.trim() || null, intent: aiIn.intent.trim() || null }; }
+      const r = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: JSON.stringify(body) });
+      if (r.ok) setAiOut(await r.json());
+    } finally { setAiBusy(false); }
   };
   // Employer review of the hired talent.
   const submitEmployerReview = async () => {
@@ -1915,6 +1933,45 @@ export default function Admin({ session }: { session: Session }) {
               <div className="mt-3 border-t border-line/40 pt-3 flex gap-2">
                 <input value={newKit} onChange={(e) => setNewKit(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") createKit(); }} placeholder={t("admin.kits.newName", "New kit name")} className="flex-1 rounded-lg border border-line/70 bg-panel2/50 px-2.5 py-1.5 text-[12px] text-ink-hi placeholder:text-ink-lo focus:border-brand/50 focus:outline-none" />
                 <button onClick={createKit} disabled={!newKit.trim()} className="rounded-lg bg-brand/15 px-3 py-1.5 text-[11px] font-semibold text-brand-bright hover:bg-brand/25 transition disabled:opacity-50">{t("admin.kits.create", "Create")}</button>
+              </div>
+            </motion.section>
+          )}
+
+          {pipelineReqs && (
+            <motion.section variants={fade} className="card p-5">
+              <div className="mb-3">
+                <h3 className="font-display text-[15px] font-bold text-ink-hi">{t("admin.ai.title", "AI writing assistant")}</h3>
+                <p className="text-[11px] text-ink-lo mt-0.5">{t("admin.ai.sub", "Generate a JD, summarise text, or draft a message. Uses a hosted model when enabled, else a built-in template.")}</p>
+              </div>
+              <div className="flex gap-1.5 mb-3">
+                {(["jd", "summarize", "draft"] as const).map((tool) => (
+                  <button key={tool} onClick={() => { setAiTool(tool); setAiOut(null); }} className={`rounded-lg px-2.5 py-1 text-[11px] font-semibold transition ${aiTool === tool ? "bg-brand/20 text-brand-bright" : "bg-panel2/60 text-ink-lo hover:text-ink-hi"}`}>{tool === "jd" ? t("admin.ai.jd", "Job description") : tool === "summarize" ? t("admin.ai.sum", "Summarise") : t("admin.ai.draft", "Draft message")}</button>
+                ))}
+              </div>
+              <div className="space-y-2">
+                {aiTool === "jd" && (
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <input value={aiIn.title} onChange={(e) => setAiIn((f) => ({ ...f, title: e.target.value }))} placeholder={t("admin.ai.roleTitle", "Role title")} className="rounded-lg border border-line/70 bg-panel2/50 px-2.5 py-1.5 text-[12px] text-ink-hi placeholder:text-ink-lo focus:border-brand/50 focus:outline-none" />
+                    <input value={aiIn.city} onChange={(e) => setAiIn((f) => ({ ...f, city: e.target.value }))} placeholder={t("admin.ai.city", "City (optional)")} className="rounded-lg border border-line/70 bg-panel2/50 px-2.5 py-1.5 text-[12px] text-ink-hi placeholder:text-ink-lo focus:border-brand/50 focus:outline-none" />
+                    <input value={aiIn.skills} onChange={(e) => setAiIn((f) => ({ ...f, skills: e.target.value }))} placeholder={t("admin.ai.skills", "Skills, comma-separated")} className="sm:col-span-2 rounded-lg border border-line/70 bg-panel2/50 px-2.5 py-1.5 text-[12px] text-ink-hi placeholder:text-ink-lo focus:border-brand/50 focus:outline-none" />
+                  </div>
+                )}
+                {aiTool === "summarize" && (
+                  <textarea value={aiIn.text} onChange={(e) => setAiIn((f) => ({ ...f, text: e.target.value }))} placeholder={t("admin.ai.textToSum", "Paste text to summarise…")} className="w-full min-h-[70px] resize-y rounded-lg border border-line/70 bg-panel2/50 px-2.5 py-1.5 text-[12px] text-ink-hi placeholder:text-ink-lo focus:border-brand/50 focus:outline-none" />
+                )}
+                {aiTool === "draft" && (
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <input value={aiIn.context} onChange={(e) => setAiIn((f) => ({ ...f, context: e.target.value }))} placeholder={t("admin.ai.ctx", "Context (e.g. Aria, SWE role)")} className="rounded-lg border border-line/70 bg-panel2/50 px-2.5 py-1.5 text-[12px] text-ink-hi placeholder:text-ink-lo focus:border-brand/50 focus:outline-none" />
+                    <input value={aiIn.intent} onChange={(e) => setAiIn((f) => ({ ...f, intent: e.target.value }))} placeholder={t("admin.ai.intent", "Intent (e.g. invite to interview)")} className="rounded-lg border border-line/70 bg-panel2/50 px-2.5 py-1.5 text-[12px] text-ink-hi placeholder:text-ink-lo focus:border-brand/50 focus:outline-none" />
+                  </div>
+                )}
+                <button onClick={runAi} disabled={aiBusy || (aiTool === "jd" && !aiIn.title.trim()) || (aiTool === "summarize" && !aiIn.text.trim())} className="rounded-lg bg-brand/15 px-3 py-1.5 text-[11px] font-semibold text-brand-bright hover:bg-brand/25 transition disabled:opacity-50">{aiBusy ? t("admin.ai.generating", "Generating…") : t("admin.ai.generate", "Generate")}</button>
+                {aiOut && (
+                  <div className="mt-1 rounded-lg border border-line/60 bg-panel2/40 p-3">
+                    <div className="flex items-center justify-between mb-1.5"><span className="eyebrow">{t("admin.ai.output", "Output")}</span><span className={`chip !text-[10px] ${aiOut.source === "hosted" ? "!text-brand-bright !border-brand/30" : "!text-ink-mid"}`}>{aiOut.source === "hosted" ? t("admin.ai.hosted", "🤖 AI model") : t("admin.ai.template", "template")}</span></div>
+                    <pre className="whitespace-pre-wrap text-[12px] text-ink-hi leading-relaxed font-sans">{aiOut.text}</pre>
+                  </div>
+                )}
               </div>
             </motion.section>
           )}

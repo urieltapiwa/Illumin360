@@ -8,5 +8,6 @@
     <ProjectReference Include="..\Illumin360.Recruitment.Contracts\Illumin360.Recruitment.Contracts.csproj" />
     <ProjectReference Include="..\Illumin360.Recruitment.Domain\Illumin360.Recruitment.Domain.csproj" />
     <ProjectReference Include="..\..\..\BuildingBlocks\Matching\Illumin360.Matching.csproj" />
+    <ProjectReference Include="..\..\..\BuildingBlocks\Ai\Illumin360.Ai.csproj" />
   </ItemGroup>
 </Project>

@@ -8,6 +8,7 @@
     <PackageReference Include="AspNetCore.HealthChecks.UI.Client" />
     <ProjectReference Include="..\Illumin360.Recruitment.Application\Illumin360.Recruitment.Application.csproj" />
     <ProjectReference Include="..\Illumin360.Recruitment.Infrastructure\Illumin360.Recruitment.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\..\BuildingBlocks\Ai\Illumin360.Ai.csproj" />
     <ProjectReference Include="..\..\..\BuildingBlocks\Observability\Illumin360.Observability.csproj" />
     <ProjectReference Include="..\..\..\BuildingBlocks\Web\Illumin360.Web.csproj" />
     <ProjectReference Include="..\..\..\BuildingBlocks\Security\Illumin360.Security.csproj" />

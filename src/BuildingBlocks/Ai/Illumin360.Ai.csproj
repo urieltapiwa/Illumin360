@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Illumin360.Ai</RootNamespace>
+  </PropertyGroup>
+  <!-- Pluggable text-completion (LLM) port + a hosted OpenAI-compatible client. BCL only (HttpClient +
+       System.Text.Json); no external packages. The default is OFF — no text leaves the platform unless a
+       tenant opts in (data-egress gate). -->
+  <ItemGroup>
+    <Compile Remove="tests/**/*.cs" />
+  </ItemGroup>
+</Project>
