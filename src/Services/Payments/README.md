@@ -26,8 +26,12 @@ an append-only movement log; Phase 2 upgrades it to strict double-entry once rea
 - `POST /contracts/{id}/milestones`, `/activate`, `/cancel`
 - `POST /milestones/{id}/fund | submit | approve | refund`
 
+## Portal UI
+`web/business-portal/src/Contracts.tsx` — a shared "Contracts & escrow" panel: the **Employer** portal drives
+the client side (draft a contract, add milestones, activate, fund, approve/refund) and the **Professional**
+portal is the talent side (view contracts, submit funded milestones). Both show the ledger.
+
 ## Not built yet (gated / later phases)
 - **Real PSP adapter** (Phase 2, decision D1) + provider-hosted funding + webhooks + reconciliation.
 - **Reviews/reputation** already shipped in the Recruitment service (Phase 0), feeding `ReputationScorer`.
-- Portal UI for contracts/milestones (fast-follow).
 - Platform take-rate split, disputes, hourly contracts (design doc D3/D5/D6).

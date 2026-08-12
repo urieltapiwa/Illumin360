@@ -6,6 +6,7 @@ import { logout, type Session } from "./auth";
 import { useTranslation } from "react-i18next";
 import { LanguageSwitcher, ThemeSwitcher } from "@illumin360/ui";
 import TalentApplications from "./TalentApplications";
+import Contracts from "./Contracts";
 import ApplyForm, { type FormQuestion } from "./ApplyForm";
 import { registerServiceWorker, pushPermission, enablePush, showPush } from "./push";
 
@@ -643,6 +644,9 @@ export default function Professional(_props: { session: Session }) {
 
           {/* my applications: live status + offers (accept/decline/e-sign) + employer messaging */}
           {d.id && <TalentApplications talentId={d.id} senderName={p.name} live={live} />}
+
+          {/* marketplace contracts (talent side): view + submit funded milestones */}
+          {d.id && <Contracts role="talent" partyId={d.id} live={live} />}
 
           {/* saved searches + job alerts */}
           {live && d.id && (
