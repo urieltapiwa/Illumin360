@@ -25,7 +25,7 @@ public interface IEmbeddingProvider
 /// offline/CI and as a graceful fallback. It is NOT true semantics; a hosted model behind
 /// <see cref="IEmbeddingProvider"/> provides that when enabled.
 /// </summary>
-public sealed class HashingEmbeddingProvider(int dimensions = 256) : IEmbeddingProvider
+public sealed class HashingEmbeddingProvider(int dimensions = 256) : IEmbeddingProvider, IEmbeddingClient
 {
     private static readonly char[] Separators =
         [' ', '\t', '\n', '\r', ',', '.', '/', '\\', '-', '_', '(', ')', '&', ':', ';', '|', '+'];
@@ -34,6 +34,9 @@ public sealed class HashingEmbeddingProvider(int dimensions = 256) : IEmbeddingP
 
     /// <inheritdoc />
     public int Dimensions => _dimensions;
+
+    /// <inheritdoc />
+    public Task<float[]> EmbedAsync(string? text, CancellationToken cancellationToken) => Task.FromResult(Embed(text));
 
     /// <inheritdoc />
     public float[] Embed(string? text)

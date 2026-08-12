@@ -1,6 +1,17 @@
 # Semantic (Embedding) Matching — Design & Decision Doc
 
-> **Status:** Proposed (no code yet) · **Owner:** Platform Architecture · **Last updated:** 2026-08-11 · **Decision needed before implementation**
+> **Status:** Partially implemented · **Owner:** Platform Architecture · **Last updated:** 2026-08-12
+>
+> **Shipped:** v1 hashing provider (`IEmbeddingProvider` / `HashingEmbeddingProvider`, compute-on-query
+> `SemanticRanker`, Candidates `GET /{id}/semantic-similar` behind `Matching:SemanticEnabled`, off by default).
+> Then (#112, 2026-08-12): the **hosted-model abstraction, defaulted OFF** — an async `IEmbeddingClient` port +
+> `HostedEmbeddingClient` (OpenAI-compatible `/embeddings`) + `EmbeddingOptions`, selected by config
+> (`Matching:Embeddings` — `Provider=Hashing` default; `Hosted` requires `Enabled=true` + an `Endpoint`, the
+> data-egress gate). No text leaves the platform until a tenant opts in.
+>
+> **Remaining:** turning the hosted flag ON (needs the **DPA / data-egress sign-off** + an endpoint/key), and
+> **pgvector persistence** — deferred until a hosted model is actually enabled (there is nothing worth
+> persisting while compute-on-query hashing is the default).
 
 This scopes **Tier 2 — semantic/embedding matching** from the deep parity audit (`FEATURE-PARITY.md`). It is a
 *decision document*: it lays out the approach, options, cost and risks so we can choose deliberately. **No code

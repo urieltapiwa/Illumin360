@@ -21,6 +21,21 @@ builder.Services.AddHealthChecks()
 builder.Services.AddCandidatesApplication();
 builder.Services.AddCandidatesInfrastructure(builder.Configuration);
 
+// --- Embedding backend for semantic matching ---
+// Default: deterministic hashing (no external calls, no data egress). A hosted model is used ONLY when a
+// tenant opts in via Matching:Embeddings (Provider=Hosted, Enabled=true, Endpoint set) — the data-egress gate.
+var embeddingOptions = builder.Configuration.GetSection("Matching:Embeddings").Get<Illumin360.Matching.EmbeddingOptions>()
+    ?? new Illumin360.Matching.EmbeddingOptions();
+if (embeddingOptions.UseHosted)
+{
+    builder.Services.AddSingleton(embeddingOptions);
+    builder.Services.AddHttpClient<Illumin360.Matching.IEmbeddingClient, Illumin360.Matching.HostedEmbeddingClient>();
+}
+else
+{
+    builder.Services.AddSingleton<Illumin360.Matching.IEmbeddingClient>(new Illumin360.Matching.HashingEmbeddingProvider(embeddingOptions.Dimensions));
+}
+
 // --- AuthN/AuthZ: validate Keycloak JWTs relayed by the BFF; expose admin role policies (charter Part 7) ---
 builder.Services.AddIllumin360Auth(builder.Configuration);
 

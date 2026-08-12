@@ -47,6 +47,56 @@ public static class SemanticRanker
             .ToList();
     }
 
+    /// <summary>
+    /// Async variant using an <see cref="IEmbeddingClient"/> — the path for a hosted model. Embeds the query
+    /// then each pool item (compute-on-query; a persisted pgvector path is the scale follow-up once a hosted
+    /// model is enabled). Most similar first, ties broken by id.
+    /// </summary>
+    /// <param name="client">The embedding client.</param>
+    /// <param name="queryText">The seed text.</param>
+    /// <param name="pool">The items to rank (id + text).</param>
+    /// <param name="excludeId">An id to exclude from the results.</param>
+    /// <param name="take">Maximum results to return.</param>
+    /// <param name="minScore">Minimum score (0–100) to include (default 1).</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The closest items, most similar first.</returns>
+    public static async Task<IReadOnlyList<SemanticMatch>> RankAsync(
+        IEmbeddingClient client,
+        string? queryText,
+        IEnumerable<(Guid Id, string? Text)> pool,
+        Guid excludeId,
+        int take,
+        int minScore = 1,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(client);
+        ArgumentNullException.ThrowIfNull(pool);
+        if (take <= 0 || string.IsNullOrWhiteSpace(queryText))
+        {
+            return [];
+        }
+
+        var query = await client.EmbedAsync(queryText, cancellationToken).ConfigureAwait(false);
+
+        var scored = new List<SemanticMatch>();
+        foreach (var (id, text) in pool)
+        {
+            if (id == excludeId)
+            {
+                continue;
+            }
+
+            var vector = await client.EmbedAsync(text, cancellationToken).ConfigureAwait(false);
+            var score = ToScore(VectorMath.Cosine(query, vector));
+            if (score >= minScore)
+            {
+                scored.Add(new SemanticMatch(id, score));
+            }
+        }
+
+        return scored.OrderByDescending(m => m.Score).ThenBy(m => m.Id).Take(take).ToList();
+    }
+
     // Cosine in [-1,1] → a 0–100 score (negatives clamp to 0).
     private static int ToScore(double cosine) => (int)Math.Round(Math.Clamp(cosine, 0, 1) * 100);
 }
