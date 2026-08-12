@@ -5,11 +5,22 @@ and an append-only **ledger**. Money movement runs through the `IPaymentProvider
 provider-agnostic. See [`03-architecture/marketplace-transactions-design.md`](../../../03-architecture/marketplace-transactions-design.md).
 
 > **Status:** Phase 1 (contracts & milestones as agreements). Default `IPaymentProvider` is the deterministic
-> **`FakePaymentProvider`** — **no real money**. Four real adapters are **scaffolded** behind the port and
-> config-selectable via `Payments:Provider` (D1 resolved: Namibia/SADC first, **Flutterwave** recommended):
-> `Flutterwave` + `Stripe` (tested reference pair) and `NGenius` + `Dpo` (structured scaffolds — validate
-> against each provider's sandbox before enabling). A real adapter is used only when `Provider` names one,
-> `Enabled=true`, and a `BaseUrl` is set — **and going live still requires the D2 legal sign-off + credentials.**
+> **`FakePaymentProvider`** — **no real money**. Four real adapters exist behind the port, verified against each
+> provider's live docs (2026-08-12) and config-selectable via `Payments:Provider`. **Payout capability differs
+> (this is the key finding):**
+>
+> | Provider | Collect | Refund | **Pay talent** | NAD/Namibia |
+> |---|---|---|---|---|
+> | Flutterwave | ✅ | ✅ | ✅ transfers/subaccounts | ❌ not supported |
+> | Stripe | ✅ | ✅ | ✅ Connect transfers | ❌ Namibia excluded |
+> | N-Genius | ✅ | ✅ (to payer) | ❌ **no payout API** | MEA |
+> | DPO | ✅ | ✅ | ❌ **no payout API** | ✅ collection only |
+>
+> **N-Genius and DPO return an explicit not-supported result on `Release`** (they cannot pay a third party).
+> **No provider offers a documented NAD payout rail** — so a Namibia-first marketplace that pays talent in NAD
+> is not achievable on these four as documented (see the design doc §12). A real adapter runs only when
+> `Provider` names one, `Enabled=true`, and `BaseUrl` is set — **and going live needs D2 legal sign-off +
+> confirmed corridor + credentials.**
 
 ## Provider config (`Payments` section, default off)
 ```jsonc

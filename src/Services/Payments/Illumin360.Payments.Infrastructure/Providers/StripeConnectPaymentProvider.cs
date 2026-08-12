@@ -33,13 +33,26 @@ public sealed class StripeConnectPaymentProvider(HttpClient http, PaymentProvide
     }
 
     /// <inheritdoc />
-    public Task<PaymentResult> ReleaseAsync(ReleaseInstruction instruction, CancellationToken cancellationToken)
+    public async Task<PaymentResult> ReleaseAsync(ReleaseInstruction instruction, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(instruction);
 
-        // Capture the manual-capture PaymentIntent. Payout to the connected account (destination) is set on the
-        // charge at hold time via Stripe Connect (on_behalf_of / transfer_data) — validate that wiring in test mode.
-        return PostAsync($"/v1/payment_intents/{instruction.HoldReference}/capture", instruction.IdempotencyKey, cancellationToken);
+        // Separate charges + transfers (recipient known only at approval): capture the held PaymentIntent, then
+        // transfer the amount to the talent's connected account. (If the recipient were fixed at hold time, the
+        // destination-charge pattern — transfer_data[destination] on the intent — would avoid the second call.)
+        var capture = await PostAsync($"/v1/payment_intents/{instruction.HoldReference}/capture", instruction.IdempotencyKey, cancellationToken).ConfigureAwait(false);
+        if (!capture.Success)
+        {
+            return capture;
+        }
+
+        var transfer = new[]
+        {
+            ("amount", instruction.AmountMinor.ToString(System.Globalization.CultureInfo.InvariantCulture)),
+            ("currency", instruction.Currency.ToLowerInvariant()),
+            ("destination", instruction.DestinationAccount),
+        };
+        return await PostAsync("/v1/transfers", $"{instruction.IdempotencyKey}-transfer", cancellationToken, transfer).ConfigureAwait(false);
     }
 
     /// <inheritdoc />

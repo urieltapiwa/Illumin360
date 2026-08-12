@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 using System.Xml.Linq;
 using Illumin360.Payments.Application.Abstractions;
@@ -5,15 +6,14 @@ using Illumin360.Payments.Application.Abstractions;
 namespace Illumin360.Payments.Infrastructure.Providers;
 
 /// <summary>
-/// DPO Group adapter (Southern/East-African acquiring, good NAD coverage). DPO uses a single XML endpoint
-/// (<c>/API/v6/</c>): <c>createToken</c> holds funds (returns a TransToken), <c>chargeToken*</c>/verify settles
-/// (release), and <c>refundToken</c> reverses. The company token comes from
-/// <see cref="PaymentProviderOptions.Extra"/>.
-///
-/// SCAFFOLD — DPO's XML API is materially different from the JSON providers; the request/response shapes here
-/// follow the documented v6 API but MUST be validated against DPO's sandbox before enabling. DPO is
-/// collection-first, so third-party payouts to talent are weaker than Flutterwave — factor that into the D1
-/// choice. Off by default; D2-gated.
+/// DPO Group (Direct Pay Online) API3G v6 adapter. Verified against DPO's Confluence API docs (2026-08-12).
+/// Single XML endpoint <c>POST /API/v6/</c> (same host for sandbox + production; the CompanyToken decides which).
+/// DPO operates in Namibia + Southern/East Africa for <b>collection</b>, but its public API is
+/// <b>collection/acquiring only — no third-party payout</b>: refunds go to the original payer, and there is no
+/// documented disburse-to-seller call. So this adapter can create a payment token + refund-to-payer, but
+/// <b>cannot pay the talent</b> — <see cref="ReleaseAsync"/> returns an explicit not-supported result. Also
+/// note <c>createToken</c> is NOT an auth-hold: it creates a payment request the payer then completes;
+/// "holding" is your own ledger against a verified payment. Off by default; D2-gated.
 /// </summary>
 /// <param name="http">The HTTP client.</param>
 /// <param name="options">Provider options (BaseUrl e.g. https://secure.3gdirectpay.com, Extra = company token).</param>
@@ -25,15 +25,28 @@ public sealed class DpoPaymentProvider(HttpClient http, PaymentProviderOptions o
     /// <inheritdoc />
     public Task<PaymentResult> CreateHoldAsync(string idempotencyKey, long amountMinor, string currency, CancellationToken cancellationToken)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(currency);
+
+        // createToken requires a Transaction block (amount/currency/ref) AND at least one Services/Service.
         var xml = new XElement(
             "API3G",
             new XElement("CompanyToken", _options.Extra),
             new XElement("Request", "createToken"),
             new XElement(
                 "Transaction",
-                new XElement("PaymentAmount", (amountMinor / 100.0m).ToString(System.Globalization.CultureInfo.InvariantCulture)),
+                new XElement("PaymentAmount", (amountMinor / 100.0m).ToString(CultureInfo.InvariantCulture)),
                 new XElement("PaymentCurrency", currency),
-                new XElement("CompanyRef", idempotencyKey)));
+                new XElement("CompanyRef", idempotencyKey),
+                new XElement("CompanyRefUnique", "1"),
+                new XElement("RedirectURL", "https://illumin360.example/payments/return"),
+                new XElement("BackURL", "https://illumin360.example/payments/cancel")),
+            new XElement(
+                "Services",
+                new XElement(
+                    "Service",
+                    new XElement("ServiceType", _options.Extra), // account-specific service-type id (placeholder)
+                    new XElement("ServiceDescription", "Illumin360 milestone funding"),
+                    new XElement("ServiceDate", "2026/01/01 00:00"))));
         return PostAsync(xml, "TransToken", idempotencyKey, cancellationToken);
     }
 
@@ -42,26 +55,23 @@ public sealed class DpoPaymentProvider(HttpClient http, PaymentProviderOptions o
     {
         ArgumentNullException.ThrowIfNull(instruction);
 
-        // Settle the held token. DPO is collection-first; disbursing to the talent (DestinationAccount) is a
-        // separate payout step — validate against the DPO sandbox.
-        var xml = new XElement(
-            "API3G",
-            new XElement("CompanyToken", _options.Extra),
-            new XElement("Request", "verifyToken"),
-            new XElement("TransactionToken", instruction.HoldReference));
-        return PostAsync(xml, "Result", instruction.IdempotencyKey, cancellationToken);
+        // DPO's public API is collection-only — no disburse-to-third-party call.
+        return Task.FromResult(new PaymentResult(false, string.Empty, "DPO API is collection-only — no third-party payout; disburse to the talent out-of-band."));
     }
 
     /// <inheritdoc />
     public Task<PaymentResult> RefundAsync(RefundInstruction instruction, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(instruction);
+
+        // refundToken requires BOTH refundAmount and refundDetails (note the lowercase leading 'r').
         var xml = new XElement(
             "API3G",
             new XElement("CompanyToken", _options.Extra),
             new XElement("Request", "refundToken"),
             new XElement("TransactionToken", instruction.HoldReference),
-            new XElement("refundAmount", (instruction.AmountMinor / 100.0m).ToString(System.Globalization.CultureInfo.InvariantCulture)));
+            new XElement("refundAmount", (instruction.AmountMinor / 100.0m).ToString(CultureInfo.InvariantCulture)),
+            new XElement("refundDetails", "Illumin360 milestone refund"));
         return PostAsync(xml, "Result", instruction.IdempotencyKey, cancellationToken);
     }
 
@@ -85,7 +95,7 @@ public sealed class DpoPaymentProvider(HttpClient http, PaymentProviderOptions o
             var result = doc.Root?.Element("Result")?.Value;
 
             // DPO signals success with Result code "000".
-            if (result is not null && result != "000" && readElement == "Result")
+            if (result is not null && result != "000")
             {
                 return new PaymentResult(false, string.Empty, $"DPO result {result}: {doc.Root?.Element("ResultExplanation")?.Value}");
             }
