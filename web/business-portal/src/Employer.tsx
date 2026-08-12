@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
+import Contracts from "./Contracts";
 import { logout, type Session } from "./auth";
 import { LanguageSwitcher, ThemeSwitcher } from "@illumin360/ui";
 
@@ -307,6 +308,12 @@ export default function Employer(_props: { session: Session }) {
               </div>
             )}
           </motion.section>
+
+          {emp.id && (
+            <motion.section variants={fade}>
+              <Contracts role="client" partyId={emp.id} live={live} />
+            </motion.section>
+          )}
 
           <footer className="flex flex-wrap items-center justify-between gap-2 pt-1 pb-4 text-[11px] text-ink-lo"><span>{t("employer.footer.brand", "Illumin360 · Employer portal")}</span><span>{live ? t("employer.footer.live", "Live data") : t("employer.footer.demo", "Demo snapshot")}</span></footer>
         </motion.div>

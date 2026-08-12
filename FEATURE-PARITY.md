@@ -404,8 +404,10 @@ integration green.
 append-only **ledger**, with money movement behind an **`IPaymentProvider`** port whose only implementation
 today is a deterministic **`FakePaymentProvider`** (no real money). Full state machine + contract
 auto-completion; migration `InitialPayments`; 6 unit + 1 real-Postgres integration test (full lifecycle over
-HTTP). D4/D5 defaulted (payments DB added; fixed-price first). **Money-movement Phases 2–4 (real PSP adapter,
-provider-hosted funding, webhooks) remain gated on the provider (D1) + legal (D2) decisions.**
+HTTP). D4/D5 defaulted (payments DB added; fixed-price first). **Portal UI** (`Contracts.tsx`): the Employer
+portal drives the client side (draft → milestones → activate → fund → approve/refund), the Professional portal
+is the talent side (submit funded milestones); both show the ledger. **Money-movement Phases 2–4 (real PSP
+adapter, provider-hosted funding, webhooks) remain gated on the provider (D1) + legal (D2) decisions.**
 
 ### Proposed v0.3.0 backlog (tiered)
 
