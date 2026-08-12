@@ -21,6 +21,31 @@ builder.Services.AddHealthChecks()
 builder.Services.AddPaymentsApplication();
 builder.Services.AddPaymentsInfrastructure(builder.Configuration);
 
+// --- Payment provider (decision D1) ---
+// Default = Fake (Phase 1, no real money). A real PSP adapter is used ONLY when Payments:Provider names one,
+// Enabled=true, and a BaseUrl is set — and going live still requires the D2 legal sign-off + credentials.
+var paymentOptions = builder.Configuration.GetSection("Payments").Get<Illumin360.Payments.Infrastructure.Providers.PaymentProviderOptions>()
+    ?? new Illumin360.Payments.Infrastructure.Providers.PaymentProviderOptions();
+builder.Services.AddSingleton(paymentOptions);
+switch (paymentOptions.UseReal ? paymentOptions.Provider : Illumin360.Payments.Infrastructure.Providers.PaymentProviderKind.Fake)
+{
+    case Illumin360.Payments.Infrastructure.Providers.PaymentProviderKind.Flutterwave:
+        builder.Services.AddHttpClient<Illumin360.Payments.Application.Abstractions.IPaymentProvider, Illumin360.Payments.Infrastructure.Providers.FlutterwavePaymentProvider>();
+        break;
+    case Illumin360.Payments.Infrastructure.Providers.PaymentProviderKind.Stripe:
+        builder.Services.AddHttpClient<Illumin360.Payments.Application.Abstractions.IPaymentProvider, Illumin360.Payments.Infrastructure.Providers.StripeConnectPaymentProvider>();
+        break;
+    case Illumin360.Payments.Infrastructure.Providers.PaymentProviderKind.NGenius:
+        builder.Services.AddHttpClient<Illumin360.Payments.Application.Abstractions.IPaymentProvider, Illumin360.Payments.Infrastructure.Providers.NGeniusPaymentProvider>();
+        break;
+    case Illumin360.Payments.Infrastructure.Providers.PaymentProviderKind.Dpo:
+        builder.Services.AddHttpClient<Illumin360.Payments.Application.Abstractions.IPaymentProvider, Illumin360.Payments.Infrastructure.Providers.DpoPaymentProvider>();
+        break;
+    default:
+        builder.Services.AddSingleton<Illumin360.Payments.Application.Abstractions.IPaymentProvider, Illumin360.Payments.Infrastructure.FakePaymentProvider>();
+        break;
+}
+
 // --- AuthN/AuthZ (Keycloak JWTs relayed by the BFF) ---
 builder.Services.AddIllumin360Auth(builder.Configuration);
 

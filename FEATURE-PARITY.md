@@ -409,6 +409,15 @@ portal drives the client side (draft → milestones → activate → fund → ap
 is the talent side (submit funded milestones); both show the ledger. **Money-movement Phases 2–4 (real PSP
 adapter, provider-hosted funding, webhooks) remain gated on the provider (D1) + legal (D2) decisions.**
 
+**Marketplace (C) — D1 resolved + PSP adapters scaffolded (2026-08-12):** launch market = **Namibia/SADC first,
+Flutterwave recommended**. All four PSP adapters — **Flutterwave, Stripe Connect, N-Genius, DPO** — implemented
+behind the `IPaymentProvider` port, config-selectable via `Payments:Provider`, **default `Fake`/off**.
+Flutterwave + Stripe are the tested reference pair (stub-handler tests assert auth, endpoint, request body,
+response parse, error surfacing); N-Genius (OAuth) + DPO (XML) are structured scaffolds to validate against
+each sandbox. 5 new unit tests (Payments 11) + integration green. **Still gated for go-live on D2 (legal) +
+live credentials; and a port extension (destination account + amount on Release/Refund) is needed for
+transfer-based payouts (Stripe capture-by-id already fits).**
+
 ### Proposed v0.3.0 backlog (tiered)
 
 **Tier 1 — headliners (high fit; build largely on what we have).** Ordered by fit×leverage:

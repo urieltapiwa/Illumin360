@@ -21,9 +21,8 @@ public static class DependencyInjection
         services.AddDbContext<PaymentsDbContext>(o => o.UseNpgsql(connectionString));
         services.AddScoped<IPaymentsRepository, PaymentsRepository>();
 
-        // Phase 1: the fake provider (no real money). Phase 2 swaps in the real PSP adapter here (decision D1).
-        services.AddSingleton<IPaymentProvider, FakePaymentProvider>();
-
+        // The IPaymentProvider is registered in the Api layer (where AddHttpClient is available): Fake by
+        // default, a real PSP adapter only when Payments:Provider opts in (decision D1). See Program.cs.
         services.AddHealthChecks()
             .AddNpgSql(connectionString, name: "payments-db", tags: ["ready", "startup"]);
 
