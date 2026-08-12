@@ -13,6 +13,9 @@ public enum MovementKind
 
     /// <summary>Funds refunded to the client.</summary>
     Refund,
+
+    /// <summary>Platform commission taken from a release (the take-rate).</summary>
+    Fee,
 }
 
 /// <summary>
