@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import * as echarts from "echarts";
 import { Chart, donutOption, cityOption, nf, compact, curC, C } from "@illumin360/ui";
 import { logout, type Session } from "./auth";
+import { useScrollSpy, scrollToSection, SectionAnchor } from "./scrollnav";
 import { useTranslation } from "react-i18next";
 import { LanguageSwitcher, ThemeSwitcher } from "@illumin360/ui";
 
@@ -526,6 +527,8 @@ export default function Admin({ session }: { session: Session }) {
       .then((v) => { if (Array.isArray(v)) setSkillRatings(Object.fromEntries(v.map((x: { skill: string; rating: number }) => [x.skill, x.rating]))); })
       .catch(() => { /* offline */ });
   }, [ivOpen]);
+  // Scrollspy for the sidebar — must run before the early return to keep hook order stable.
+  const activeSec = useScrollSpy(["sec-overview", "sec-accounts", "sec-pipeline", "sec-sourcing", "sec-campaigns", "sec-talent"]);
   if (!d) return <div className="grid place-items-center h-screen text-ink-mid font-mono text-sm animate-pulse">{t("admin.loading")}</div>;
 
   const k = d.kpis;
@@ -980,7 +983,15 @@ export default function Admin({ session }: { session: Session }) {
   };
   const pipelineStages = ["applied", "reviewed", "shortlisted", "hired", "rejected"];
   const degraded = d.services.filter((s) => s.status !== "operational").length;
-  const nav: [React.ReactNode, string, boolean][] = [[ICN.grid, t("admin.nav.overview"), true], [ICN.users, t("admin.nav.users"), false], [ICN.cash, t("admin.nav.revenue"), false], [ICN.shield, t("admin.nav.moderation"), false], [ICN.server, t("admin.nav.system"), false], [ICN.gear, t("admin.nav.settings"), false]];
+  // Sidebar sections map to real content anchors on this single-page dashboard (scrollspy).
+  const nav: [React.ReactNode, string, string][] = [
+    [ICN.grid, t("admin.nav.overview", "Overview"), "sec-overview"],
+    [ICN.users, t("admin.nav.accounts", "Accounts"), "sec-accounts"],
+    [ICN.shield, t("admin.nav.pipeline", "Pipeline"), "sec-pipeline"],
+    [ICN.bolt, t("admin.nav.sourcing", "Sourcing & Ranking"), "sec-sourcing"],
+    [ICN.server, t("admin.nav.campaigns", "Campaigns & AI"), "sec-campaigns"],
+    [ICN.gear, t("admin.nav.talent", "Talent & CRM"), "sec-talent"],
+  ];
   const initials = (session.name || "Admin").split(" ").map((x) => x[0]).slice(0, 2).join("");
   const kpiCards = [
     [t("admin.kpi.totalUsers"), nf(live ? talentTotal! + k.companies : k.totalUsers), t("admin.kpi.dauDelta", { delta: k.dauDelta }), C.brand],
@@ -993,16 +1004,19 @@ export default function Admin({ session }: { session: Session }) {
 
   return (
     <div className="flex min-h-screen">
-      <aside className="hidden lg:flex w-[228px] shrink-0 flex-col border-r border-line/70 bg-panel/40 px-4 py-6 relative z-10">
+      <aside className="hidden lg:flex w-[228px] shrink-0 flex-col border-r border-line/70 bg-panel/40 px-4 py-6 relative z-10 lg:sticky lg:top-0 lg:h-screen lg:self-start lg:overflow-y-auto">
         <div className="px-1"><Logo /></div>
         <nav className="mt-9 flex flex-col gap-1">
           <div className="eyebrow px-3 mb-1">{t("admin.nav.platform")}</div>
-          {nav.map(([icon, label, active]) => (
-            <a key={label} href="#" className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition ${active ? "bg-brand/[0.12] text-ink-hi shadow-[inset_0_0_0_1px_rgba(47,211,154,0.25)]" : "text-ink-mid hover:bg-white/[0.03] hover:text-ink-hi"}`}>
-              <span className={active ? "text-brand-bright" : "text-ink-lo group-hover:text-ink-mid"}><Ic d={icon} /></span>{label}
-              {active && <span className="ml-auto h-1.5 w-1.5 rounded-full bg-gold" />}
-            </a>
-          ))}
+          {nav.map(([icon, label, id]) => {
+            const active = activeSec === id;
+            return (
+              <a key={id} href={`#${id}`} onClick={(e) => { e.preventDefault(); scrollToSection(id); }} aria-current={active ? "true" : undefined} className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition ${active ? "bg-brand/[0.12] text-ink-hi shadow-[inset_0_0_0_1px_rgba(47,211,154,0.25)]" : "text-ink-mid hover:bg-white/[0.03] hover:text-ink-hi"}`}>
+                <span className={active ? "text-brand-bright" : "text-ink-lo group-hover:text-ink-mid"}><Ic d={icon} /></span>{label}
+                {active && <span className="ml-auto h-1.5 w-1.5 rounded-full bg-gold" />}
+              </a>
+            );
+          })}
         </nav>
         <div className="mt-auto card p-3.5">
           <div className="flex items-center gap-2 text-brand-bright"><Ic d={ICN.bolt} s={15} /><span className="text-xs font-semibold text-ink-hi">{t("admin.sidebar.online", { n: nf(k.dau) })}</span></div>
@@ -1035,6 +1049,7 @@ export default function Admin({ session }: { session: Session }) {
         </header>
 
         <motion.div initial="initial" animate="animate" transition={{ staggerChildren: 0.05 }} className="px-5 lg:px-7 py-6 space-y-5">
+          <SectionAnchor id="sec-overview" />
           <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
             {kpiCards.map(([label, val, sub, color], i) => (
               <motion.div key={i} variants={fade} className="card p-4">
@@ -1166,6 +1181,7 @@ export default function Admin({ session }: { session: Session }) {
             </motion.section>
           </div>
 
+          <SectionAnchor id="sec-accounts" />
           {liveAccounts !== null && (
             <div className="grid grid-cols-1 gap-5">
               <motion.section variants={fade} className="card p-5">
@@ -1195,6 +1211,7 @@ export default function Admin({ session }: { session: Session }) {
             </div>
           )}
 
+          <SectionAnchor id="sec-pipeline" />
           {pipelineReqs && pipelineReqs.length > 0 && (
             <motion.section variants={fade} className="card p-5">
               <div className="flex items-center justify-between mb-3 gap-3 flex-wrap">
@@ -1625,6 +1642,7 @@ export default function Admin({ session }: { session: Session }) {
             </motion.section>
           )}
 
+          <SectionAnchor id="sec-sourcing" />
           {channels && channels.length > 0 && (
             <motion.section variants={fade} className="card p-5">
               <div className="mb-3"><h3 className="font-display text-[15px] font-bold text-ink-hi">{t("admin.channels.title", "Source of applications")}</h3><p className="text-[11px] text-ink-lo mt-0.5">{t("admin.channels.sub", "Applications and hires by arrival channel.")}</p></div>
@@ -1790,6 +1808,7 @@ export default function Admin({ session }: { session: Session }) {
             </motion.section>
           )}
 
+          <SectionAnchor id="sec-campaigns" />
           {campaigns && (
             <motion.section variants={fade} className="card p-5">
               <div className="flex items-center justify-between mb-3 gap-3 flex-wrap">
@@ -2068,6 +2087,7 @@ export default function Admin({ session }: { session: Session }) {
             )}
           </motion.section>
 
+          <SectionAnchor id="sec-talent" />
           {pools && (
             <motion.section variants={fade} className="card p-5">
               <div className="flex items-center justify-between mb-3 gap-3 flex-wrap">
