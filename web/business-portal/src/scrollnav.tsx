@@ -11,8 +11,20 @@ const HEADER_OFFSET = 96;
 export function scrollToSection(id: string, offset = HEADER_OFFSET) {
   const el = document.getElementById(id);
   if (!el) return;
-  const top = el.getBoundingClientRect().top + window.scrollY - offset;
-  window.scrollTo({ top: Math.max(top, 0), behavior: "smooth" });
+  // The anchor's position: recomputed on demand because async content (charts) can reflow the
+  // page and shift it after the initial scroll request.
+  const targetTop = () => Math.max(el.getBoundingClientRect().top + window.scrollY - offset, 0);
+  window.scrollTo({ top: targetTop(), behavior: "smooth" });
+  // Robustness net for contexts where smooth scrolling is a silent no-op or gets interrupted
+  // (background/unfocused tabs, some embedded webviews, non-compositing pages) and for reflow
+  // that leaves us short of the anchor: snap to the freshly-computed target if we're not there,
+  // then nudge the scrollspy so the active item re-evaluates even where a programmatic scroll
+  // emits no scroll event.
+  window.setTimeout(() => {
+    const t = targetTop();
+    if (Math.abs(window.scrollY - t) > 4) window.scrollTo({ top: t });
+    window.dispatchEvent(new Event("scroll"));
+  }, 340);
 }
 
 /** Returns the id of the section currently in view, updated on scroll/resize/content-growth. */
