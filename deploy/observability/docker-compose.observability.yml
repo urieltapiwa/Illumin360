@@ -35,7 +35,11 @@ services:
       - "${OTLP_HTTP_PORT:-4318}:4318"   # OTLP HTTP
       - "12345:12345"                    # Alloy UI
     volumes:
-      - ./alloy/config.alloy:/etc/alloy/config.alloy:ro
+      # Bind paths in a compose file are resolved relative to the PROJECT directory (the dir of the
+      # first `-f` file, i.e. deploy/docker/), not this file's dir. This overlay is always run with
+      # deploy/docker/docker-compose.yml first, so reach these configs via ../observability/… — a bare
+      # ./alloy/… would resolve to deploy/docker/alloy/… (missing) and Docker would bind an empty dir.
+      - ../observability/alloy/config.alloy:/etc/alloy/config.alloy:ro
     networks: [illumin360]
 
   # ---------------------------------------------------------------- Prometheus (scrape + short-term)
@@ -49,7 +53,7 @@ services:
       - --enable-feature=exemplar-storage
     # No host port: the shared Grafana queries it in-network as illumin360-prometheus.
     volumes:
-      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ../observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus-data:/prometheus
     networks:
       illumin360:
@@ -64,7 +68,7 @@ services:
     command: ["-config.file=/etc/mimir/mimir.yaml"]
     # No host port: reached in-network as illumin360-mimir.
     volumes:
-      - ./mimir/mimir.yaml:/etc/mimir/mimir.yaml:ro
+      - ../observability/mimir/mimir.yaml:/etc/mimir/mimir.yaml:ro
       - mimir-data:/data
     networks:
       illumin360:
@@ -79,7 +83,7 @@ services:
     command: ["-config.file=/etc/loki/loki.yaml"]
     # No host port: reached in-network as illumin360-loki.
     volumes:
-      - ./loki/loki.yaml:/etc/loki/loki.yaml:ro
+      - ../observability/loki/loki.yaml:/etc/loki/loki.yaml:ro
       - loki-data:/loki
     networks:
       illumin360:
@@ -94,7 +98,7 @@ services:
     command: ["-config.file=/etc/tempo/tempo.yaml"]
     # No host port: reached in-network as illumin360-tempo.
     volumes:
-      - ./tempo/tempo.yaml:/etc/tempo/tempo.yaml:ro
+      - ../observability/tempo/tempo.yaml:/etc/tempo/tempo.yaml:ro
       - tempo-data:/var/tempo
     networks:
       illumin360:
