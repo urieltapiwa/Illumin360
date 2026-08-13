@@ -4,6 +4,7 @@ import * as echarts from "echarts";
 import { useTranslation } from "react-i18next";
 import { Chart, sparkOption, C } from "@illumin360/ui";
 import { logout, type Session } from "./auth";
+import { useScrollSpy, scrollToSection, SectionAnchor } from "./scrollnav";
 import { LanguageSwitcher, ThemeSwitcher } from "@illumin360/ui";
 import TalentApplications from "./TalentApplications";
 
@@ -77,6 +78,8 @@ export default function Student(_props: { session: Session }) {
     })();
     return () => { cancelled = true; };
   }, []);
+  // Scrollspy for the sidebar — must run before the early return to keep hook order stable.
+  const activeSec = useScrollSpy(["sec-overview", "sec-cv", "sec-matches", "sec-applications", "sec-progress"]);
   if (!d) return <div className="grid place-items-center h-screen text-ink-mid font-mono text-sm animate-pulse">{t("student.loading")}</div>;
   const p = d.persona, k = d.kpis;
   const availability = p.availability ?? "Open to internships";
@@ -129,17 +132,27 @@ export default function Student(_props: { session: Session }) {
     const r = await fetch(`/api/students/me/availability`, { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: JSON.stringify({ availability: next }) });
     if (r.ok) { const v = await r.json().catch(() => next); setD((prev) => (prev ? { ...prev, persona: { ...prev.persona, availability: typeof v === "string" ? v : next } } : prev)); }
   };
-  const nav: [React.ReactNode, string, boolean][] = [[N.path, "student.nav.path", true], [N.cap, "student.nav.internships", false], [N.book, "student.nav.learning", false], [N.chat, "student.nav.mentors", false], [N.gear, "student.nav.settings", false]];
+  // Sidebar sections map to real content anchors on this single-page dashboard (scrollspy).
+  const nav: [React.ReactNode, string, string, string][] = [
+    [N.path, "student.nav.overview", "Overview", "sec-overview"],
+    [N.cap, "student.nav.cv", "CV & Résumé", "sec-cv"],
+    [N.book, "student.nav.internships", "Internships", "sec-matches"],
+    [N.chat, "student.nav.applications", "Applications", "sec-applications"],
+    [N.gear, "student.nav.progress", "Skills & Progress", "sec-progress"],
+  ];
   const initials = p.name.split(" ").map((x) => x[0]).slice(0, 2).join("");
   return (
     <div className="flex min-h-screen">
-      <aside className="hidden lg:flex w-[228px] shrink-0 flex-col border-r border-line/70 bg-panel/40 px-4 py-6 relative z-10">
+      <aside className="hidden lg:flex w-[228px] shrink-0 flex-col border-r border-line/70 bg-panel/40 px-4 py-6 relative z-10 lg:sticky lg:top-0 lg:h-screen lg:self-start lg:overflow-y-auto">
         <div className="px-1"><Logo /></div>
         <nav className="mt-9 flex flex-col gap-1"><div className="eyebrow px-3 mb-1">{t("student.nav.eyebrow")}</div>
-          {nav.map(([icon, label, active]) => (
-            <a key={label as string} href="#" className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition ${active ? "bg-brand/[0.12] text-ink-hi shadow-[inset_0_0_0_1px_rgba(47,211,154,0.25)]" : "text-ink-mid hover:bg-white/[0.03] hover:text-ink-hi"}`}>
-              <span className={active ? "text-brand-bright" : "text-ink-lo group-hover:text-ink-mid"}><Ic d={icon} /></span>{t(label as string)}{active && <span className="ml-auto h-1.5 w-1.5 rounded-full bg-gold" />}</a>
-          ))}
+          {nav.map(([icon, labelKey, fallback, id]) => {
+            const active = activeSec === id;
+            return (
+            <a key={id} href={`#${id}`} onClick={(e) => { e.preventDefault(); scrollToSection(id); }} aria-current={active ? "true" : undefined} className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition ${active ? "bg-brand/[0.12] text-ink-hi shadow-[inset_0_0_0_1px_rgba(47,211,154,0.25)]" : "text-ink-mid hover:bg-white/[0.03] hover:text-ink-hi"}`}>
+              <span className={active ? "text-brand-bright" : "text-ink-lo group-hover:text-ink-mid"}><Ic d={icon} /></span>{t(labelKey, fallback)}{active && <span className="ml-auto h-1.5 w-1.5 rounded-full bg-gold" />}</a>
+            );
+          })}
         </nav>
         <div className="mt-auto card p-3.5"><div className="text-xs font-semibold text-gold">★ {p.program}</div><p className="mt-1.5 text-[11px] leading-snug text-ink-mid">{t("student.sidebar.blurb")}</p></div>
       </aside>
@@ -157,6 +170,7 @@ export default function Student(_props: { session: Session }) {
           </div>
         </header>
         <motion.div initial="initial" animate="animate" transition={{ staggerChildren: 0.06 }} className="px-5 lg:px-7 py-6 space-y-5">
+          <SectionAnchor id="sec-overview" />
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
             <motion.section variants={fade} className="card p-5 flex items-center gap-4">
               <div className="w-[150px] shrink-0"><Chart option={gauge(p.readiness)} height={150} /></div>
@@ -170,6 +184,7 @@ export default function Student(_props: { session: Session }) {
               </div>
             </motion.section>
           </div>
+          <SectionAnchor id="sec-cv" />
           <motion.section variants={fade} className="card p-5">
             <div className="flex items-center justify-between gap-3 flex-wrap">
               <div>
@@ -206,6 +221,7 @@ export default function Student(_props: { session: Session }) {
               </div>
             )}
           </motion.section>
+          <SectionAnchor id="sec-matches" />
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
             <motion.section variants={fade} className="card p-5 xl:col-span-2">
               <div className="flex items-center justify-between mb-3">
@@ -255,8 +271,10 @@ export default function Student(_props: { session: Session }) {
               <div className="space-y-3">{d.learning.map((l, i) => (<div key={i}><div className="flex items-center justify-between text-xs mb-1"><span className="text-ink-hi font-medium">{l.name}</span><span className={`text-[10px] uppercase tracking-wide ${tagColor[l.tag]}`}>{l.tag}</span></div><div className="h-2 rounded-full bg-panel2/70 overflow-hidden"><div className="h-full rounded-full bg-gradient-to-r from-brand-deep to-brand-bright" style={{ width: l.progress + "%" }} /></div></div>))}</div>
             </motion.section>
           </div>
+          <SectionAnchor id="sec-applications" />
           {/* my applications: live status + offers (accept/decline/e-sign) + employer messaging */}
           {d.id && <TalentApplications talentId={d.id} senderName={p.name} live={live} />}
+          <SectionAnchor id="sec-progress" />
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
             <motion.section variants={fade} className="card p-5">
               <h3 className="font-display text-[15px] font-bold text-ink-hi">{t("student.pipeline.title")}</h3><p className="text-[11px] text-ink-lo mt-0.5 mb-4">{t("student.pipeline.sub")}</p>

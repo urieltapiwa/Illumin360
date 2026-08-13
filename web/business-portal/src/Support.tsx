@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { LanguageSwitcher, ThemeSwitcher } from "@illumin360/ui";
 import { Chart, nf, C } from "@illumin360/ui";
 import { logout, type Session } from "./auth";
+import { useScrollSpy, scrollToSection, SectionAnchor } from "./scrollnav";
 
 interface SupportData {
   agent: { name: string; role: string; team: string };
@@ -49,17 +50,25 @@ export default function Support({ session }: { session: Session }) {
   const { t } = useTranslation();
   const [d, setD] = useState<SupportData | null>(null);
   useEffect(() => { fetch(import.meta.env.BASE_URL + "support.json").then((r) => r.json()).then(setD); }, []);
+  // Scrollspy for the sidebar — must run before the early return to keep hook order stable.
+  const activeSec = useScrollSpy(["sec-overview", "sec-queue", "sec-reports", "sec-activity"]);
   if (!d) return <div className="grid place-items-center h-screen text-ink-mid font-mono text-sm animate-pulse">{t("support.loading")}</div>;
   const k = d.kpis;
-  const nav: [React.ReactNode, string, boolean][] = [[N.inbox, t("support.nav.queue"), true], [N.tag, t("support.nav.myTickets"), false], [N.chart, t("support.nav.reports"), false], [N.book, t("support.nav.knowledge"), false], [N.gear, t("support.nav.settings"), false]];
+  // Sidebar sections map to real content anchors on this single-page dashboard (scrollspy).
+  const nav: [React.ReactNode, string, string][] = [
+    [N.inbox, t("support.nav.overview", "Overview"), "sec-overview"],
+    [N.tag, t("support.nav.queue", "Queue"), "sec-queue"],
+    [N.chart, t("support.nav.reports", "Reports"), "sec-reports"],
+    [N.book, t("support.nav.activity", "Activity"), "sec-activity"],
+  ];
   const initials = (session.name || d.agent.name).split(" ").map((x) => x[0]).slice(0, 2).join("");
   const kpis = [[t("support.kpi.openTickets"), nf(k.openTickets), t("support.kpi.inQueue"), C.gold], [t("support.kpi.assignedToMe"), nf(k.assignedToMe), t("support.kpi.active"), C.blue], [t("support.kpi.resolvedToday"), nf(k.resolvedToday), t("support.kpi.resolvedDelta"), C.brand], [t("support.kpi.avgFirstResponse"), k.avgFirstResponse + "m", t("support.kpi.avgTarget"), C.brandDeep], [t("support.kpi.csat"), k.csat + "%", t("support.kpi.csatPeriod"), C.violet], [t("support.kpi.slaMet"), k.slaMet + "%", t("support.kpi.slaPeriod"), C.brand]];
   return (
     <div className="flex min-h-screen">
-      <aside className="hidden lg:flex w-[228px] shrink-0 flex-col border-r border-line/70 bg-panel/40 px-4 py-6 relative z-10">
+      <aside className="hidden lg:flex w-[228px] shrink-0 flex-col border-r border-line/70 bg-panel/40 px-4 py-6 relative z-10 lg:sticky lg:top-0 lg:h-screen lg:self-start lg:overflow-y-auto">
         <div className="px-1"><Logo /></div>
         <nav className="mt-9 flex flex-col gap-1"><div className="eyebrow px-3 mb-1">{t("support.nav.section")}</div>
-          {nav.map(([icon, label, active]) => (<a key={label} href="#" className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition ${active ? "bg-brand/[0.12] text-ink-hi shadow-[inset_0_0_0_1px_rgba(47,211,154,0.25)]" : "text-ink-mid hover:bg-white/[0.03] hover:text-ink-hi"}`}><span className={active ? "text-brand-bright" : "text-ink-lo group-hover:text-ink-mid"}><Ic d={icon} /></span>{label}{active && <span className="ml-auto h-1.5 w-1.5 rounded-full bg-gold" />}</a>))}
+          {nav.map(([icon, label, id]) => { const active = activeSec === id; return (<a key={id} href={`#${id}`} onClick={(e) => { e.preventDefault(); scrollToSection(id); }} aria-current={active ? "true" : undefined} className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition ${active ? "bg-brand/[0.12] text-ink-hi shadow-[inset_0_0_0_1px_rgba(47,211,154,0.25)]" : "text-ink-mid hover:bg-white/[0.03] hover:text-ink-hi"}`}><span className={active ? "text-brand-bright" : "text-ink-lo group-hover:text-ink-mid"}><Ic d={icon} /></span>{label}{active && <span className="ml-auto h-1.5 w-1.5 rounded-full bg-gold" />}</a>); })}
         </nav>
         <div className="mt-auto card p-3.5"><div className="flex items-center gap-2 text-brand-bright"><Ic d={N.bolt} s={15} /><span className="text-xs font-semibold text-ink-hi">{t("support.sidebar.slaLabel", { n: k.slaMet })}</span></div><p className="mt-1.5 text-[11px] leading-snug text-ink-mid">{t("support.sidebar.slaTip")}</p></div>
       </aside>
@@ -73,9 +82,11 @@ export default function Support({ session }: { session: Session }) {
           </div>
         </header>
         <motion.div initial="initial" animate="animate" transition={{ staggerChildren: 0.05 }} className="px-5 lg:px-7 py-6 space-y-5">
+          <SectionAnchor id="sec-overview" />
           <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
             {kpis.map(([label, val, sub, color], i) => (<motion.div key={i} variants={fade} className="card p-4"><div className="flex items-center justify-between"><span className="eyebrow">{label as string}</span><span className="h-1.5 w-1.5 rounded-full" style={{ background: color as string }} /></div><div className="num text-[24px] font-bold text-ink-hi leading-none mt-2">{val as string}</div><div className="text-[10px] text-ink-lo mt-1.5">{sub as string}</div></motion.div>))}
           </div>
+          <SectionAnchor id="sec-queue" />
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
             <motion.section variants={fade} className="card p-5 xl:col-span-2">
               <div className="flex items-center justify-between mb-3"><div><h3 className="font-display text-[15px] font-bold text-ink-hi">{t("support.queue.title")}</h3><p className="text-[11px] text-ink-lo mt-0.5">{t("support.queue.subtitle")}</p></div><span className="chip !text-[10px] !text-gold !border-gold/30">{t("support.queue.openBadge", { n: k.openTickets })}</span></div>
@@ -90,10 +101,12 @@ export default function Support({ session }: { session: Session }) {
               {[[t("support.sla.p1"), d.priority.p1, "#FF7E92"], [t("support.sla.p2"), d.priority.p2, "#E8B14C"], [t("support.sla.p3"), d.priority.p3, "#2FD39A"]].map(([l, v, c], i) => (<div key={i} className="mb-2"><div className="flex justify-between text-xs mb-1"><span className="text-ink-mid">{l as string}</span><span className="num text-ink-hi">{v as number}</span></div><div className="h-2 rounded-full bg-panel2/70 overflow-hidden"><div className="h-full rounded-full" style={{ width: ((v as number) / d.priority.open) * 100 + "%", background: c as string }} /></div></div>))}
             </motion.section>
           </div>
+          <SectionAnchor id="sec-reports" />
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
             <motion.section variants={fade} className="card p-5 xl:col-span-2"><h3 className="font-display text-[15px] font-bold text-ink-hi">{t("support.volume.title")}</h3><p className="text-[11px] text-ink-lo mt-0.5">{t("support.volume.subtitle")}</p><Chart option={volumeOption(d.volume)} height={230} /></motion.section>
             <motion.section variants={fade} className="card p-5"><h3 className="font-display text-[15px] font-bold text-ink-hi">{t("support.category.title")}</h3><p className="text-[11px] text-ink-lo mt-0.5">{t("support.category.subtitle")}</p><div className="mt-1"><Chart option={catOption(d.byCategory)} height={210} /></div></motion.section>
           </div>
+          <SectionAnchor id="sec-activity" />
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
             <motion.section variants={fade} className="card p-5 xl:col-span-2">
               <h3 className="font-display text-[15px] font-bold text-ink-hi mb-3">{t("support.leaderboard.title")}</h3>

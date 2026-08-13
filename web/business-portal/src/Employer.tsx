@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import Contracts from "./Contracts";
 import { logout, type Session } from "./auth";
+import { useScrollSpy, scrollToSection, SectionAnchor } from "./scrollnav";
 import { LanguageSwitcher, ThemeSwitcher } from "@illumin360/ui";
 
 // Company profile as returned by the Employers service (GET /api/employers/me → EmployerDto).
@@ -130,6 +131,8 @@ export default function Employer(_props: { session: Session }) {
     }
   };
 
+  // Scrollspy for the sidebar — must run before the early return to keep hook order stable.
+  const activeSec = useScrollSpy(["sec-profile", "sec-candidates", "sec-team"]);
   if (!emp) return <div className="grid place-items-center h-screen text-ink-mid font-mono text-sm animate-pulse">{t("employer.loading", "Loading company…")}</div>;
 
   const startEdit = () => { setForm({ ...emp }); setSaving("idle"); setEditing(true); };
@@ -169,19 +172,27 @@ export default function Employer(_props: { session: Session }) {
     }
   };
 
-  const nav: [React.ReactNode, string, boolean][] = [[N.building, "employer.nav.profile", true], [N.users, "employer.nav.candidates", false], [N.brief, "employer.nav.roles", false], [N.gear, "employer.nav.settings", false]];
+  // Sidebar sections map to real content anchors on this single-page dashboard (scrollspy).
+  const nav: [React.ReactNode, string, string, string][] = [
+    [N.building, "employer.nav.profile", "Profile", "sec-profile"],
+    [N.users, "employer.nav.candidates", "Candidates", "sec-candidates"],
+    [N.brief, "employer.nav.team", "Team & Roles", "sec-team"],
+  ];
   const initials = emp.companyName.split(" ").map((x) => x[0]).slice(0, 2).join("").toUpperCase();
   const inputCls = "w-full rounded-lg border border-line/70 bg-panel2/50 px-3 py-2 text-sm text-ink-hi placeholder:text-ink-lo focus:border-brand/50 focus:outline-none";
 
   return (
     <div className="flex min-h-screen">
-      <aside className="hidden lg:flex w-[228px] shrink-0 flex-col border-r border-line/70 bg-panel/40 px-4 py-6 relative z-10">
+      <aside className="hidden lg:flex w-[228px] shrink-0 flex-col border-r border-line/70 bg-panel/40 px-4 py-6 relative z-10 lg:sticky lg:top-0 lg:h-screen lg:self-start lg:overflow-y-auto">
         <div className="px-1"><Logo /></div>
         <nav className="mt-9 flex flex-col gap-1"><div className="eyebrow px-3 mb-1">{t("employer.nav.eyebrow", "Company")}</div>
-          {nav.map(([icon, label, active]) => (
-            <a key={label as string} href="#" className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition ${active ? "bg-brand/[0.12] text-ink-hi shadow-[inset_0_0_0_1px_rgba(47,211,154,0.25)]" : "text-ink-mid hover:bg-white/[0.03] hover:text-ink-hi"}`}>
-              <span className={active ? "text-brand-bright" : "text-ink-lo group-hover:text-ink-mid"}><Ic d={icon} /></span>{t(label as string, (label as string).split(".").pop()!)}{active && <span className="ml-auto h-1.5 w-1.5 rounded-full bg-gold" />}</a>
-          ))}
+          {nav.map(([icon, labelKey, fallback, id]) => {
+            const active = activeSec === id;
+            return (
+            <a key={id} href={`#${id}`} onClick={(e) => { e.preventDefault(); scrollToSection(id); }} aria-current={active ? "true" : undefined} className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition ${active ? "bg-brand/[0.12] text-ink-hi shadow-[inset_0_0_0_1px_rgba(47,211,154,0.25)]" : "text-ink-mid hover:bg-white/[0.03] hover:text-ink-hi"}`}>
+              <span className={active ? "text-brand-bright" : "text-ink-lo group-hover:text-ink-mid"}><Ic d={icon} /></span>{t(labelKey, fallback)}{active && <span className="ml-auto h-1.5 w-1.5 rounded-full bg-gold" />}</a>
+            );
+          })}
         </nav>
         <div className="mt-auto card p-3.5"><div className="text-xs font-semibold text-gold">★ {emp.industry}</div><p className="mt-1.5 text-[11px] leading-snug text-ink-mid">{t("employer.sidebar.blurb", "Keep your company profile current so the right talent finds you.")}</p></div>
       </aside>
@@ -195,6 +206,7 @@ export default function Employer(_props: { session: Session }) {
           </div>
         </header>
         <motion.div initial="initial" animate="animate" transition={{ staggerChildren: 0.06 }} className="px-5 lg:px-7 py-6 space-y-5">
+          <SectionAnchor id="sec-profile" />
           <motion.section variants={fade} className="card p-5">
             <div className="flex items-start justify-between gap-3 flex-wrap">
               <div className="flex items-center gap-4">
@@ -241,6 +253,7 @@ export default function Employer(_props: { session: Session }) {
             )}
           </motion.section>
 
+          <SectionAnchor id="sec-candidates" />
           <motion.section variants={fade} className="card p-5">
             <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
               <div><h3 className="font-display text-[15px] font-bold text-ink-hi">{t("employer.top.title", "Top candidates for you")}</h3><p className="text-[11px] text-ink-lo mt-0.5">{t("employer.top.sub", "Ranked by match to a role, near {{city}}.", { city: emp.city })}</p></div>
@@ -268,6 +281,7 @@ export default function Employer(_props: { session: Session }) {
             )}
           </motion.section>
 
+          <SectionAnchor id="sec-team" />
           <motion.section variants={fade} className="card p-5">
             <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
               <div><h3 className="font-display text-[15px] font-bold text-ink-hi">{t("employer.team.title", "Team & roles")}</h3><p className="text-[11px] text-ink-lo mt-0.5">{t("employer.team.sub", "Owners manage the team, recruiters manage hiring, viewers read only.")}</p></div>
