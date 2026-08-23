@@ -60,7 +60,7 @@ public sealed class KeycloakRegistrar(IHttpClientFactory httpFactory, IConfigura
             "student" => "client.student",
             "professional" => "client.user",
             "employer" => "client.employer",
-            "business" => "client.user",
+            "business" => "client.business",
             _ => null,
         };
         if (role is null)

@@ -18,7 +18,8 @@
   "roles": {
     "realm": [
       {
-        "name": "client.user"
+        "name": "client.business",
+        "description": "Business account (Talent Insights consumer)"
       }
     ]
   },
@@ -61,7 +62,7 @@
         }
       ],
       "realmRoles": [
-        "client.user"
+        "client.business"
       ]
     }
   ]

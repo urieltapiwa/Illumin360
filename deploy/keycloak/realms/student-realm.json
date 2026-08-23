@@ -22,6 +22,10 @@
       },
       {
         "name": "client.student"
+      },
+      {
+        "name": "admin.write",
+        "description": "Service-account provisioning role (registration -> domain profile create). Not for human users."
       }
     ]
   },
