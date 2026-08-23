@@ -33,7 +33,7 @@
     }
 </div>
 
-<div class="row row-cols-2 row-cols-md-3 row-cols-xl-5 g-3 mb-3">
+<div id="overview" class="row row-cols-2 row-cols-md-3 row-cols-xl-5 g-3 mb-3" style="scroll-margin-top:84px;">
     @foreach (var (label, value, sub, icon) in kpis)
     {
         <div class="col">
@@ -47,11 +47,11 @@
     }
 </div>
 <div class="row g-3 mb-4">
-    <div class="col-lg-8"><div class="card mb-0 h-100">
+    <div id="trend" class="col-lg-8" style="scroll-margin-top:84px;"><div class="card mb-0 h-100">
         <div class="card-header"><h5 class="mb-0 fw-bold">Profile views</h5><small class="text-muted">Recent trend</small></div>
         <div class="card-body"><div id="areaChart"></div></div>
     </div></div>
-    <div class="col-lg-4"><div class="card mb-0 h-100">
+    <div id="learning" class="col-lg-4" style="scroll-margin-top:84px;"><div class="card mb-0 h-100">
         <div class="card-header"><h5 class="mb-0 fw-bold">Learning</h5></div>
         <div class="card-body d-flex align-items-center justify-content-center"><div id="donutChart"></div></div>
     </div></div>

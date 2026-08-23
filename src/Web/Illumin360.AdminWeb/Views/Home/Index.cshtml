@@ -47,7 +47,7 @@
 </div>
 
 <!-- KPI cards -->
-<div class="row row-cols-2 row-cols-md-3 row-cols-xl-6 g-3 mb-3">
+<div id="overview" class="row row-cols-2 row-cols-md-3 row-cols-xl-6 g-3 mb-3" style="scroll-margin-top:84px;">
     @foreach (var (label, value, sub, icon) in kpis)
     {
         <div class="col">
@@ -70,7 +70,7 @@
 </div>
 
 <!-- Growth + segments -->
-<div class="row g-3 mb-3">
+<div id="growth" class="row g-3 mb-3" style="scroll-margin-top:84px;">
     <div class="col-lg-8">
         <div class="card mb-0 h-100">
             <div class="card-header d-flex justify-content-between align-items-center">
@@ -88,7 +88,7 @@
 </div>
 
 <!-- Revenue + system health -->
-<div class="row g-3 mb-3">
+<div id="revenue" class="row g-3 mb-3" style="scroll-margin-top:84px;">
     <div class="col-lg-8">
         <div class="card mb-0 h-100">
             <div class="card-header"><h5 class="mb-0 fw-bold">Recurring revenue</h5><small class="text-muted">Platform MRR</small></div>
@@ -112,7 +112,7 @@
 </div>
 
 <!-- Verification queue + talent by region -->
-<div class="row g-3 mb-4">
+<div id="verifications" class="row g-3 mb-4" style="scroll-margin-top:84px;">
     <div class="col-lg-8">
         <div class="card mb-0 h-100">
             <div class="card-header d-flex justify-content-between align-items-center"><h5 class="mb-0 fw-bold">Verification queue</h5><span class="badge bg-soft-primary text-primary">@(Model?.PendingVerifications ?? 5) pending</span></div>
@@ -137,7 +137,7 @@
             </div>
         </div>
     </div>
-    <div class="col-lg-4">
+    <div id="regions" class="col-lg-4" style="scroll-margin-top:84px;">
         <div class="card mb-0 h-100">
             <div class="card-header"><h5 class="mb-0 fw-bold">Accounts by region</h5></div>
             <div class="card-body"><div id="regionChart"></div></div>
