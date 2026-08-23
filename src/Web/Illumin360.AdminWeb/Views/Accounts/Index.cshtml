@@ -1,0 +1,65 @@
+@model IReadOnlyList<Illumin360.AdminWeb.Services.AccountRow>
+@{
+    ViewData["Title"] = "Accounts";
+    var kind = ViewData["Kind"] as string;
+    var status = ViewData["Status"] as string;
+    string Pill(string? label, string? k, string? s) =>
+        (string.Equals(kind, k, StringComparison.OrdinalIgnoreCase) && string.Equals(status, s, StringComparison.OrdinalIgnoreCase))
+        || (label == "All" && string.IsNullOrEmpty(kind) && string.IsNullOrEmpty(status)) ? "btn-primary" : "btn-soft-primary";
+}
+
+<div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+    <span class="text-muted small me-2">Registered companies &amp; talent on the platform.</span>
+    <a class="btn btn-sm @Pill("All", null, null)" href="/Accounts">All</a>
+    <a class="btn btn-sm @(string.Equals(kind,"Company",StringComparison.OrdinalIgnoreCase) ? "btn-primary" : "btn-soft-primary")" href="/Accounts?kind=Company">Companies</a>
+    <a class="btn btn-sm @(string.Equals(kind,"Talent",StringComparison.OrdinalIgnoreCase) ? "btn-primary" : "btn-soft-primary")" href="/Accounts?kind=Talent">Talent</a>
+    <span class="mx-1 text-muted">·</span>
+    <a class="btn btn-sm @(string.Equals(status,"suspended",StringComparison.OrdinalIgnoreCase) ? "btn-primary" : "btn-soft-primary")" href="/Accounts?status=suspended">Suspended</a>
+</div>
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0 fw-bold">Accounts</h5>
+        <span class="badge bg-soft-primary text-primary">@Model.Count shown</span>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table mb-0 align-middle">
+                <thead><tr><th>Name</th><th>Type</th><th>Region</th><th>Email</th><th>Status</th><th class="text-end">Action</th></tr></thead>
+                <tbody>
+                @if (Model.Count == 0)
+                {
+                    <tr><td colspan="6" class="text-center text-muted py-4">No accounts match this filter.</td></tr>
+                }
+                @foreach (var a in Model)
+                {
+                    var suspended = string.Equals(a.Status, "suspended", StringComparison.OrdinalIgnoreCase);
+                    <tr>
+                        <td class="fw-semibold">@a.Name</td>
+                        <td><span class="badge @(string.Equals(a.Kind,"Company",StringComparison.OrdinalIgnoreCase) ? "bg-soft-primary text-primary" : "bg-soft-info text-info")">@a.Kind</span></td>
+                        <td class="text-muted">@(string.IsNullOrWhiteSpace(a.Region) ? "—" : a.Region)</td>
+                        <td class="text-muted">@a.Email</td>
+                        <td><span class="badge @(suspended ? "bg-soft-danger text-danger" : "bg-soft-success text-success")">@(suspended ? "Suspended" : "Active")</span></td>
+                        <td class="text-end">
+                            @if (suspended)
+                            {
+                                <form asp-controller="Accounts" asp-action="Activate" method="post" class="m-0 d-inline">
+                                    <input type="hidden" name="id" value="@a.Id" />
+                                    <button type="submit" class="btn btn-sm btn-soft-success">Activate</button>
+                                </form>
+                            }
+                            else
+                            {
+                                <form asp-controller="Accounts" asp-action="Suspend" method="post" class="m-0 d-inline">
+                                    <input type="hidden" name="id" value="@a.Id" />
+                                    <button type="submit" class="btn btn-sm btn-soft-danger">Suspend</button>
+                                </form>
+                            }
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

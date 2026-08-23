@@ -38,7 +38,7 @@ public sealed class TokenRelayHandler(IHttpContextAccessor accessor) : Delegatin
 }
 
 // Typed client for the Admin summary via the gateway.
-public sealed class AdminApiClient(HttpClient http)
+public sealed partial class AdminApiClient(HttpClient http)
 {
     private readonly HttpClient _http = http;
 

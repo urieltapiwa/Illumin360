@@ -8,7 +8,8 @@ namespace Illumin360.Admin.Application.Accounts;
 /// <param name="Kind">"Talent" or "Company".</param>
 /// <param name="Email">Contact email.</param>
 /// <param name="Status">Access state (active/suspended).</param>
-public sealed record AccountDto(Guid Id, string Name, string Kind, string Email, string Status)
+/// <param name="Region">Home city / region.</param>
+public sealed record AccountDto(Guid Id, string Name, string Kind, string Email, string Status, string Region)
 {
     /// <summary>Projects a domain <see cref="AdminAccount"/> into the transport DTO.</summary>
     /// <param name="a">The account.</param>
@@ -17,6 +18,6 @@ public sealed record AccountDto(Guid Id, string Name, string Kind, string Email,
     {
         ArgumentNullException.ThrowIfNull(a);
         var status = a.Status == AccountStatus.Suspended ? "suspended" : "active";
-        return new AccountDto(a.Id.Value, a.Name, a.Kind, a.Email, status);
+        return new AccountDto(a.Id.Value, a.Name, a.Kind, a.Email, status, a.Region);
     }
 }
