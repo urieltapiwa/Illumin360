@@ -242,3 +242,136 @@ services:
     ports: ["5180:8080"]
     depends_on: [web, gateway]
     networks: [illumin360]
+
+  # ---------------------------------------------------------------------------------------------------
+  # MVC portal web apps (HopeUI). Each reaches Keycloak in-network as keycloak:8080 for discovery/token
+  # exchange; browser redirects are rewritten to Oidc__FrontChannelAuthority (localhost:8080). Published
+  # on the same host ports as local 'dotnet run' so the realm clients' registered :519x/signin-oidc
+  # redirect URIs keep working unchanged. API calls go to the gateway in-network (Gateway__BaseAddress).
+  # ---------------------------------------------------------------------------------------------------
+  admin-web:
+    build:
+      context: ../..
+      dockerfile: src/Web/Illumin360.AdminWeb/Dockerfile
+    container_name: illumin360-admin-webapp
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      Oidc__Authority: "http://keycloak:8080/realms/illumin360"
+      Oidc__FrontChannelAuthority: "http://localhost:8080/realms/illumin360"
+      Oidc__ClientId: "admin-web"
+      Oidc__ClientSecret: "${ADMIN_WEB_CLIENT_SECRET:-CHANGE_ME_admin_dev_secret}"
+      Oidc__RequireHttps: "false"
+      Gateway__BaseAddress: "http://gateway:8080"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://alloy:4317"
+    ports: ["5192:8080"]
+    depends_on: [gateway]
+    networks: [illumin360]
+
+  business-web:
+    build:
+      context: ../..
+      dockerfile: src/Web/Illumin360.BusinessWeb/Dockerfile
+    container_name: illumin360-business-webapp
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      Oidc__Authority: "http://keycloak:8080/realms/illumin360"
+      Oidc__FrontChannelAuthority: "http://localhost:8080/realms/illumin360"
+      Oidc__ClientId: "business-web"
+      Oidc__ClientSecret: "${BUSINESS_WEB_CLIENT_SECRET:-CHANGE_ME_business_dev_secret}"
+      Oidc__RequireHttps: "false"
+      Gateway__BaseAddress: "http://gateway:8080"
+      Registration__KeycloakBaseUrl: "http://keycloak:8080"
+      Registration__GatewayBaseUrl: "http://gateway:8080"
+      Registration__ClientSecret: "${REGISTRATION_CLIENT_SECRET:-CHANGE_ME_registration_dev_secret}"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://alloy:4317"
+    ports: ["5193:8080"]
+    depends_on: [gateway]
+    networks: [illumin360]
+
+  student-web:
+    build:
+      context: ../..
+      dockerfile: src/Web/Illumin360.StudentWeb/Dockerfile
+    container_name: illumin360-student-webapp
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      Oidc__Authority: "http://keycloak:8080/realms/illumin360"
+      Oidc__FrontChannelAuthority: "http://localhost:8080/realms/illumin360"
+      Oidc__ClientId: "student-web"
+      Oidc__ClientSecret: "${STUDENT_WEB_CLIENT_SECRET:-CHANGE_ME_student_dev_secret}"
+      Oidc__RequireHttps: "false"
+      Gateway__BaseAddress: "http://gateway:8080"
+      Registration__KeycloakBaseUrl: "http://keycloak:8080"
+      Registration__GatewayBaseUrl: "http://gateway:8080"
+      Registration__ClientSecret: "${REGISTRATION_CLIENT_SECRET:-CHANGE_ME_registration_dev_secret}"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://alloy:4317"
+    ports: ["5194:8080"]
+    depends_on: [gateway]
+    networks: [illumin360]
+
+  professional-web:
+    build:
+      context: ../..
+      dockerfile: src/Web/Illumin360.ProfessionalWeb/Dockerfile
+    container_name: illumin360-professional-webapp
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      Oidc__Authority: "http://keycloak:8080/realms/illumin360"
+      Oidc__FrontChannelAuthority: "http://localhost:8080/realms/illumin360"
+      Oidc__ClientId: "professional-web"
+      Oidc__ClientSecret: "${PROFESSIONAL_WEB_CLIENT_SECRET:-CHANGE_ME_professional_dev_secret}"
+      Oidc__RequireHttps: "false"
+      Gateway__BaseAddress: "http://gateway:8080"
+      Registration__KeycloakBaseUrl: "http://keycloak:8080"
+      Registration__GatewayBaseUrl: "http://gateway:8080"
+      Registration__ClientSecret: "${REGISTRATION_CLIENT_SECRET:-CHANGE_ME_registration_dev_secret}"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://alloy:4317"
+    ports: ["5195:8080"]
+    depends_on: [gateway]
+    networks: [illumin360]
+
+  employer-web:
+    build:
+      context: ../..
+      dockerfile: src/Web/Illumin360.EmployerWeb/Dockerfile
+    container_name: illumin360-employer-webapp
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      Oidc__Authority: "http://keycloak:8080/realms/illumin360"
+      Oidc__FrontChannelAuthority: "http://localhost:8080/realms/illumin360"
+      Oidc__ClientId: "employer-web"
+      Oidc__ClientSecret: "${EMPLOYER_WEB_CLIENT_SECRET:-CHANGE_ME_employer_dev_secret}"
+      Oidc__RequireHttps: "false"
+      Gateway__BaseAddress: "http://gateway:8080"
+      Registration__KeycloakBaseUrl: "http://keycloak:8080"
+      Registration__GatewayBaseUrl: "http://gateway:8080"
+      Registration__ClientSecret: "${REGISTRATION_CLIENT_SECRET:-CHANGE_ME_registration_dev_secret}"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://alloy:4317"
+    ports: ["5196:8080"]
+    depends_on: [gateway]
+    networks: [illumin360]
+
+  support-web:
+    build:
+      context: ../..
+      dockerfile: src/Web/Illumin360.SupportWeb/Dockerfile
+    container_name: illumin360-support-webapp
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      Oidc__Authority: "http://keycloak:8080/realms/illumin360"
+      Oidc__FrontChannelAuthority: "http://localhost:8080/realms/illumin360"
+      Oidc__ClientId: "support-web"
+      Oidc__ClientSecret: "${SUPPORT_WEB_CLIENT_SECRET:-CHANGE_ME_support_dev_secret}"
+      Oidc__RequireHttps: "false"
+      Gateway__BaseAddress: "http://gateway:8080"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://alloy:4317"
+    ports: ["5197:8080"]
+    depends_on: [gateway]
+    networks: [illumin360]
+
