@@ -9,9 +9,16 @@ namespace Illumin360.Security;
 
 /// <summary>
 /// Shared service-layer authentication/authorization wiring. Validates Keycloak-issued JWT bearer
-/// access tokens (relayed by the BFF) and projects the realm roles Keycloak emits under
+/// access tokens (relayed by the portals) and projects the realm roles Keycloak emits under
 /// <c>realm_access.roles</c> into ASP.NET <see cref="ClaimTypes.Role"/> claims so role policies work
 /// (charter Part 7: authZ enforced at the service layer).
+/// <para>
+/// Each MVC portal authenticates against its own Keycloak realm (admin/student/professional/business/
+/// employer/support), so a relayed access token can carry any of several issuers. The gateway also fans
+/// a single portal's calls out to shared services, so every service must trust every portal realm. This
+/// registers one <see cref="JwtBearerDefaults.AuthenticationScheme"/> handler per realm and a policy
+/// scheme that forwards each request to the handler matching the token's <c>iss</c>.
+/// </para>
 /// </summary>
 public static class AuthenticationExtensions
 {
@@ -27,8 +34,15 @@ public static class AuthenticationExtensions
     /// <summary>Policy for a signed-in student acting on their own data (role <c>client.user</c>; admins allowed).</summary>
     public const string StudentPolicy = "student";
 
-    private const string DefaultAuthority = "http://keycloak:8080/realms/illumin360";
-    private const string DefaultFrontChannel = "http://localhost:8080/realms/illumin360";
+    /// <summary>The composite scheme that selects a per-realm handler by the token issuer.</summary>
+    public const string MultiRealmScheme = "kc-multirealm";
+
+    private const string DefaultBackChannelBase = "http://keycloak:8080";
+    private const string DefaultFrontChannelBase = "http://localhost:8080";
+
+    // Every portal realm plus the legacy shared realm (old SPA/BFF), so existing tokens keep validating.
+    private static readonly string[] DefaultRealms =
+        ["admin", "student", "professional", "business", "employer", "support", "illumin360"];
 
     private static readonly string[] AdminRoles = ["admin.read", "admin.write", "admin.superuser"];
     private static readonly string[] AdminWriteRoles = ["admin.write", "admin.superuser"];
@@ -37,13 +51,15 @@ public static class AuthenticationExtensions
     private static readonly string[] ClientUserRoles = ["client.user", "admin.write", "admin.superuser"];
 
     /// <summary>
-    /// Adds JWT bearer authentication (against Keycloak) and the admin authorization policies.
+    /// Adds multi-realm JWT bearer authentication (against Keycloak) and the admin authorization policies.
     /// </summary>
     /// <param name="services">The service collection.</param>
     /// <param name="configuration">
-    /// App configuration. Reads <c>Oidc:Authority</c> (back-channel host used for JWKS/discovery, reachable
-    /// in-cluster) and <c>Oidc:FrontChannelAuthority</c> (browser-facing host). Both are accepted as valid
-    /// token issuers, because Keycloak stamps <c>iss</c> with whichever host the user authenticated against.
+    /// App configuration. Reads <c>Oidc:BackChannelBase</c> (in-cluster host for JWKS/discovery, default
+    /// <c>http://keycloak:8080</c>), <c>Oidc:FrontChannelBase</c> (browser-facing host, default
+    /// <c>http://localhost:8080</c>) and <c>Oidc:Realms</c> (the realm names to trust; defaults to the six
+    /// portal realms plus the legacy <c>illumin360</c> realm). Both hosts are accepted as valid issuers per
+    /// realm, because Keycloak stamps <c>iss</c> with whichever host the user authenticated against.
     /// </param>
     /// <returns>The same collection for chaining.</returns>
     public static IServiceCollection AddIllumin360Auth(
@@ -51,11 +67,45 @@ public static class AuthenticationExtensions
     {
         ArgumentNullException.ThrowIfNull(configuration);
 
-        var authority = configuration["Oidc:Authority"] ?? DefaultAuthority;
-        var frontChannel = configuration["Oidc:FrontChannelAuthority"] ?? DefaultFrontChannel;
+        var backBase = (configuration["Oidc:BackChannelBase"] ?? DefaultBackChannelBase).TrimEnd('/');
+        var frontBase = (configuration["Oidc:FrontChannelBase"] ?? DefaultFrontChannelBase).TrimEnd('/');
+        var realms = configuration.GetSection("Oidc:Realms").Get<string[]>() ?? DefaultRealms;
+        if (realms.Length == 0)
+        {
+            realms = DefaultRealms;
+        }
 
-        services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-            .AddJwtBearer(options =>
+        // Map each realm's possible issuers (back- and front-channel) to that realm's handler scheme, so the
+        // policy scheme can forward by `iss` without re-parsing hosts on every request.
+        var issuerToScheme = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var realm in realms)
+        {
+            var scheme = SchemeFor(realm);
+            issuerToScheme[$"{backBase}/realms/{realm}"] = scheme;
+            issuerToScheme[$"{frontBase}/realms/{realm}"] = scheme;
+        }
+
+        var authBuilder = services.AddAuthentication(MultiRealmScheme)
+            .AddPolicyScheme(MultiRealmScheme, MultiRealmScheme, options =>
+            {
+                options.ForwardDefaultSelector = context =>
+                {
+                    var issuer = ReadIssuer(context.Request.Headers.Authorization);
+                    if (issuer is not null && issuerToScheme.TryGetValue(issuer, out var scheme))
+                    {
+                        return scheme;
+                    }
+
+                    // Unknown/no issuer: fall through to the first realm's handler, which will reject it.
+                    return SchemeFor(realms[0]);
+                };
+            });
+
+        foreach (var realm in realms)
+        {
+            var authority = $"{backBase}/realms/{realm}";
+            var frontChannel = $"{frontBase}/realms/{realm}";
+            authBuilder.AddJwtBearer(SchemeFor(realm), options =>
             {
                 // JWKS + discovery come from the back-channel authority (reachable inside the cluster).
                 options.Authority = authority;
@@ -68,11 +118,11 @@ public static class AuthenticationExtensions
                 {
                     ValidateIssuer = true,
 
-                    // Accept both hosts: the access token's `iss` is the front-channel host the user
-                    // authenticated against, while discovery/JWKS is the back-channel host.
+                    // The access token's `iss` is the front-channel host the user authenticated against,
+                    // while discovery/JWKS is fetched from the back-channel host.
                     ValidIssuers = [authority, frontChannel],
 
-                    // No audience mapper is configured in the realm yet, so the access token's `aud`
+                    // No audience mapper is configured in the realms yet, so the access token's `aud`
                     // does not carry the service name. Revisit once a client-scope audience mapper exists.
                     ValidateAudience = false,
 
@@ -90,6 +140,7 @@ public static class AuthenticationExtensions
                     },
                 };
             });
+        }
 
         services.AddAuthorization(options =>
         {
@@ -102,11 +153,65 @@ public static class AuthenticationExtensions
         return services;
     }
 
+    /// <summary>The per-realm JWT handler scheme name (e.g. <c>kc-admin</c>).</summary>
+    /// <param name="realm">The Keycloak realm name.</param>
+    /// <returns>The handler scheme name for that realm.</returns>
+    private static string SchemeFor(string realm) => $"kc-{realm}";
+
+    /// <summary>
+    /// Reads the (unvalidated) <c>iss</c> claim from a bearer token so the request can be routed to the
+    /// realm handler that will actually validate it. Signature verification happens in that handler.
+    /// </summary>
+    /// <param name="authorizationHeader">The raw <c>Authorization</c> header value.</param>
+    /// <returns>The issuer string, or <see langword="null"/> if absent/unparseable.</returns>
+    private static string? ReadIssuer(string? authorizationHeader)
+    {
+        if (string.IsNullOrEmpty(authorizationHeader)
+            || !authorizationHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        var token = authorizationHeader["Bearer ".Length..].Trim();
+        var parts = token.Split('.');
+        if (parts.Length < 2)
+        {
+            return null;
+        }
+
+        try
+        {
+            var payload = Base64UrlDecode(parts[1]);
+            using var document = JsonDocument.Parse(payload);
+            return document.RootElement.TryGetProperty("iss", out var iss) ? iss.GetString() : null;
+        }
+        catch (Exception ex) when (ex is FormatException or JsonException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>Decodes a base64url segment (JWT payload) into UTF-8 bytes.</summary>
+    /// <param name="segment">The base64url-encoded segment.</param>
+    /// <returns>The decoded bytes.</returns>
+    private static byte[] Base64UrlDecode(string segment)
+    {
+        var s = segment.Replace('-', '+').Replace('_', '/');
+        s = (s.Length % 4) switch
+        {
+            2 => s + "==",
+            3 => s + "=",
+            _ => s,
+        };
+        return Convert.FromBase64String(s);
+    }
+
     /// <summary>
     /// Projects Keycloak realm roles (emitted as a JSON object under the <c>realm_access</c> claim) into
     /// individual <see cref="ClaimTypes.Role"/> claims. ASP.NET's JWT handler does not flatten these
     /// automatically, so without this projection <c>RequireRole</c>/<c>[Authorize(Roles=…)]</c> never match.
     /// </summary>
+    /// <param name="principal">The validated principal to augment.</param>
     private static void ProjectRealmRoles(ClaimsPrincipal? principal)
     {
         if (principal?.Identity is not ClaimsIdentity identity)
