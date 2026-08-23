@@ -9,6 +9,8 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllersWithViews();
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddHttpClient();
+builder.Services.AddScoped<Illumin360.StudentWeb.Services.KeycloakRegistrar>();
 
 // --- Keycloak OIDC: server-side cookie session + authorization-code + PKCE ---
 // Same pattern as the Business BFF: tokens live server-side; the browser only gets an
@@ -22,7 +24,7 @@ builder.Services.AddAuthentication(options =>
 })
 .AddCookie(options =>
 {
-    options.Cookie.Name = "illumin360.adminweb";
+    options.Cookie.Name = "illumin360.studentweb";
     options.Cookie.HttpOnly = true;
     options.Cookie.SameSite = SameSiteMode.Lax;
     options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;

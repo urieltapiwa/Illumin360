@@ -1,0 +1,31 @@
+/* ============================================================
+   Illumin360 brand layer on top of HopeUI.
+   Default = authentic HopeUI blue (#3a57e8) — no override.
+   The navbar toggle flips <html data-brand="green"> to recolour
+   HopeUI's primary to Illumin360 green. HopeUI keys almost
+   everything off --bs-primary / --bs-primary-rgb (+ two tints),
+   so overriding those swaps the whole theme.
+   ============================================================ */
+[data-brand="green"] {
+  --bs-primary: #1fb283;
+  --bs-primary-rgb: 31, 178, 131;
+  --bs-primary-tint-90: #e8f7f1;
+  --bs-primary-tint-20: #4fddad;
+  --bs-link-color-rgb: 31, 178, 131;
+}
+[data-brand="green"] .btn-primary {
+  --bs-btn-bg: #1fb283; --bs-btn-border-color: #1fb283;
+  --bs-btn-hover-bg: #17916b; --bs-btn-hover-border-color: #17916b;
+  --bs-btn-active-bg: #12805c; --bs-btn-active-border-color: #12805c;
+  --bs-btn-disabled-bg: #1fb283; --bs-btn-disabled-border-color: #1fb283;
+}
+[data-brand="green"] .bg-soft-primary { background-color: rgba(31, 178, 131, .12) !important; }
+[data-brand="green"] .text-primary { color: #17916b !important; }
+
+/* The HopeUI logo mark + the "360" follow the active primary. */
+.navbar-brand .logo-main { color: var(--bs-primary); transition: color .2s ease; }
+.brand-360 { color: var(--bs-primary); }
+
+/* Live pill (independent of the primary hue). */
+.status-live { display: inline-flex; align-items: center; gap: 6px; font-size: .72rem; font-weight: 700; color: #1aa053; border: 1px solid rgba(26,160,83,.35); border-radius: 999px; padding: 3px 10px; }
+.status-live .dot { width: 7px; height: 7px; border-radius: 50%; background: #1aa053; }

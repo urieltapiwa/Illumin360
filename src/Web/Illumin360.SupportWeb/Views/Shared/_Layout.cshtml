@@ -14,13 +14,11 @@
 <body>
     @{ var _uname = (User.Identity?.Name) ?? "Account"; var _uinit = string.Concat(_uname.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(w => char.ToUpperInvariant(w[0]))); }
     @{
-        var nav = new[] {
-            ("Overview", "/", true, "M4 21V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v17M9 8h2M9 12h2M9 16h2M16 10h3a1 1 0 0 1 1 1v10"),
-            ("Accounts", "#", false, "M16 11a4 4 0 1 0-4-4 4 4 0 0 0 4 4zM2 21a7 7 0 0 1 14 0M19 21a5 5 0 0 0-6-4.9"),
-            ("Pipeline", "#", false, "M4 6h16M4 12h10M4 18h6"),
-            ("Sourcing & Ranking", "#", false, "M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM21 21l-4.3-4.3"),
-            ("Campaigns & AI", "#", false, "M3 11l18-8-8 18-2-7-8-3z"),
-            ("Talent & CRM", "#", false, "M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"),
+        var nav = new (string, string, bool, string)[] {
+            ("Overview", "/", true, "M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z"),
+            ("Queue", "#", false, "M3 12h5l2 3h4l2-3h5M3 12V5a1 1 0 0 1 1-1h16a1 1 0 0 1 1 1v7"),
+            ("Reports", "#", false, "M4 20V10M10 20V4M16 20v-7M22 20H2"),
+            ("Activity", "#", false, "M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"),
         };
     }
     <aside class="sidebar sidebar-default sidebar-white sidebar-base navs-rounded-all">
@@ -39,7 +37,7 @@
         <div class="sidebar-body pt-0 data-scrollbar">
             <div class="sidebar-list">
                 <ul class="navbar-nav iq-main-menu" id="sidebar-menu">
-                    <li class="nav-item static-item"><span class="nav-link static-item disabled"><span class="default-icon">Platform</span></span></li>
+                    <li class="nav-item static-item"><span class="nav-link static-item disabled"><span class="default-icon">Support Desk</span></span></li>
                     @foreach (var (name, href, active, path) in nav)
                     {
                         <li class="nav-item">
@@ -59,8 +57,8 @@
         <nav class="nav navbar navbar-expand-lg navbar-light iq-navbar">
             <div class="container-fluid navbar-inner">
                 <div>
-                    <h4 class="mb-0 fw-bold">@(ViewData["Title"] ?? "Platform Command")</h4>
-                    <small class="text-muted">Operations, growth, revenue and system health across Illumin360.</small>
+                    <h4 class="mb-0 fw-bold">@(ViewData["Title"] ?? "Support Desk")</h4>
+                    <small class="text-muted">Live queue, SLAs and customer satisfaction across Illumin360.</small>
                 </div>
                 <div class="ms-auto d-flex align-items-center gap-3">
                     <span class="status-live"><span class="dot"></span> LIVE</span>
@@ -69,7 +67,6 @@
                 </div>
             </div>
         </nav>
-
         <div class="container-fluid content-inner pb-0 mt-4">
             @RenderBody()
         </div>
