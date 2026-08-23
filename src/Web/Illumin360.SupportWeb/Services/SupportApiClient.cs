@@ -4,7 +4,9 @@ using Microsoft.AspNetCore.Authentication;
 namespace Illumin360.SupportWeb.Services;
 
 // Live support-queue metrics from GET /api/admin/support-summary (Admin service).
-public sealed record SupportSummary(int Open, int Assigned, int Resolved, int P1, int P2, int P3, int[]? PriorityMix);
+public sealed record VolumePoint(string? Label, int Created);
+
+public sealed record SupportSummary(int Open, int Assigned, int Resolved, int P1, int P2, int P3, int[]? PriorityMix, VolumePoint[]? Volume);
 
 // Relays the signed-in agent's access token to the gateway.
 public sealed class TokenRelayHandler(IHttpContextAccessor accessor) : DelegatingHandler

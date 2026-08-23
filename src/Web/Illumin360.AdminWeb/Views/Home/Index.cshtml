@@ -4,6 +4,11 @@
     var live = Model is not null;
     var mix = (Model?.AccountMix is { Length: 2 }) ? Model!.AccountMix! : new[] { 4, 2 };
     var segmentJson = "[" + string.Join(",", mix) + "]";
+    var growth = Model?.Growth ?? System.Array.Empty<Illumin360.AdminWeb.Services.GrowthPoint>();
+    var hasGrowth = growth.Length > 0;
+    var gLabels = hasGrowth ? "[" + string.Join(",", growth.Select(g => "\"" + g.Label + "\"")) + "]" : "[\"2016\",\"2018\",\"2020\",\"2022\",\"2024\",\"2026\"]";
+    var gTalent = hasGrowth ? "[" + string.Join(",", growth.Select(g => g.Talent)) + "]" : "[800,2400,5200,9100,13800,17360]";
+    var gCompanies = hasGrowth ? "[" + string.Join(",", growth.Select(g => g.Companies)) + "]" : "[120,380,720,1150,1600,1879]";
     var kpis = new[] {
         ("Total Accounts", (Model?.TotalAccounts ?? 6).ToString(), $"{Model?.ActiveAccounts ?? 6} active", "M16 11a4 4 0 1 0-4-4 4 4 0 0 0 4 4zM2 21a7 7 0 0 1 14 0"),
         ("Companies", (Model?.Companies ?? 4).ToString(), "on the platform", "M4 21V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v17M9 8h2M9 12h2M9 16h2"),
@@ -31,7 +36,7 @@
 
 <div class="d-flex align-items-center gap-2 mb-2">
     <span class="badge @(live ? "bg-soft-primary text-primary" : "bg-soft-warning text-warning")">@(live ? "Live data" : "Demo data")</span>
-    <span class="text-muted small">Accounts, verifications &amp; tickets are live from the Admin service; growth/revenue trends are illustrative.</span>
+    <span class="text-muted small">Accounts, verifications, tickets &amp; account growth are live from the Admin service; revenue and regional splits are illustrative.</span>
 </div>
 
 <!-- KPI cards -->
@@ -62,7 +67,7 @@
     <div class="col-lg-8">
         <div class="card mb-0 h-100">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <div><h5 class="mb-0 fw-bold">Platform growth</h5><small class="text-muted">Cumulative talent &amp; companies · 10Y</small></div>
+                <div><h5 class="mb-0 fw-bold">Platform growth</h5><small class="text-muted">Cumulative talent &amp; companies · last 6 months</small></div>
             </div>
             <div class="card-body"><div id="growthChart"></div></div>
         </div>
@@ -142,14 +147,12 @@
     charts.forEach(function (c) { try { c.destroy(); } catch (e) {} });
     charts = [];
     var p = primary();
-    var years = ["2016","2018","2020","2022","2024","2026"];
-
     charts.push(new ApexCharts(document.querySelector("#growthChart"), {
       chart: { type: "area", height: 300, toolbar: { show: false } },
       colors: [p, "#e8b14c"],
-      series: [{ name: "Talent", data: [800, 2400, 5200, 9100, 13800, 17360] },
-               { name: "Companies", data: [120, 380, 720, 1150, 1600, 1879] }],
-      xaxis: { categories: years }, dataLabels: { enabled: false },
+      series: [{ name: "Talent", data: @Html.Raw(gTalent) },
+               { name: "Companies", data: @Html.Raw(gCompanies) }],
+      xaxis: { categories: @Html.Raw(gLabels) }, dataLabels: { enabled: false },
       stroke: { curve: "smooth", width: 2 }, fill: { type: "gradient", gradient: { opacityFrom: .4, opacityTo: 0 } },
       legend: { position: "top", horizontalAlign: "right" }, grid: { borderColor: "#eef0f7" }
     }));
