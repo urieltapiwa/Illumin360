@@ -9,6 +9,8 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllersWithViews();
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddHttpClient();
+builder.Services.AddScoped<Illumin360.BusinessWeb.Services.KeycloakRegistrar>();
 
 // --- Keycloak OIDC: server-side cookie session + authorization-code + PKCE ---
 // Same pattern as the Business BFF: tokens live server-side; the browser only gets an

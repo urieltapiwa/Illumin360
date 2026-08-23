@@ -1,0 +1,43 @@
+@model Illumin360.BusinessWeb.Controllers.RegisterViewModel
+@{ Layout = null; }
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Create account &middot; Illumin360</title>
+    <link rel="stylesheet" href="~/hopeui/fonts/inter.css" />
+    <link rel="stylesheet" href="~/hopeui/css/core/libs.min.css" />
+    <link rel="stylesheet" href="~/hopeui/css/hope-ui.min.css" />
+    <link rel="stylesheet" href="~/hopeui/css/custom.min.css" />
+    <link rel="stylesheet" href="~/hopeui/brand.css" />
+</head>
+<body style="background:#f5f6fa;">
+    <div class="container" style="max-width:560px;padding-top:6vh;">
+        <div class="text-center mb-4">
+            <span class="logo-main d-inline-flex" style="color:var(--bs-primary);">
+                <svg width="40" height="40" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="14" stroke="currentColor" stroke-width="1.8"/><circle cx="16" cy="16" r="8.5" stroke="currentColor" stroke-width="1.8" opacity=".6"/><circle cx="16" cy="16" r="3" fill="#E8B14C"/></svg>
+            </span>
+            <h4 class="fw-bold mt-2 mb-0">Illumin<span style="color:var(--bs-primary);">360</span></h4>
+        </div>
+        <div class="card">
+            <div class="card-body p-4">
+                <h5 class="fw-bold mb-1">Create your business account</h5>
+                <p class="text-muted small mb-3">Already have an account? <a href="/">Sign in</a>.</p>
+                <div asp-validation-summary="All" class="text-danger small mb-2"></div>
+                <form method="post" class="row g-3">
+                    @Html.AntiForgeryToken()
+                    <div class="col-md-6"><label class="form-label" asp-for="FirstName">First name</label><input class="form-control" asp-for="FirstName" /></div>
+                    <div class="col-md-6"><label class="form-label" asp-for="LastName">Last name</label><input class="form-control" asp-for="LastName" /></div>
+                    <div class="col-12"><label class="form-label" asp-for="Email">Email</label><input class="form-control" type="email" asp-for="Email" /></div>
+                    <div class="col-12"><label class="form-label" asp-for="Password">Password</label><input class="form-control" type="password" asp-for="Password" /><div class="form-text">At least 12 characters.</div></div>
+                    <div class="col-md-6"><label class="form-label" asp-for="City">City</label><input class="form-control" asp-for="City" /></div>
+                    <div class="col-md-6"><label class="form-label" asp-for="Company">Organisation</label><input class="form-control" asp-for="Company" /></div>
+                    <div class="col-12 d-grid mt-2"><button type="submit" class="btn btn-primary">Create account</button></div>
+                </form>
+            </div>
+        </div>
+        <p class="text-center text-muted small mt-3">You will verify your email before your first sign-in.</p>
+    </div>
+</body>
+</html>
