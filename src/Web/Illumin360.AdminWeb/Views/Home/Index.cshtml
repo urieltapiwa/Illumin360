@@ -1,12 +1,16 @@
+@model Illumin360.AdminWeb.Services.AdminSummary?
 @{
     ViewData["Title"] = "Platform Command";
+    var live = Model is not null;
+    var mix = (Model?.AccountMix is { Length: 2 }) ? Model!.AccountMix! : new[] { 4, 2 };
+    var segmentJson = "[" + string.Join(",", mix) + "]";
     var kpis = new[] {
-        ("Total Users", "19,237", "+9% DAU", "M16 11a4 4 0 1 0-4-4 4 4 0 0 0 4 4zM2 21a7 7 0 0 1 14 0"),
-        ("Companies", "1,879", "active accounts", "M4 21V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v17M9 8h2M9 12h2M9 16h2"),
-        ("MRR", "N$1.1M", "N$13M ARR", "M3 6h18v12H3zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"),
-        ("Active Subs", "499", "paying", "M9 11l3 3 8-8M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9"),
-        ("Uptime 30d", "99.97%", "1 degraded", "M22 12h-4l-3 9L9 3l-3 9H2"),
-        ("Open Tickets", "23", "41 resolved today", "M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"),
+        ("Total Accounts", (Model?.TotalAccounts ?? 6).ToString(), $"{Model?.ActiveAccounts ?? 6} active", "M16 11a4 4 0 1 0-4-4 4 4 0 0 0 4 4zM2 21a7 7 0 0 1 14 0"),
+        ("Companies", (Model?.Companies ?? 4).ToString(), "on the platform", "M4 21V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v17M9 8h2M9 12h2M9 16h2"),
+        ("Talent", (Model?.Talent ?? 2).ToString(), "candidates & pros", "M12 2l3 7h7l-5.5 4 2 7L12 16l-6.5 4 2-7L2 9h7z"),
+        ("Suspended", (Model?.SuspendedAccounts ?? 0).ToString(), "access revoked", "M18.36 6.64A9 9 0 1 1 5.64 5.64M12 2v10"),
+        ("Pending Verifications", (Model?.PendingVerifications ?? 5).ToString(), "awaiting review", "M22 12h-4l-3 9L9 3l-3 9H2"),
+        ("Open Tickets", (Model?.OpenTickets ?? 4).ToString(), "in the support queue", "M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"),
     };
     var services = new[] {
         ("Gateway", "38ms", "99.99%", true),
@@ -24,6 +28,11 @@
         ("Erongo Consulting", "Company verification", "3h ago", "Medium"),
     };
 }
+
+<div class="d-flex align-items-center gap-2 mb-2">
+    <span class="badge @(live ? "bg-soft-primary text-primary" : "bg-soft-warning text-warning")">@(live ? "Live data" : "Demo data")</span>
+    <span class="text-muted small">Accounts, verifications &amp; tickets are live from the Admin service; growth/revenue trends are illustrative.</span>
+</div>
 
 <!-- KPI cards -->
 <div class="row row-cols-2 row-cols-md-3 row-cols-xl-6 g-3 mb-3">
@@ -94,7 +103,7 @@
 <div class="row g-3 mb-4">
     <div class="col-lg-8">
         <div class="card mb-0 h-100">
-            <div class="card-header d-flex justify-content-between align-items-center"><h5 class="mb-0 fw-bold">Verification queue</h5><span class="badge bg-soft-primary text-primary">6 pending</span></div>
+            <div class="card-header d-flex justify-content-between align-items-center"><h5 class="mb-0 fw-bold">Verification queue</h5><span class="badge bg-soft-primary text-primary">@(Model?.PendingVerifications ?? 5) pending</span></div>
             <div class="card-body p-0">
                 <div class="table-responsive">
                     <table class="table mb-0">
@@ -147,8 +156,8 @@
     charts[charts.length-1].render();
 
     charts.push(new ApexCharts(document.querySelector("#segmentChart"), {
-      chart: { type: "donut", height: 260 }, colors: [p, "#e8b14c", "#5ab7ff"],
-      series: [11800, 5560, 1879], labels: ["Professionals", "Students", "Companies"],
+      chart: { type: "donut", height: 260 }, colors: [p, "#e8b14c"],
+      series: @Html.Raw(segmentJson), labels: ["Companies", "Talent"],
       legend: { position: "bottom" }, dataLabels: { enabled: false },
       plotOptions: { pie: { donut: { size: "68%" } } }
     }));

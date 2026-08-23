@@ -3,6 +3,7 @@ using Illumin360.Admin.Application;
 using Illumin360.Admin.Application.Abstractions;
 using Illumin360.Admin.Application.Accounts;
 using Illumin360.Admin.Application.Audit;
+using Illumin360.Admin.Application.Dashboard;
 using Illumin360.Admin.Application.Tickets;
 using Illumin360.Admin.Application.Verifications;
 using Illumin360.Admin.Infrastructure;
@@ -52,6 +53,41 @@ app.MapProjectHealthChecks();
 
 // --- API v1 endpoints (all admin-tier; charter Part 7 — admin.read to view, admin.write to act) ---
 var v1 = app.MapGroup("/v1/admin").WithTags("Admin");
+
+// --- Dashboard summaries (read-only aggregations over the admin data; anonymous like the other
+// portal dashboards — mutations below still require the admin role). ---
+v1.MapGet("/summary", async (
+        IQueryHandler<GetAdminSummaryQuery, AdminSummaryDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new GetAdminSummaryQuery(), ct);
+        return result.ToHttpResult();
+    })
+    .WithName("GetAdminSummary")
+    .WithSummary("Platform-operations summary for the Admin dashboard (accounts, verifications, tickets).")
+    .Produces<AdminSummaryDto>(StatusCodes.Status200OK);
+
+v1.MapGet("/talent-insights", async (
+        IQueryHandler<GetTalentInsightsQuery, TalentInsightsDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new GetTalentInsightsQuery(), ct);
+        return result.ToHttpResult();
+    })
+    .WithName("GetTalentInsights")
+    .WithSummary("Talent-marketplace insights for the Business dashboard (talent, companies, verification).")
+    .Produces<TalentInsightsDto>(StatusCodes.Status200OK);
+
+v1.MapGet("/support-summary", async (
+        IQueryHandler<GetSupportSummaryQuery, SupportSummaryDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new GetSupportSummaryQuery(), ct);
+        return result.ToHttpResult();
+    })
+    .WithName("GetSupportSummary")
+    .WithSummary("Support-queue metrics for the Support dashboard (open/assigned/resolved, by priority).")
+    .Produces<SupportSummaryDto>(StatusCodes.Status200OK);
 
 v1.MapGet("/audit", async (
         string? action,

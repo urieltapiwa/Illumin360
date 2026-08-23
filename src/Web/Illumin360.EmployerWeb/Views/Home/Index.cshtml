@@ -1,11 +1,37 @@
+@model Illumin360.EmployerWeb.Services.EmployerProfile?
 @{
     ViewData["Title"] = "Company profile";
+    var live = Model is not null;
     var kpis = new (string, string, string, string)[] {
         ("Open Roles", "5", "2 featured", "M3 8h18v12H3zM8 8V6a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 13h18"),
         ("Candidates", "128", "ranked", "M16 11a4 4 0 1 0-4-4 4 4 0 0 0 4 4zM2 21a7 7 0 0 1 14 0"),
         ("Team Members", "4", "1 owner", "M16 11a4 4 0 1 0-4-4 4 4 0 0 0 4 4zM2 21a7 7 0 0 1 14 0"),
         ("Time to Fill", "18d", "median", "M9 11l3 3 8-8M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9"),
     };
+}
+@if (live)
+{
+    <div class="card mb-3"><div class="card-body d-flex align-items-center justify-content-between flex-wrap gap-2">
+        <div>
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <h5 class="mb-0 fw-bold">@Model?.CompanyName</h5>
+                <span class="badge bg-soft-primary text-primary">Live profile</span>
+            </div>
+            <div class="text-muted small">@Model?.Industry · @Model?.City</div>
+            @if (Model?.About is { Length: > 0 } about)
+            {
+                <p class="mb-0 mt-1 text-muted" style="max-width:640px;">@about</p>
+            }
+        </div>
+        @if (Model?.Website is { Length: > 0 } site)
+        {
+            <a class="btn btn-sm btn-soft-primary" href="@site" target="_blank" rel="noopener">Visit website</a>
+        }
+    </div></div>
+}
+else
+{
+    <div class="mb-3"><span class="badge bg-soft-warning text-warning">Demo data</span></div>
 }
 <div class="row row-cols-2 row-cols-md-3 row-cols-xl-4 g-3 mb-3">
     @foreach (var (label, value, sub, icon) in kpis)

@@ -1,14 +1,18 @@
 using System.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using Illumin360.ProfessionalWeb.Models;
+using Illumin360.ProfessionalWeb.Services;
 
 namespace Illumin360.ProfessionalWeb.Controllers;
 
-public class HomeController : Controller
+public class HomeController(ProfessionalsApiClient professionals) : Controller
 {
-    public IActionResult Index()
+    private readonly ProfessionalsApiClient _professionals = professionals;
+
+    public async Task<IActionResult> Index(CancellationToken ct)
     {
-        return View();
+        var dashboard = await _professionals.GetDashboardAsync(ct);
+        return View(dashboard);
     }
 
     [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]

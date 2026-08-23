@@ -1,6 +1,7 @@
 using Illumin360.Admin.Application.Abstractions;
 using Illumin360.Admin.Application.Accounts;
 using Illumin360.Admin.Application.Audit;
+using Illumin360.Admin.Application.Dashboard;
 using Illumin360.Admin.Application.Tickets;
 using Illumin360.Admin.Application.Verifications;
 using Microsoft.Extensions.DependencyInjection;
@@ -38,6 +39,16 @@ public static class DependencyInjection
         services.AddScoped<
             IQueryHandler<GetAuditLogQuery, IReadOnlyList<AuditEntryDto>>,
             GetAuditLogQueryHandler>();
+
+        services.AddScoped<
+            IQueryHandler<GetAdminSummaryQuery, AdminSummaryDto>,
+            GetAdminSummaryQueryHandler>();
+        services.AddScoped<
+            IQueryHandler<GetTalentInsightsQuery, TalentInsightsDto>,
+            GetTalentInsightsQueryHandler>();
+        services.AddScoped<
+            IQueryHandler<GetSupportSummaryQuery, SupportSummaryDto>,
+            GetSupportSummaryQueryHandler>();
 
         return services;
     }
