@@ -1,0 +1,60 @@
+@model IReadOnlyList<Illumin360.AdminWeb.Services.VerificationRow>
+@{
+    ViewData["Title"] = "Verifications";
+    var status = (ViewData["Status"] as string) ?? "pending";
+    string Pill(string s) => string.Equals(status, s, StringComparison.OrdinalIgnoreCase) ? "btn-primary" : "btn-soft-primary";
+}
+
+<div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+    <span class="text-muted small me-2">Company &amp; talent verifications awaiting review.</span>
+    <a class="btn btn-sm @Pill("pending")" href="/Verifications?status=pending">Pending</a>
+    <a class="btn btn-sm @Pill("approved")" href="/Verifications?status=approved">Approved</a>
+    <a class="btn btn-sm @Pill("rejected")" href="/Verifications?status=rejected">Rejected</a>
+</div>
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0 fw-bold text-capitalize">@status verifications</h5>
+        <span class="badge bg-soft-primary text-primary">@Model.Count</span>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table mb-0 align-middle">
+                <thead><tr><th>Entity</th><th>Type</th><th>Submitted</th><th>Risk</th><th class="text-end">Decision</th></tr></thead>
+                <tbody>
+                @if (Model.Count == 0)
+                {
+                    <tr><td colspan="5" class="text-center text-muted py-4">Nothing @status.</td></tr>
+                }
+                @foreach (var v in Model)
+                {
+                    var pending = string.Equals(v.Status, "pending", StringComparison.OrdinalIgnoreCase);
+                    <tr>
+                        <td class="fw-semibold">@v.Entity</td>
+                        <td class="text-muted">@v.Kind</td>
+                        <td class="text-muted">@v.Submitted</td>
+                        <td><span class="badge @(string.Equals(v.Risk,"Medium",StringComparison.OrdinalIgnoreCase) ? "bg-soft-warning text-warning" : string.Equals(v.Risk,"High",StringComparison.OrdinalIgnoreCase) ? "bg-soft-danger text-danger" : "bg-soft-primary text-primary")">@v.Risk</span></td>
+                        <td class="text-end">
+                            @if (pending)
+                            {
+                                <form asp-controller="Verifications" asp-action="Approve" method="post" class="m-0 d-inline">
+                                    <input type="hidden" name="id" value="@v.Id" />
+                                    <button type="submit" class="btn btn-sm btn-soft-success">Approve</button>
+                                </form>
+                                <form asp-controller="Verifications" asp-action="Reject" method="post" class="m-0 d-inline ms-1">
+                                    <input type="hidden" name="id" value="@v.Id" />
+                                    <button type="submit" class="btn btn-sm btn-soft-danger">Reject</button>
+                                </form>
+                            }
+                            else
+                            {
+                                <span class="text-muted small text-capitalize">@v.Status@(string.IsNullOrWhiteSpace(v.DecidedBy) ? "" : $" · {v.DecidedBy}")</span>
+                            }
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

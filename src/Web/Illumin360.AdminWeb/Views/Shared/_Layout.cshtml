@@ -14,12 +14,14 @@
 <body>
     @{ var _uname = (User.Identity?.Name) ?? "Account"; var _uinit = string.Concat(_uname.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(w => char.ToUpperInvariant(w[0]))); }
     @{
+        var _path = (Context.Request.Path.Value ?? "/").ToLowerInvariant();
+        bool _active(string href) => href == "/" ? _path == "/" : _path.StartsWith(href.ToLowerInvariant(), StringComparison.Ordinal);
         var nav = new[] {
-            ("Overview", "#overview", true, "M4 21V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v17M9 8h2M9 12h2M9 16h2M16 10h3a1 1 0 0 1 1 1v10"),
-            ("Growth", "#growth", false, "M3 17l6-6 4 4 8-8M21 7v5h-5"),
-            ("Revenue", "#revenue", false, "M3 6h18v12H3zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"),
-            ("Verifications", "#verifications", false, "M9 11l3 3 8-8M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9"),
-            ("Regions", "#regions", false, "M12 21s-6-5.7-6-10a6 6 0 1 1 12 0c0 4.3-6 10-6 10zM12 11a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"),
+            ("Dashboard", "/", _active("/"), "M4 21V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v17M9 8h2M9 12h2M9 16h2M16 10h3a1 1 0 0 1 1 1v10"),
+            ("Accounts", "/Accounts", _active("/Accounts"), "M16 11a4 4 0 1 0-4-4 4 4 0 0 0 4 4zM2 21a7 7 0 0 1 14 0M19 21a5 5 0 0 0-6-4.9"),
+            ("Verifications", "/Verifications", _active("/Verifications"), "M9 11l3 3 8-8M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9"),
+            ("Tickets", "/Tickets", _active("/Tickets"), "M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"),
+            ("Audit", "/Audit", _active("/Audit"), "M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"),
         };
     }
     <aside class="sidebar sidebar-default sidebar-white sidebar-base navs-rounded-all">
@@ -77,32 +79,6 @@
     <script src="~/hopeui/js/libs.min.js"></script>
     <script src="~/hopeui/js/external.min.js"></script>
     <script src="~/hopeui/js/hope-ui.js" defer></script>
-    <script>
-      // Scrollspy: highlight the sidebar item for the dashboard section in view, and smooth-scroll on click.
-      (function () {
-        var links = Array.prototype.slice.call(document.querySelectorAll('#sidebar-menu .nav-link[href^="#"]'));
-        if (!links.length) { return; }
-        var byId = {};
-        links.forEach(function (a) { byId[a.getAttribute('href').slice(1)] = a; });
-        var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-        links.forEach(function (a) {
-          a.addEventListener('click', function (e) {
-            var el = document.getElementById(a.getAttribute('href').slice(1));
-            if (el) { e.preventDefault(); el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' }); }
-          });
-        });
-        var sections = Object.keys(byId).map(function (id) { return document.getElementById(id); }).filter(Boolean);
-        var spy = new IntersectionObserver(function (entries) {
-          entries.forEach(function (en) {
-            if (en.isIntersecting) {
-              links.forEach(function (l) { l.classList.remove('active'); });
-              if (byId[en.target.id]) { byId[en.target.id].classList.add('active'); }
-            }
-          });
-        }, { rootMargin: '-80px 0px -60% 0px', threshold: 0 });
-        sections.forEach(function (s) { spy.observe(s); });
-      })();
-    </script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>
