@@ -38,6 +38,10 @@ builder.Services.AddAuthentication(options =>
     options.ClientSecret = oidc["ClientSecret"];
     options.ResponseType = OpenIdConnectResponseType.Code;
     options.UsePkce = true;
+
+    // PAR pushes the auth request server-side; disable it to match the BFF and get a clean
+    // browser redirect (opt back in once the confidential clients have PAR enabled in Keycloak).
+    options.PushedAuthorizationBehavior = PushedAuthorizationBehavior.Disable;
     options.SaveTokens = true;
     options.GetClaimsFromUserInfoEndpoint = false;
     options.CallbackPath = "/signin-oidc";
