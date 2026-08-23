@@ -1,0 +1,180 @@
+@{
+    ViewData["Title"] = "Platform Command";
+    var kpis = new[] {
+        ("Total Users", "19,237", "+9% DAU", "M16 11a4 4 0 1 0-4-4 4 4 0 0 0 4 4zM2 21a7 7 0 0 1 14 0"),
+        ("Companies", "1,879", "active accounts", "M4 21V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v17M9 8h2M9 12h2M9 16h2"),
+        ("MRR", "N$1.1M", "N$13M ARR", "M3 6h18v12H3zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"),
+        ("Active Subs", "499", "paying", "M9 11l3 3 8-8M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9"),
+        ("Uptime 30d", "99.97%", "1 degraded", "M22 12h-4l-3 9L9 3l-3 9H2"),
+        ("Open Tickets", "23", "41 resolved today", "M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"),
+    };
+    var services = new[] {
+        ("Gateway", "38ms", "99.99%", true),
+        ("Candidates", "52ms", "99.98%", true),
+        ("Recruitment / AI Match", "119ms", "99.95%", true),
+        ("Billing", "61ms", "99.99%", true),
+        ("Notifications", "248ms", "99.82%", false),
+        ("Identity (Keycloak)", "44ms", "99.99%", true),
+    };
+    var queue = new[] {
+        ("Etosha Consulting", "Company verification", "34s ago", "Low"),
+        ("Apex Namibia", "Recruiter ID", "12s ago", "Low"),
+        ("Meridian Group", "Company verification", "5h ago", "Medium"),
+        ("Orange River Trading", "Document review", "3h ago", "Low"),
+        ("Erongo Consulting", "Company verification", "3h ago", "Medium"),
+    };
+}
+
+<!-- KPI cards -->
+<div class="row row-cols-2 row-cols-md-3 row-cols-xl-6 g-3 mb-3">
+    @foreach (var (label, value, sub, icon) in kpis)
+    {
+        <div class="col">
+            <div class="card h-100 mb-0">
+                <div class="card-body">
+                    <div class="d-flex align-items-start justify-content-between">
+                        <div>
+                            <p class="mb-1 text-muted small">@label</p>
+                            <h4 class="mb-0 fw-bold">@value</h4>
+                            <span class="text-muted" style="font-size:.72rem;">@sub</span>
+                        </div>
+                        <div class="rounded p-2 bg-soft-primary text-primary d-inline-flex">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="@icon" /></svg>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<!-- Growth + segments -->
+<div class="row g-3 mb-3">
+    <div class="col-lg-8">
+        <div class="card mb-0 h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div><h5 class="mb-0 fw-bold">Platform growth</h5><small class="text-muted">Cumulative talent &amp; companies · 10Y</small></div>
+            </div>
+            <div class="card-body"><div id="growthChart"></div></div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card mb-0 h-100">
+            <div class="card-header"><h5 class="mb-0 fw-bold">User segments</h5></div>
+            <div class="card-body d-flex align-items-center justify-content-center"><div id="segmentChart"></div></div>
+        </div>
+    </div>
+</div>
+
+<!-- Revenue + system health -->
+<div class="row g-3 mb-3">
+    <div class="col-lg-8">
+        <div class="card mb-0 h-100">
+            <div class="card-header"><h5 class="mb-0 fw-bold">Recurring revenue</h5><small class="text-muted">Platform MRR</small></div>
+            <div class="card-body"><div id="revenueChart"></div></div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card mb-0 h-100">
+            <div class="card-header d-flex justify-content-between align-items-center"><h5 class="mb-0 fw-bold">System health</h5><span class="badge bg-soft-primary text-primary">live</span></div>
+            <div class="card-body">
+                @foreach (var (name, latency, uptime, ok) in services)
+                {
+                    <div class="d-flex align-items-center justify-content-between py-2 border-bottom">
+                        <span class="d-flex align-items-center gap-2"><span class="rounded-circle d-inline-block" style="width:8px;height:8px;background:@(ok ? "#1aa053" : "#e8b14c")"></span>@name</span>
+                        <span class="text-muted small">@latency · <span class="@(ok ? "" : "text-warning")">@uptime</span></span>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Verification queue + talent by region -->
+<div class="row g-3 mb-4">
+    <div class="col-lg-8">
+        <div class="card mb-0 h-100">
+            <div class="card-header d-flex justify-content-between align-items-center"><h5 class="mb-0 fw-bold">Verification queue</h5><span class="badge bg-soft-primary text-primary">6 pending</span></div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table mb-0">
+                        <thead><tr><th>Entity</th><th>Type</th><th>Submitted</th><th>Risk</th><th class="text-end">Action</th></tr></thead>
+                        <tbody>
+                            @foreach (var (entity, type, submitted, risk) in queue)
+                            {
+                                <tr>
+                                    <td class="fw-semibold">@entity</td>
+                                    <td class="text-muted">@type</td>
+                                    <td class="text-muted">@submitted</td>
+                                    <td><span class="badge @(risk == "Medium" ? "bg-soft-warning text-warning" : "bg-soft-primary text-primary")">@risk</span></td>
+                                    <td class="text-end"><a href="#" class="btn btn-sm btn-soft-primary">Review</a></td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card mb-0 h-100">
+            <div class="card-header"><h5 class="mb-0 fw-bold">Talent by region</h5></div>
+            <div class="card-body"><div id="regionChart"></div></div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+(function () {
+  function primary() { return (window.brandPrimary ? window.brandPrimary() : "#3a57e8"); }
+  var charts = [];
+  function build() {
+    charts.forEach(function (c) { try { c.destroy(); } catch (e) {} });
+    charts = [];
+    var p = primary();
+    var years = ["2016","2018","2020","2022","2024","2026"];
+
+    charts.push(new ApexCharts(document.querySelector("#growthChart"), {
+      chart: { type: "area", height: 300, toolbar: { show: false } },
+      colors: [p, "#e8b14c"],
+      series: [{ name: "Talent", data: [800, 2400, 5200, 9100, 13800, 17360] },
+               { name: "Companies", data: [120, 380, 720, 1150, 1600, 1879] }],
+      xaxis: { categories: years }, dataLabels: { enabled: false },
+      stroke: { curve: "smooth", width: 2 }, fill: { type: "gradient", gradient: { opacityFrom: .4, opacityTo: 0 } },
+      legend: { position: "top", horizontalAlign: "right" }, grid: { borderColor: "#eef0f7" }
+    }));
+    charts[charts.length-1].render();
+
+    charts.push(new ApexCharts(document.querySelector("#segmentChart"), {
+      chart: { type: "donut", height: 260 }, colors: [p, "#e8b14c", "#5ab7ff"],
+      series: [11800, 5560, 1879], labels: ["Professionals", "Students", "Companies"],
+      legend: { position: "bottom" }, dataLabels: { enabled: false },
+      plotOptions: { pie: { donut: { size: "68%" } } }
+    }));
+    charts[charts.length-1].render();
+
+    charts.push(new ApexCharts(document.querySelector("#revenueChart"), {
+      chart: { type: "area", height: 300, toolbar: { show: false } }, colors: [p],
+      series: [{ name: "MRR (N$)", data: [180000, 320000, 470000, 610000, 780000, 940000, 1100000] }],
+      xaxis: { categories: ["Jan","Feb","Mar","Apr","May","Jun","Jul"] }, dataLabels: { enabled: false },
+      stroke: { curve: "smooth", width: 2.5 }, fill: { type: "gradient", gradient: { opacityFrom: .45, opacityTo: 0 } },
+      grid: { borderColor: "#eef0f7" }
+    }));
+    charts[charts.length-1].render();
+
+    charts.push(new ApexCharts(document.querySelector("#regionChart"), {
+      chart: { type: "bar", height: 300, toolbar: { show: false } }, colors: [p],
+      series: [{ name: "Talent", data: [5884, 1717, 1404, 1371, 1037, 877, 728] }],
+      xaxis: { categories: ["Windhoek","Walvis Bay","Swakopmund","Oshakati","Rundu","Ongwediva","Otjiwarongo"] },
+      plotOptions: { bar: { horizontal: true, borderRadius: 4, barHeight: "60%" } },
+      dataLabels: { enabled: false }, grid: { borderColor: "#eef0f7" }
+    }));
+    charts[charts.length-1].render();
+  }
+  function start() { if (window.ApexCharts) { build(); } else { setTimeout(start, 60); } }
+  start();
+  document.addEventListener("brandchange", function () { if (window.ApexCharts) { build(); } });
+})();
+</script>
+}
