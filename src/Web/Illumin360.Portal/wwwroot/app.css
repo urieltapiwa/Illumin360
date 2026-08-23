@@ -1,91 +1,32 @@
 /* ============================================================
-   Illumin360 brand override on top of HopeUI (Bootstrap 5).
-   Load order (App.razor): inter.css → core/libs.min.css →
-   hope-ui.min.css → custom.min.css → this file.
-   HopeUI owns the layout/components; this file ONLY recolours the
-   blue primary (#3a57e8) to Illumin360 green and adds a couple of
-   brand touches. No layout rules — HopeUI positions the shell.
-   Note: a few HopeUI form glyphs (checkbox/radio ticks) are
-   hard-coded blue SVGs in the vendor CSS and stay blue.
+   Illumin360 portal — thin layer ON TOP of HopeUI.
+   HopeUI (core/libs.min.css + hope-ui.min.css + custom.min.css)
+   owns ALL layout, the sidebar, the navbar and the components.
+   Do NOT add layout/position/margin rules here — they fight
+   HopeUI's fixed sidebar + content offset and break the shell.
+   This file only adds a couple of small brand helpers used by
+   the custom navbar bits. Colours are authentic HopeUI (blue).
    ============================================================ */
-:root {
-  --brand: #1fb283;
-  --brand-deep: #17916b;
-  --brand-bright: #2fd39a;
 
-  /* Bootstrap/HopeUI primary → green */
-  --bs-primary: #1fb283;
-  --bs-primary-rgb: 31, 178, 131;
-  --bs-link-color: #17916b;
-  --bs-link-color-rgb: 23, 145, 107;
-  --bs-link-hover-color: #12805c;
-  --bs-body-font-family: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-}
-
-/* HopeUI defines its own --primary/--bs-primary tokens; keep them green too. */
-:root, .sidebar, .iq-navbar, body {
-  --primary: #1fb283;
-}
-
-/* Primary buttons (Bootstrap component-level vars) */
-.btn-primary {
-  --bs-btn-bg: #1fb283;
-  --bs-btn-border-color: #1fb283;
-  --bs-btn-hover-bg: #17916b;
-  --bs-btn-hover-border-color: #17916b;
-  --bs-btn-active-bg: #12805c;
-  --bs-btn-active-border-color: #12805c;
-  --bs-btn-disabled-bg: #1fb283;
-  --bs-btn-disabled-border-color: #1fb283;
-}
-.btn-soft-primary { background-color: rgba(31, 178, 131, .12); color: #17916b; border: 1px solid transparent; }
-.btn-soft-primary:hover { background-color: #1fb283; color: #fff; }
-.btn-outline-primary { --bs-btn-color: #17916b; --bs-btn-border-color: #1fb283; --bs-btn-hover-bg: #1fb283; --bs-btn-hover-border-color: #1fb283; }
-
-.text-primary { color: #17916b !important; }
-.bg-primary { background-color: #1fb283 !important; }
-.bg-soft-primary { background-color: rgba(31, 178, 131, .12) !important; }
-.badge.bg-primary { background-color: #1fb283 !important; }
-
-a { color: var(--bs-link-color); }
-a:hover { color: var(--bs-link-hover-color); }
-
-/* HopeUI active sidebar item → green (it defaults to primary/blue). */
-.sidebar .nav-item > .nav-link.active,
-.sidebar .navbar-nav .nav-link.active {
-  background-color: #1fb283;
-  color: #fff;
-}
-.sidebar .nav-item > .nav-link.active .icon,
-.sidebar .nav-item > .nav-link.active svg { color: #fff; }
-
-/* small brand touches */
-.brand-360 { color: #1fb283; }
+/* Small helpers for the top-navbar extras we render ourselves. */
 .avatar-initials {
   display: inline-grid; place-items: center;
   width: 40px; height: 40px; border-radius: 12px;
-  background: rgba(31, 178, 131, .14); color: #17916b; font-weight: 700; font-size: .85rem;
+  background: rgba(58, 87, 232, .12); color: #3a57e8; font-weight: 700; font-size: .85rem;
 }
 .status-live {
   display: inline-flex; align-items: center; gap: 6px;
-  font-size: .72rem; font-weight: 700; color: #17916b;
-  border: 1px solid rgba(31, 178, 131, .35); border-radius: 999px; padding: 3px 10px;
+  font-size: .72rem; font-weight: 700; color: #1aa053;
+  border: 1px solid rgba(26, 160, 83, .35); border-radius: 999px; padding: 3px 10px;
 }
-.status-live .pulse { width: 7px; height: 7px; border-radius: 50%; background: #1fb283; animation: livepulse 1.6s ease-in-out infinite; }
+.status-live .pulse { width: 7px; height: 7px; border-radius: 50%; background: #1aa053; animation: livepulse 1.6s ease-in-out infinite; }
 
 @keyframes livepulse { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
 @media (prefers-reduced-motion: reduce) { .status-live .pulse { animation: none; } }
 
-:focus-visible { outline: 2px solid #1fb283; outline-offset: 2px; }
-
-/* HopeUI's sidebar collapse/offset is JS-driven; we run static SSR without that JS,
-   so pin the desktop shell deterministically (sidebar fixed, content cleared past it).
-   Below lg the sidebar stacks above the content. */
+/* HopeUI's sidebar toggle/offset is JS-managed; running static SSR without that JS,
+   its collapsed-state rule leaves .main-content at margin-left:0 (content hidden under the
+   fixed sidebar). Re-assert HopeUI's own desktop offset (higher specificity, same value). */
 @media (min-width: 992px) {
-  .sidebar.sidebar-default { position: fixed; top: 0; left: 0; height: 100vh; z-index: 100; }
-  .main-content { margin-left: 250px; }
-}
-@media (max-width: 991.98px) {
-  .sidebar.sidebar-default { position: static; width: 100%; height: auto; }
-  .main-content { margin-left: 0; }
+  .sidebar.sidebar-default + .main-content { margin-left: var(--sidebar-width, 16.2rem); }
 }
