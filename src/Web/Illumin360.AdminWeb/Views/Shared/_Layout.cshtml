@@ -15,12 +15,11 @@
     @{ var _uname = (User.Identity?.Name) ?? "Account"; var _uinit = string.Concat(_uname.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(w => char.ToUpperInvariant(w[0]))); }
     @{
         var nav = new[] {
-            ("Overview", "/", true, "M4 21V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v17M9 8h2M9 12h2M9 16h2M16 10h3a1 1 0 0 1 1 1v10"),
-            ("Accounts", "#", false, "M16 11a4 4 0 1 0-4-4 4 4 0 0 0 4 4zM2 21a7 7 0 0 1 14 0M19 21a5 5 0 0 0-6-4.9"),
-            ("Pipeline", "#", false, "M4 6h16M4 12h10M4 18h6"),
-            ("Sourcing & Ranking", "#", false, "M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM21 21l-4.3-4.3"),
-            ("Campaigns & AI", "#", false, "M3 11l18-8-8 18-2-7-8-3z"),
-            ("Talent & CRM", "#", false, "M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"),
+            ("Overview", "#overview", true, "M4 21V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v17M9 8h2M9 12h2M9 16h2M16 10h3a1 1 0 0 1 1 1v10"),
+            ("Growth", "#growth", false, "M3 17l6-6 4 4 8-8M21 7v5h-5"),
+            ("Revenue", "#revenue", false, "M3 6h18v12H3zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"),
+            ("Verifications", "#verifications", false, "M9 11l3 3 8-8M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9"),
+            ("Regions", "#regions", false, "M12 21s-6-5.7-6-10a6 6 0 1 1 12 0c0 4.3-6 10-6 10zM12 11a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"),
         };
     }
     <aside class="sidebar sidebar-default sidebar-white sidebar-base navs-rounded-all">
@@ -78,6 +77,32 @@
     <script src="~/hopeui/js/libs.min.js"></script>
     <script src="~/hopeui/js/external.min.js"></script>
     <script src="~/hopeui/js/hope-ui.js" defer></script>
+    <script>
+      // Scrollspy: highlight the sidebar item for the dashboard section in view, and smooth-scroll on click.
+      (function () {
+        var links = Array.prototype.slice.call(document.querySelectorAll('#sidebar-menu .nav-link[href^="#"]'));
+        if (!links.length) { return; }
+        var byId = {};
+        links.forEach(function (a) { byId[a.getAttribute('href').slice(1)] = a; });
+        var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        links.forEach(function (a) {
+          a.addEventListener('click', function (e) {
+            var el = document.getElementById(a.getAttribute('href').slice(1));
+            if (el) { e.preventDefault(); el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' }); }
+          });
+        });
+        var sections = Object.keys(byId).map(function (id) { return document.getElementById(id); }).filter(Boolean);
+        var spy = new IntersectionObserver(function (entries) {
+          entries.forEach(function (en) {
+            if (en.isIntersecting) {
+              links.forEach(function (l) { l.classList.remove('active'); });
+              if (byId[en.target.id]) { byId[en.target.id].classList.add('active'); }
+            }
+          });
+        }, { rootMargin: '-80px 0px -60% 0px', threshold: 0 });
+        sections.forEach(function (s) { spy.observe(s); });
+      })();
+    </script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>
