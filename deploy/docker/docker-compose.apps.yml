@@ -257,8 +257,8 @@ services:
     restart: unless-stopped
     environment:
       ASPNETCORE_ENVIRONMENT: Production
-      Oidc__Authority: "http://keycloak:8080/realms/illumin360"
-      Oidc__FrontChannelAuthority: "http://localhost:8080/realms/illumin360"
+      Oidc__Authority: "http://keycloak:8080/realms/admin"
+      Oidc__FrontChannelAuthority: "http://localhost:8080/realms/admin"
       Oidc__ClientId: "admin-web"
       Oidc__ClientSecret: "${ADMIN_WEB_CLIENT_SECRET:-CHANGE_ME_admin_dev_secret}"
       Oidc__RequireHttps: "false"
@@ -276,8 +276,8 @@ services:
     restart: unless-stopped
     environment:
       ASPNETCORE_ENVIRONMENT: Production
-      Oidc__Authority: "http://keycloak:8080/realms/illumin360"
-      Oidc__FrontChannelAuthority: "http://localhost:8080/realms/illumin360"
+      Oidc__Authority: "http://keycloak:8080/realms/business"
+      Oidc__FrontChannelAuthority: "http://localhost:8080/realms/business"
       Oidc__ClientId: "business-web"
       Oidc__ClientSecret: "${BUSINESS_WEB_CLIENT_SECRET:-CHANGE_ME_business_dev_secret}"
       Oidc__RequireHttps: "false"
@@ -298,8 +298,8 @@ services:
     restart: unless-stopped
     environment:
       ASPNETCORE_ENVIRONMENT: Production
-      Oidc__Authority: "http://keycloak:8080/realms/illumin360"
-      Oidc__FrontChannelAuthority: "http://localhost:8080/realms/illumin360"
+      Oidc__Authority: "http://keycloak:8080/realms/student"
+      Oidc__FrontChannelAuthority: "http://localhost:8080/realms/student"
       Oidc__ClientId: "student-web"
       Oidc__ClientSecret: "${STUDENT_WEB_CLIENT_SECRET:-CHANGE_ME_student_dev_secret}"
       Oidc__RequireHttps: "false"
@@ -320,8 +320,8 @@ services:
     restart: unless-stopped
     environment:
       ASPNETCORE_ENVIRONMENT: Production
-      Oidc__Authority: "http://keycloak:8080/realms/illumin360"
-      Oidc__FrontChannelAuthority: "http://localhost:8080/realms/illumin360"
+      Oidc__Authority: "http://keycloak:8080/realms/professional"
+      Oidc__FrontChannelAuthority: "http://localhost:8080/realms/professional"
       Oidc__ClientId: "professional-web"
       Oidc__ClientSecret: "${PROFESSIONAL_WEB_CLIENT_SECRET:-CHANGE_ME_professional_dev_secret}"
       Oidc__RequireHttps: "false"
@@ -342,8 +342,8 @@ services:
     restart: unless-stopped
     environment:
       ASPNETCORE_ENVIRONMENT: Production
-      Oidc__Authority: "http://keycloak:8080/realms/illumin360"
-      Oidc__FrontChannelAuthority: "http://localhost:8080/realms/illumin360"
+      Oidc__Authority: "http://keycloak:8080/realms/employer"
+      Oidc__FrontChannelAuthority: "http://localhost:8080/realms/employer"
       Oidc__ClientId: "employer-web"
       Oidc__ClientSecret: "${EMPLOYER_WEB_CLIENT_SECRET:-CHANGE_ME_employer_dev_secret}"
       Oidc__RequireHttps: "false"
@@ -364,8 +364,8 @@ services:
     restart: unless-stopped
     environment:
       ASPNETCORE_ENVIRONMENT: Production
-      Oidc__Authority: "http://keycloak:8080/realms/illumin360"
-      Oidc__FrontChannelAuthority: "http://localhost:8080/realms/illumin360"
+      Oidc__Authority: "http://keycloak:8080/realms/support"
+      Oidc__FrontChannelAuthority: "http://localhost:8080/realms/support"
       Oidc__ClientId: "support-web"
       Oidc__ClientSecret: "${SUPPORT_WEB_CLIENT_SECRET:-CHANGE_ME_support_dev_secret}"
       Oidc__RequireHttps: "false"

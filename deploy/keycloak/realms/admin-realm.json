@@ -1,0 +1,74 @@
+{
+  "enabled": true,
+  "sslRequired": "external",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "accessTokenLifespan": 900,
+  "ssoSessionIdleTimeout": 1800,
+  "ssoSessionMaxLifespan": 2592000,
+  "bruteForceProtected": true,
+  "permanentLockout": false,
+  "failureFactor": 10,
+  "passwordPolicy": "length(12) and upperCase(1) and lowerCase(1) and digits(1) and notUsername()",
+  "realm": "admin",
+  "displayName": "Illumin360 Admin",
+  "loginTheme": "illumin360",
+  "roles": {
+    "realm": [
+      {
+        "name": "admin.read"
+      },
+      {
+        "name": "admin.write"
+      },
+      {
+        "name": "admin.superuser"
+      }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "admin-web",
+      "name": "Illumin360 Admin Portal (MVC)",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "secret": "CHANGE_ME_admin_dev_secret",
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "redirectUris": [
+        "http://localhost:5192/signin-oidc",
+        "http://localhost:5192/signout-callback-oidc"
+      ],
+      "webOrigins": [
+        "http://localhost:5192"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "http://localhost:5192/*"
+      }
+    }
+  ],
+  "users": [
+    {
+      "username": "dev.admin",
+      "enabled": true,
+      "email": "dev.admin@illumin360.local",
+      "emailVerified": true,
+      "firstName": "Dev",
+      "lastName": "Admin",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Password123!",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "admin.superuser"
+      ]
+    }
+  ]
+}
