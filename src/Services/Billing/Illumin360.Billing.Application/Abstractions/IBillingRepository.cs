@@ -42,6 +42,10 @@ public interface IBillingRepository
     /// <param name="cancellationToken">Cancellation token.</param>
     Task<IReadOnlyList<Subscription>> ListDueSubscriptionsAsync(DateTimeOffset now, CancellationToken cancellationToken);
 
+    /// <summary>Lists every subscription (all statuses), for reporting/analytics.</summary>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<IReadOnlyList<Subscription>> ListAllSubscriptionsAsync(CancellationToken cancellationToken);
+
     /// <summary>Stages a new invoice.</summary>
     /// <param name="invoice">The invoice.</param>
     void AddInvoice(Invoice invoice);

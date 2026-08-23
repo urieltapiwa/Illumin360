@@ -63,6 +63,9 @@ public sealed class Ticket : Entity<TicketId>
     /// <summary>When the ticket was created (UTC).</summary>
     public DateTimeOffset CreatedAt { get; private set; }
 
+    /// <summary>When the ticket was resolved (UTC); null until resolved.</summary>
+    public DateTimeOffset? ResolvedAt { get; private set; }
+
     /// <summary>Rehydrates a ticket from seed/storage with a fixed identity (raises no event).</summary>
     /// <param name="id">Identity.</param>
     /// <param name="subject">Subject.</param>
@@ -78,6 +81,26 @@ public sealed class Ticket : Entity<TicketId>
             Requester = requester,
             Status = TicketStatus.Open,
             CreatedAt = createdAt,
+        };
+
+    /// <summary>Rehydrates an already-resolved ticket (for seed/backfill; raises no event).</summary>
+    /// <param name="id">Identity.</param>
+    /// <param name="subject">Subject.</param>
+    /// <param name="priority">Priority band.</param>
+    /// <param name="requester">Requester.</param>
+    /// <param name="createdAt">Creation timestamp (UTC).</param>
+    /// <param name="resolvedAt">Resolution timestamp (UTC).</param>
+    /// <returns>The hydrated, resolved ticket.</returns>
+    public static Ticket SeedResolved(Guid id, string subject, string priority, string requester, DateTimeOffset createdAt, DateTimeOffset resolvedAt)
+        => new(new TicketId(id))
+        {
+            Subject = subject,
+            Priority = priority,
+            Requester = requester,
+            Status = TicketStatus.Resolved,
+            Assignee = "support.agent",
+            CreatedAt = createdAt,
+            ResolvedAt = resolvedAt,
         };
 
     /// <summary>Assigns the ticket to an agent.</summary>
@@ -107,6 +130,7 @@ public sealed class Ticket : Entity<TicketId>
         }
 
         Status = TicketStatus.Resolved;
+        ResolvedAt = DateTimeOffset.UtcNow;
         Assignee ??= string.IsNullOrWhiteSpace(resolvedBy) ? "admin" : resolvedBy.Trim();
         Raise(new TicketTriaged(Id, Status.ToString(), Assignee, DateTimeOffset.UtcNow));
         return this;

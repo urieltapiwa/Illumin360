@@ -14,7 +14,13 @@ public sealed record GrowthPoint(string Label, int Talent, int Companies);
 /// <summary>A point in the daily ticket-volume series (one day).</summary>
 /// <param name="Label">Short day label (e.g. "Aug 9").</param>
 /// <param name="Created">Tickets created that day.</param>
-public sealed record VolumePoint(string Label, int Created);
+/// <param name="Resolved">Tickets resolved that day.</param>
+public sealed record VolumePoint(string Label, int Created, int Resolved);
+
+/// <summary>A talent/company count for one region (city).</summary>
+/// <param name="Region">Region / city name.</param>
+/// <param name="Count">Accounts based there.</param>
+public sealed record RegionPoint(string Region, int Count);
 
 /// <summary>Builds real time-series from the admin data (account created-dates, ticket created-dates).</summary>
 public static class DashboardSeries
@@ -51,11 +57,26 @@ public static class DashboardSeries
         for (var i = 29; i >= 0; i--)
         {
             var day = today.AddDays(-i);
-            var count = tickets.Count(t => t.CreatedAt.UtcDateTime.Date == day);
-            points.Add(new VolumePoint(day.ToString("MMM d", CultureInfo.InvariantCulture), count));
+            var created = tickets.Count(t => t.CreatedAt.UtcDateTime.Date == day);
+            var resolved = tickets.Count(t => t.ResolvedAt.HasValue && t.ResolvedAt.Value.UtcDateTime.Date == day);
+            points.Add(new VolumePoint(day.ToString("MMM d", CultureInfo.InvariantCulture), created, resolved));
         }
 
         return points;
+    }
+
+    /// <summary>Account counts grouped by region (city), busiest first.</summary>
+    /// <param name="accounts">All platform accounts.</param>
+    /// <returns>Region points, highest count first.</returns>
+    public static IReadOnlyList<RegionPoint> BuildRegions(IReadOnlyList<AdminAccount> accounts)
+    {
+        ArgumentNullException.ThrowIfNull(accounts);
+        return [.. accounts
+            .Where(a => !string.IsNullOrWhiteSpace(a.Region))
+            .GroupBy(a => a.Region)
+            .Select(g => new RegionPoint(g.Key, g.Count()))
+            .OrderByDescending(r => r.Count)
+            .ThenBy(r => r.Region, StringComparer.Ordinal)];
     }
 }
 
@@ -69,6 +90,7 @@ public static class DashboardSeries
 /// <param name="OpenTickets">Support tickets not yet resolved.</param>
 /// <param name="AccountMix">Company vs talent counts, for the donut.</param>
 /// <param name="Growth">Cumulative talent/company growth over the last six months.</param>
+/// <param name="Regions">Account counts by region (city).</param>
 public sealed record AdminSummaryDto(
     int TotalAccounts,
     int ActiveAccounts,
@@ -78,7 +100,8 @@ public sealed record AdminSummaryDto(
     int PendingVerifications,
     int OpenTickets,
     IReadOnlyList<int> AccountMix,
-    IReadOnlyList<GrowthPoint> Growth);
+    IReadOnlyList<GrowthPoint> Growth,
+    IReadOnlyList<RegionPoint> Regions);
 
 /// <summary>Talent-marketplace insights for the Business portal dashboard.</summary>
 /// <param name="TotalTalent">Talent accounts on the platform.</param>
@@ -162,7 +185,8 @@ public sealed class GetAdminSummaryQueryHandler(
             pending,
             openTickets,
             [companies, talent],
-            DashboardSeries.BuildGrowth(allAccounts)));
+            DashboardSeries.BuildGrowth(allAccounts),
+            DashboardSeries.BuildRegions(allAccounts)));
     }
 }
 

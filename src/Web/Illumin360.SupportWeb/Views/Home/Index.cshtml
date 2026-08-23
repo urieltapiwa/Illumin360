@@ -8,6 +8,7 @@
     var hasVolume = volume.Length > 0;
     var vLabels = hasVolume ? "[" + string.Join(",", volume.Select(v => "\"" + v.Label + "\"")) + "]" : "[\"1\",\"2\",\"3\",\"4\",\"5\",\"6\",\"7\",\"8\",\"9\",\"10\",\"11\",\"12\",\"13\",\"14\"]";
     var vCreated = hasVolume ? "[" + string.Join(",", volume.Select(v => v.Created)) + "]" : "[41,38,52,47,60,55,49,58,44,51,57,50,62,48]";
+    var vResolved = hasVolume ? "[" + string.Join(",", volume.Select(v => v.Resolved)) + "]" : "[38,40,49,45,55,52,47,54,46,49,53,51,58,50]";
     var kpis = new (string, string, string, string)[] {
         ("Open Tickets", (Model?.Open ?? 4).ToString(), "awaiting triage", "M3 8h18v12H3zM8 8V6a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 13h18"),
         ("Assigned", (Model?.Assigned ?? 0).ToString(), "with an agent", "M16 11a4 4 0 1 0-4-4 4 4 0 0 0 4 4zM2 21a7 7 0 0 1 14 0"),
@@ -19,7 +20,7 @@
 }
 <div class="d-flex align-items-center gap-2 mb-2">
     <span class="badge @(live ? "bg-soft-primary text-primary" : "bg-soft-warning text-warning")">@(live ? "Live data" : "Demo data")</span>
-    <span class="text-muted small">Queue counts, priority mix &amp; the 30-day created-volume trend are live from the ticket board.</span>
+    <span class="text-muted small">Queue counts, priority mix &amp; the 30-day created/resolved trend are live from the ticket board.</span>
 </div>
 <div class="row row-cols-2 row-cols-md-3 row-cols-xl-6 g-3 mb-3">
     @foreach (var (label, value, sub, icon) in kpis)
@@ -36,7 +37,7 @@
 </div>
 <div class="row g-3 mb-4">
     <div class="col-lg-8"><div class="card mb-0 h-100">
-        <div class="card-header"><h5 class="mb-0 fw-bold">Ticket volume</h5><small class="text-muted">Tickets created · last 30 days</small></div>
+        <div class="card-header"><h5 class="mb-0 fw-bold">Ticket volume</h5><small class="text-muted">Created vs resolved · last 30 days</small></div>
         <div class="card-body"><div id="areaChart"></div></div>
     </div></div>
     <div class="col-lg-4"><div class="card mb-0 h-100">
@@ -54,11 +55,11 @@
     charts.forEach(function (c) { try { c.destroy(); } catch (e) {} }); charts = [];
     var p = primary();
     var a = new ApexCharts(document.querySelector("#areaChart"), {
-      chart: { type: "area", height: 300, toolbar: { show: false } }, colors: [p],
-      series: [{ name: "Created", data: @Html.Raw(vCreated) }],
+      chart: { type: "area", height: 300, toolbar: { show: false } }, colors: [p, "#e8b14c"],
+      series: [{ name: "Created", data: @Html.Raw(vCreated) }, { name: "Resolved", data: @Html.Raw(vResolved) }],
       xaxis: { categories: @Html.Raw(vLabels) }, dataLabels: { enabled: false },
       stroke: { curve: "smooth", width: 2.5 }, fill: { type: "gradient", gradient: { opacityFrom: .45, opacityTo: 0 } },
-      grid: { borderColor: "#eef0f7" } });
+      legend: { position: "top", horizontalAlign: "right" }, grid: { borderColor: "#eef0f7" } });
     a.render(); charts.push(a);
     var d = new ApexCharts(document.querySelector("#donutChart"), {
       chart: { type: "donut", height: 260 }, colors: [p, "#e8b14c", "#5ab7ff"],

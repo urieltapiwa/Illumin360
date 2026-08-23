@@ -57,6 +57,7 @@ await using (var scope = app.Services.CreateAsyncScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<BillingDbContext>();
     await db.Database.MigrateAsync();
+    await BillingSeeder.SeedAsync(db, CancellationToken.None);
 }
 
 app.UseExceptionHandler();
@@ -149,6 +150,17 @@ v1.MapGet("/subscriptions/{customerId:guid}/invoices", async (
     .WithName("ListInvoices")
     .WithSummary("List a customer's invoices.")
     .Produces<IReadOnlyList<InvoiceDto>>(StatusCodes.Status200OK);
+
+v1.MapGet("/mrr-trend", async (
+        IQueryHandler<GetMrrTrendQuery, MrrTrendDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new GetMrrTrendQuery(), ct);
+        return result.ToHttpResult();
+    })
+    .WithName("GetMrrTrend")
+    .WithSummary("Platform monthly-recurring-revenue over the last six months (for the Admin dashboard).")
+    .Produces<MrrTrendDto>(StatusCodes.Status200OK);
 
 v1.MapGet("/entitlements/{customerId:guid}", async (
         Guid customerId,

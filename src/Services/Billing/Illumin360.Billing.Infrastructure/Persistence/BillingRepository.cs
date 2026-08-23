@@ -47,6 +47,10 @@ public sealed class BillingRepository(BillingDbContext db) : IBillingRepository
             .ToListAsync(cancellationToken).ConfigureAwait(false);
 
     /// <inheritdoc />
+    public async Task<IReadOnlyList<Subscription>> ListAllSubscriptionsAsync(CancellationToken cancellationToken)
+        => await _db.Subscriptions.AsNoTracking().ToListAsync(cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
     public void AddInvoice(Invoice invoice) => _db.Invoices.Add(invoice);
 
     /// <inheritdoc />
