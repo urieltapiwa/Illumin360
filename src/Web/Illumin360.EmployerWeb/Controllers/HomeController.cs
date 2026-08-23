@@ -1,14 +1,18 @@
 using System.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using Illumin360.EmployerWeb.Models;
+using Illumin360.EmployerWeb.Services;
 
 namespace Illumin360.EmployerWeb.Controllers;
 
-public class HomeController : Controller
+public class HomeController(EmployersApiClient employers) : Controller
 {
-    public IActionResult Index()
+    private readonly EmployersApiClient _employers = employers;
+
+    public async Task<IActionResult> Index(CancellationToken ct)
     {
-        return View();
+        var profile = await _employers.GetProfileAsync(ct);
+        return View(profile);
     }
 
     [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]

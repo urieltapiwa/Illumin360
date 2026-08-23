@@ -1,14 +1,18 @@
 using System.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using Illumin360.SupportWeb.Models;
+using Illumin360.SupportWeb.Services;
 
 namespace Illumin360.SupportWeb.Controllers;
 
-public class HomeController : Controller
+public class HomeController(SupportApiClient support) : Controller
 {
-    public IActionResult Index()
+    private readonly SupportApiClient _support = support;
+
+    public async Task<IActionResult> Index(CancellationToken ct)
     {
-        return View();
+        var summary = await _support.GetSummaryAsync(ct);
+        return View(summary);
     }
 
     [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]

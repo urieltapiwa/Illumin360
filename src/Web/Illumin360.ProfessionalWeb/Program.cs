@@ -11,6 +11,10 @@ builder.Services.AddControllersWithViews();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<Illumin360.ProfessionalWeb.Services.KeycloakRegistrar>();
+builder.Services.AddTransient<Illumin360.ProfessionalWeb.Services.TokenRelayHandler>();
+builder.Services.AddHttpClient<Illumin360.ProfessionalWeb.Services.ProfessionalsApiClient>(client =>
+        client.BaseAddress = new Uri(builder.Configuration["Gateway:BaseAddress"] ?? "http://localhost:8088"))
+    .AddHttpMessageHandler<Illumin360.ProfessionalWeb.Services.TokenRelayHandler>();
 
 // --- Keycloak OIDC: server-side cookie session + authorization-code + PKCE ---
 // Same pattern as the Business BFF: tokens live server-side; the browser only gets an

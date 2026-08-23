@@ -1,14 +1,21 @@
+@model Illumin360.BusinessWeb.Services.TalentInsights?
 @{
     ViewData["Title"] = "Talent Insights";
+    var live = Model is not null;
+    var mix = (Model?.Mix is { Length: 2 }) ? Model!.Mix! : new[] { 2, 4 };
+    var mixJson = "[" + string.Join(",", mix) + "]";
     var kpis = new[] {
-        ("Total Talent", "17,360", "+27% YoY", "M16 11a4 4 0 1 0-4-4 4 4 0 0 0 4 4zM2 21a7 7 0 0 1 14 0"),
-        ("Active Companies", "1,879", "+26% YoY", "M4 21V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v17M9 8h2M9 12h2"),
-        ("Hires Placed", "25,514", "+36% YoY", "M9 11l3 3 8-8M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9"),
-        ("Fill Rate", "80.3%", "median 18 days", "M22 12h-4l-3 9L9 3l-3 9H2"),
-        ("ARR", "N$13M", "N$1.1M MRR", "M3 6h18v12H3zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"),
+        ("Total Talent", (Model?.TotalTalent ?? 2).ToString(), "on the platform", "M16 11a4 4 0 1 0-4-4 4 4 0 0 0 4 4zM2 21a7 7 0 0 1 14 0"),
+        ("Companies", (Model?.TotalCompanies ?? 4).ToString(), $"{Model?.ActiveCompanies ?? 4} active", "M4 21V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v17M9 8h2M9 12h2"),
+        ("Verified", (Model?.VerifiedEntities ?? 1).ToString(), "entities cleared", "M9 11l3 3 8-8M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9"),
+        ("Pending Review", (Model?.PendingReview ?? 5).ToString(), "in the queue", "M22 12h-4l-3 9L9 3l-3 9H2"),
     };
 }
-<div class="row row-cols-2 row-cols-md-3 row-cols-xl-5 g-3 mb-3">
+<div class="d-flex align-items-center gap-2 mb-2">
+    <span class="badge @(live ? "bg-soft-primary text-primary" : "bg-soft-warning text-warning")">@(live ? "Live data" : "Demo data")</span>
+    <span class="text-muted small">Talent, company &amp; verification counts are live; the 10-year growth trend is illustrative.</span>
+</div>
+<div class="row row-cols-2 row-cols-md-3 row-cols-xl-4 g-3 mb-3">
     @foreach (var (label, value, sub, icon) in kpis)
     {
         <div class="col">
@@ -48,8 +55,8 @@
       legend: { position: "top", horizontalAlign: "right" }, grid: { borderColor: "#eef0f7" } });
     a.render(); charts.push(a);
     var d = new ApexCharts(document.querySelector("#mixChart"), {
-      chart: { type: "donut", height: 260 }, colors: [p, "#e8b14c", "#5ab7ff"],
-      series: [11800, 5560, 1879], labels: ["Professionals", "Students", "Companies"],
+      chart: { type: "donut", height: 260 }, colors: [p, "#e8b14c"],
+      series: @Html.Raw(mixJson), labels: ["Talent", "Companies"],
       legend: { position: "bottom" }, dataLabels: { enabled: false }, plotOptions: { pie: { donut: { size: "68%" } } } });
     d.render(); charts.push(d);
   }

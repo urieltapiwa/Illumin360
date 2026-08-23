@@ -1,14 +1,18 @@
 using System.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using Illumin360.BusinessWeb.Models;
+using Illumin360.BusinessWeb.Services;
 
 namespace Illumin360.BusinessWeb.Controllers;
 
-public class HomeController : Controller
+public class HomeController(InsightsApiClient insights) : Controller
 {
-    public IActionResult Index()
+    private readonly InsightsApiClient _insights = insights;
+
+    public async Task<IActionResult> Index(CancellationToken ct)
     {
-        return View();
+        var data = await _insights.GetInsightsAsync(ct);
+        return View(data);
     }
 
     [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
