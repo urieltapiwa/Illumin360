@@ -4,7 +4,9 @@ using Microsoft.AspNetCore.Authentication;
 namespace Illumin360.BusinessWeb.Services;
 
 // Live talent-marketplace insights from GET /api/admin/talent-insights (Admin service).
-public sealed record TalentInsights(int TotalTalent, int TotalCompanies, int ActiveCompanies, int VerifiedEntities, int PendingReview, int[]? Mix);
+public sealed record GrowthPoint(string? Label, int Talent, int Companies);
+
+public sealed record TalentInsights(int TotalTalent, int TotalCompanies, int ActiveCompanies, int VerifiedEntities, int PendingReview, int[]? Mix, GrowthPoint[]? Growth);
 
 // Relays the signed-in user's access token to the gateway.
 public sealed class TokenRelayHandler(IHttpContextAccessor accessor) : DelegatingHandler

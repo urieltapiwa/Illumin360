@@ -4,7 +4,9 @@ using Microsoft.AspNetCore.Authentication;
 namespace Illumin360.AdminWeb.Services;
 
 // Live platform-operations summary from GET /api/admin/summary (Admin service).
-public sealed record AdminSummary(int TotalAccounts, int ActiveAccounts, int SuspendedAccounts, int Companies, int Talent, int PendingVerifications, int OpenTickets, int[]? AccountMix);
+public sealed record GrowthPoint(string? Label, int Talent, int Companies);
+
+public sealed record AdminSummary(int TotalAccounts, int ActiveAccounts, int SuspendedAccounts, int Companies, int Talent, int PendingVerifications, int OpenTickets, int[]? AccountMix, GrowthPoint[]? Growth);
 
 // Relays the signed-in admin's access token to the gateway.
 public sealed class TokenRelayHandler(IHttpContextAccessor accessor) : DelegatingHandler
