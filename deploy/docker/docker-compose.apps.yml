@@ -242,3 +242,27 @@ services:
     ports: ["5180:8080"]
     depends_on: [web, gateway]
     networks: [illumin360]
+
+  # Server-rendered Blazor portal (ADR-0009) — the SPA's replacement, migrated portal-by-portal.
+  # It subsumes the BFF role for its own pages: server-side OIDC (code+PKCE) holds tokens in the
+  # encrypted cookie and a token-relay HttpClient calls the gateway in-network. Same Keycloak
+  # front/back-channel alignment as bff-business (Authority=keycloak:8080 back-channel; browser
+  # redirects rewritten to localhost:8080). Real login needs the `illumin360-portal` realm client
+  # (redirect URI http://localhost:5190/signin-oidc); anonymous reads work without it.
+  portal:
+    build:
+      context: ../..
+      dockerfile: src/Web/Illumin360.Portal/Dockerfile
+    container_name: illumin360-portal
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      Gateway__BaseAddress: "http://gateway:8080"
+      Oidc__Authority: "http://keycloak:8080/realms/illumin360"
+      Oidc__FrontChannelAuthority: "http://localhost:8080/realms/illumin360"
+      Oidc__ClientId: "illumin360-portal"
+      Oidc__ClientSecret: "${PORTAL_CLIENT_SECRET:-portal-dev-secret-local-only}"
+      Oidc__RequireHttps: "false"
+    ports: ["5190:8080"]
+    depends_on: [gateway]
+    networks: [illumin360]

@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <RootNamespace>Illumin360.Portal</RootNamespace>
+    <UserSecretsId>illumin360-portal</UserSecretsId>
+    <BlazorDisableThrowNavigationException>true</BlazorDisableThrowNavigationException>
+    <!-- Presentation (Blazor) project: XML-documentation and file-header rules suit library code,
+         not UI components. Security/quality analyzers (CA*, nullable, code style) stay enforced. -->
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);SA0001;SA1600;SA1601;SA1633</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" />
+  </ItemGroup>
+
+</Project>

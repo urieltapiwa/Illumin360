@@ -1,0 +1,127 @@
+@page "/employer/team"
+@inject EmployersApiClient Api
+
+<PageTitle>Team &amp; roles · Illumin360</PageTitle>
+
+<div class="mb-3">
+    <h2 class="h4 fw-bold mb-1">Team &amp; roles</h2>
+    <p class="text-muted small mb-0">Owners manage the team; recruiters manage hiring; viewers read only. Inviting requires an admin-write role.</p>
+</div>
+
+@if (_error is not null)
+{
+    <div class="alert alert-danger" role="alert">Couldn't load the team: @_error</div>
+}
+else
+{
+    <div class="card">
+        <div class="card-header">
+            <h3 class="h6 fw-bold mb-0">Members</h3>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table align-middle mb-0">
+                    <thead>
+                        <tr><th>Member</th><th>Email</th><th>Role</th><th>Invited</th></tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var m in _team)
+                        {
+                            <tr>
+                                <td class="fw-semibold">@m.DisplayName</td>
+                                <td class="text-muted">@m.Email</td>
+                                <td><span class="badge bg-soft-primary text-primary">@m.Role</span></td>
+                                <td class="text-muted">@m.InvitedAt.ToString("yyyy-MM-dd")</td>
+                            </tr>
+                        }
+                        @if (_team.Count == 0)
+                        {
+                            <tr><td colspan="4" class="text-muted">No team members yet.</td></tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h3 class="h6 fw-bold mb-0">Invite a member</h3>
+        </div>
+        <div class="card-body">
+            <EditForm Model="Input" FormName="invite" OnValidSubmit="HandleInvite" method="post">
+                <DataAnnotationsValidator />
+                <div class="row g-3 align-items-end">
+                    <div class="col-sm-4">
+                        <label for="inv-name" class="form-label">Name</label>
+                        <InputText id="inv-name" @bind-Value="Input.DisplayName" class="form-control" autocomplete="name" />
+                    </div>
+                    <div class="col-sm-4">
+                        <label for="inv-email" class="form-label">Email</label>
+                        <InputText id="inv-email" @bind-Value="Input.Email" type="email" class="form-control" autocomplete="email" />
+                    </div>
+                    <div class="col-sm-2">
+                        <label for="inv-role" class="form-label">Role</label>
+                        <InputSelect id="inv-role" @bind-Value="Input.Role" class="form-select">
+                            <option value="recruiter">recruiter</option>
+                            <option value="viewer">viewer</option>
+                            <option value="owner">owner</option>
+                        </InputSelect>
+                    </div>
+                    <div class="col-sm-2">
+                        <button class="btn btn-primary w-100" type="submit">Invite</button>
+                    </div>
+                </div>
+                <ValidationSummary class="small text-danger mt-2" />
+            </EditForm>
+
+            <div aria-live="polite" role="status">
+                @if (_result is not null)
+                {
+                    <div class="alert @(_result.Ok ? "alert-success" : "alert-warning") mt-3 mb-0" role="alert">
+                        @(_result.Ok
+                            ? $"Invited {_result.Member!.DisplayName} ({_result.Member.Role}) — persisted to the Employers database."
+                            : _result.Message)
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private IReadOnlyList<TeamMemberDto> _team = [];
+    private string? _error;
+    private InviteResult? _result;
+
+    [SupplyParameterFromForm]
+    private InviteModel Input { get; set; } = default!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Input ??= new();
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        try { _team = await Api.GetTeamAsync(); }
+        catch (Exception ex) { _error = ex.Message; }
+    }
+
+    private async Task HandleInvite()
+    {
+        _result = await Api.InviteAsync(new InviteTeamMember(Input.Email, Input.DisplayName, Input.Role));
+        if (_result.Ok) Input = new();
+        await LoadAsync();
+    }
+
+    public sealed class InviteModel
+    {
+        [System.ComponentModel.DataAnnotations.Required, System.ComponentModel.DataAnnotations.EmailAddress]
+        public string Email { get; set; } = "";
+        [System.ComponentModel.DataAnnotations.Required]
+        public string DisplayName { get; set; } = "";
+        public string Role { get; set; } = "recruiter";
+    }
+}

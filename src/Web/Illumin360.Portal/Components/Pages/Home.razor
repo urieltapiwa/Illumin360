@@ -1,0 +1,7 @@
+@page "/"
+@inject NavigationManager Nav
+
+@code {
+    // Pilot lands on the Employer portal.
+    protected override void OnInitialized() => Nav.NavigateTo("/employer");
+}

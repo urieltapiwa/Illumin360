@@ -1,0 +1,57 @@
+@page "/employer"
+@inject EmployersApiClient Api
+
+<PageTitle>Company profile · Illumin360</PageTitle>
+
+<div class="mb-3">
+    <h2 class="h4 fw-bold mb-1">Company profile</h2>
+    <p class="text-muted small mb-0">Server-rendered from the live Employers API — no client bundle, no tokens in the browser.</p>
+</div>
+
+@if (_error is not null)
+{
+    <div class="alert alert-danger" role="alert">Couldn't load the profile: @_error</div>
+}
+else if (_profile is null)
+{
+    <div class="card"><div class="card-body text-muted">Loading…</div></div>
+}
+else
+{
+    <div class="card">
+        <div class="card-body d-flex align-items-center gap-3">
+            <span class="avatar-initials" style="width:56px;height:56px;font-size:1.15rem;">@Initials(_profile.CompanyName)</span>
+            <div>
+                <h3 class="h5 fw-bold mb-1">@_profile.CompanyName</h3>
+                <div class="d-flex align-items-center gap-2 flex-wrap small text-muted">
+                    <span class="badge bg-soft-primary text-primary">@_profile.Industry</span>
+                    <span>@_profile.City</span>
+                    @if (!string.IsNullOrWhiteSpace(_profile.Website))
+                    {
+                        <a href="@_profile.Website" target="_blank" rel="noopener">@_profile.Website</a>
+                    }
+                </div>
+            </div>
+        </div>
+        @if (!string.IsNullOrWhiteSpace(_profile.About))
+        {
+            <div class="card-body pt-0"><p class="text-muted mb-0">@_profile.About</p></div>
+        }
+    </div>
+
+    <a href="/employer/team" class="btn btn-soft-primary btn-sm">Manage team &amp; roles →</a>
+}
+
+@code {
+    private EmployerDto? _profile;
+    private string? _error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try { _profile = await Api.GetMyProfileAsync(); }
+        catch (Exception ex) { _error = ex.Message; }
+    }
+
+    private static string Initials(string name) =>
+        string.Concat(name.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(w => w[0])).ToUpperInvariant();
+}

@@ -1,0 +1,99 @@
+/* ============================================================
+   Illumin360 brand override on top of HopeUI (Bootstrap 5).
+   Load order (App.razor): inter.css → hope-ui.min.css → this file.
+   HopeUI's primary is #3a57e8 (blue); we keep Illumin360's green.
+   Note: a few HopeUI form-control glyphs (checkbox/radio ticks) are
+   hard-coded blue SVGs in the vendor CSS and are recoloured below
+   where practical; the rest inherit the tokens.
+   ============================================================ */
+:root {
+  --brand: #1fb283;
+  --brand-deep: #17916b;
+  --brand-bright: #2fd39a;
+  --brand-rgb: 31, 178, 131;
+
+  /* Bootstrap/HopeUI primary → green */
+  --bs-primary: #1fb283;
+  --bs-primary-rgb: 31, 178, 131;
+  --bs-link-color: #17916b;
+  --bs-link-hover-color: #12805c;
+  --bs-body-font-family: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+/* Primary buttons (Bootstrap component-level vars) */
+.btn-primary {
+  --bs-btn-bg: #1fb283;
+  --bs-btn-border-color: #1fb283;
+  --bs-btn-hover-bg: #17916b;
+  --bs-btn-hover-border-color: #17916b;
+  --bs-btn-active-bg: #12805c;
+  --bs-btn-active-border-color: #12805c;
+  --bs-btn-disabled-bg: #1fb283;
+  --bs-btn-disabled-border-color: #1fb283;
+}
+.btn-soft-primary, .btn-outline-primary {
+  --bs-btn-color: #17916b;
+  --bs-btn-border-color: #1fb283;
+  --bs-btn-hover-bg: #1fb283;
+  --bs-btn-hover-border-color: #1fb283;
+}
+
+/* Text / background / border utilities that read the primary hue */
+.text-primary { color: #17916b !important; }
+.bg-soft-primary { background-color: rgba(31, 178, 131, .12) !important; }
+.badge.bg-primary { background-color: #1fb283 !important; }
+
+/* Links */
+a { color: var(--bs-link-color); }
+a:hover { color: var(--bs-link-hover-color); }
+
+/* Sidebar active item + brand mark → green */
+.sidebar .nav-item .nav-link.active,
+.sidebar .navbar-nav .nav-link.active {
+  background-color: #1fb283;
+  color: #fff;
+  box-shadow: 0 6px 14px -6px rgba(31, 178, 131, .6);
+}
+.sidebar .nav-item .nav-link.active .icon,
+.sidebar .nav-item .nav-link.active svg { color: #fff; }
+.sidebar .nav-link:hover { color: #17916b; }
+
+/* small brand touches */
+.logo-title { font-weight: 700; letter-spacing: -.3px; }
+.brand-360 { color: #1fb283; }
+.avatar-initials {
+  display: inline-grid; place-items: center;
+  width: 44px; height: 44px; border-radius: 12px;
+  background: rgba(31, 178, 131, .14); color: #17916b; font-weight: 700;
+}
+.status-live {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: .72rem; font-weight: 700; color: #17916b;
+  border: 1px solid rgba(31, 178, 131, .35); border-radius: 999px; padding: 2px 9px;
+}
+.status-live .pulse { width: 7px; height: 7px; border-radius: 50%; background: #1fb283; animation: livepulse 1.6s ease-in-out infinite; }
+
+@keyframes livepulse { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+@media (prefers-reduced-motion: reduce) { .status-live .pulse { animation: none; } }
+
+:focus-visible { outline: 2px solid #1fb283; outline-offset: 2px; }
+
+/* Guaranteed shell layout (independent of HopeUI's JS-driven sidebar toggle) */
+.app-shell { display: flex; min-height: 100vh; align-items: stretch; }
+.app-shell > .sidebar {
+  width: 260px; flex: 0 0 260px; position: sticky; top: 0; height: 100vh;
+  overflow-y: auto; border-right: 1px solid var(--bs-border-color, #eaeaf1);
+  background: var(--bs-body-bg, #fff);
+}
+.app-shell > .main-content { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
+.sidebar-header { padding: 20px 18px; }
+.sidebar .navbar-nav { gap: 4px; }
+.sidebar .nav-link { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-radius: 12px; color: var(--bs-body-color); font-weight: 500; }
+.sidebar .nav-link svg { width: 18px; height: 18px; flex: none; }
+.iq-navbar { border-bottom: 1px solid var(--bs-border-color, #eaeaf1); background: var(--bs-body-bg, #fff); padding: 0; }
+.iq-navbar .navbar-inner { display: flex; align-items: center; width: 100%; padding: 14px 24px; }
+.content-inner { padding: 24px; }
+@media (max-width: 720px) {
+  .app-shell { flex-direction: column; }
+  .app-shell > .sidebar { width: 100%; flex-basis: auto; height: auto; position: static; }
+}
