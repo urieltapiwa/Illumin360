@@ -1,0 +1,60 @@
+@{
+    ViewData["Title"] = "Company profile";
+    var kpis = new (string, string, string, string)[] {
+        ("Open Roles", "5", "2 featured", "M3 8h18v12H3zM8 8V6a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 13h18"),
+        ("Candidates", "128", "ranked", "M16 11a4 4 0 1 0-4-4 4 4 0 0 0 4 4zM2 21a7 7 0 0 1 14 0"),
+        ("Team Members", "4", "1 owner", "M16 11a4 4 0 1 0-4-4 4 4 0 0 0 4 4zM2 21a7 7 0 0 1 14 0"),
+        ("Time to Fill", "18d", "median", "M9 11l3 3 8-8M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9"),
+    };
+}
+<div class="row row-cols-2 row-cols-md-3 row-cols-xl-4 g-3 mb-3">
+    @foreach (var (label, value, sub, icon) in kpis)
+    {
+        <div class="col">
+            <div class="card h-100 mb-0"><div class="card-body">
+                <div class="d-flex align-items-start justify-content-between">
+                    <div><p class="mb-1 text-muted small">@label</p><h4 class="mb-0 fw-bold">@value</h4><span class="text-muted" style="font-size:.72rem;">@sub</span></div>
+                    <div class="rounded p-2 bg-soft-primary text-primary d-inline-flex"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="@icon" /></svg></div>
+                </div>
+            </div></div>
+        </div>
+    }
+</div>
+<div class="row g-3 mb-4">
+    <div class="col-lg-8"><div class="card mb-0 h-100">
+        <div class="card-header"><h5 class="mb-0 fw-bold">Applications received</h5><small class="text-muted">Last 6 months</small></div>
+        <div class="card-body"><div id="areaChart"></div></div>
+    </div></div>
+    <div class="col-lg-4"><div class="card mb-0 h-100">
+        <div class="card-header"><h5 class="mb-0 fw-bold">Pipeline</h5></div>
+        <div class="card-body d-flex align-items-center justify-content-center"><div id="donutChart"></div></div>
+    </div></div>
+</div>
+
+@section Scripts {
+<script>
+(function () {
+  function primary() { return (window.brandPrimary ? window.brandPrimary() : "#3a57e8"); }
+  var charts = [];
+  function build() {
+    charts.forEach(function (c) { try { c.destroy(); } catch (e) {} }); charts = [];
+    var p = primary();
+    var a = new ApexCharts(document.querySelector("#areaChart"), {
+      chart: { type: "area", height: 300, toolbar: { show: false } }, colors: [p],
+      series: [{ name: "Applications", data: [22,31,28,44,52,61] }],
+      xaxis: { categories: ["Mar","Apr","May","Jun","Jul","Aug"] }, dataLabels: { enabled: false },
+      stroke: { curve: "smooth", width: 2.5 }, fill: { type: "gradient", gradient: { opacityFrom: .45, opacityTo: 0 } },
+      grid: { borderColor: "#eef0f7" } });
+    a.render(); charts.push(a);
+    var d = new ApexCharts(document.querySelector("#donutChart"), {
+      chart: { type: "donut", height: 260 }, colors: [p, "#e8b14c", "#5ab7ff"],
+      series: [128,42,17], labels: ["Applied","Shortlisted","Hired"],
+      legend: { position: "bottom" }, dataLabels: { enabled: false }, plotOptions: { pie: { donut: { size: "68%" } } } });
+    d.render(); charts.push(d);
+  }
+  function start() { if (window.ApexCharts) { build(); } else { setTimeout(start, 60); } }
+  start();
+  document.addEventListener("brandchange", function () { if (window.ApexCharts) { build(); } });
+})();
+</script>
+}

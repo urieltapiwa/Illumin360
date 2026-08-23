@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] · Illumin360</title>
+    <link rel="stylesheet" href="~/hopeui/fonts/inter.css" />
+    <link rel="stylesheet" href="~/hopeui/css/core/libs.min.css" />
+    <link rel="stylesheet" href="~/hopeui/css/hope-ui.min.css" />
+    <link rel="stylesheet" href="~/hopeui/css/custom.min.css" />
+    <link rel="stylesheet" href="~/hopeui/brand.css" />
+    <script src="~/hopeui/js/theme.js"></script>
+    <style>
+        /* Top-nav (user-facing) layout: no sidebar, full-width content. */
+        .main-content { margin-left: 0 !important; }
+        .iq-topnav { background: #fff; border-bottom: 1px solid var(--bs-border-color, #eaeaf1); }
+        .iq-topnav .nav-link { color: var(--bs-body-color); font-weight: 500; padding: .5rem .9rem; border-radius: 10px; }
+        .iq-topnav .nav-link:hover { color: var(--bs-primary); }
+        .iq-topnav .nav-link.active { color: var(--bs-primary); background: rgba(var(--bs-primary-rgb), .12); }
+    </style>
+</head>
+<body>
+    @{
+        var nav = new (string, string, bool)[] {
+            ("Overview", "/", true),
+            ("CV & Résumé", "#", false),
+            ("Internships", "#", false),
+            ("Applications", "#", false),
+            ("Skills & Progress", "#", false),
+        };
+    }
+    <nav class="navbar navbar-expand-lg navbar-light iq-topnav sticky-top">
+        <div class="container">
+            <a href="/" class="navbar-brand d-flex align-items-center gap-2 text-decoration-none">
+                <span class="logo-main d-inline-flex">
+                    <svg width="28" height="28" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+                        <circle cx="16" cy="16" r="14" stroke="currentColor" stroke-width="1.8" />
+                        <circle cx="16" cy="16" r="8.5" stroke="currentColor" stroke-width="1.8" opacity=".6" />
+                        <circle cx="16" cy="16" r="3" fill="#E8B14C" />
+                    </svg>
+                </span>
+                <span class="logo-title fw-bold">Illumin<span class="brand-360">360</span></span>
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#topnav" aria-controls="topnav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="topnav">
+                <ul class="navbar-nav mx-lg-3 mb-2 mb-lg-0">
+                    @foreach (var (name, href, active) in nav)
+                    {
+                        <li class="nav-item"><a class="nav-link @(active ? "active" : "")" href="@href">@name</a></li>
+                    }
+                </ul>
+                <div class="ms-auto d-flex align-items-center gap-3">
+                    <span class="status-live"><span class="dot"></span> LIVE</span>
+                    <button id="brandToggle" type="button" class="btn btn-sm btn-primary">Theme: <span id="brandLabel">HopeUI Blue</span></button>
+                    <span class="avatar-initials rounded d-inline-flex align-items-center justify-content-center bg-soft-primary text-primary fw-bold" style="width:36px;height:36px;">SN</span>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container py-4">
+        <div class="mb-4">
+            <h4 class="fw-bold mb-1">@(ViewData["Title"] ?? "My Path")</h4>
+            <small class="text-muted">Readiness, internships and learning — guided to your first job.</small>
+        </div>
+        @RenderBody()
+    </div>
+
+    <script src="~/hopeui/js/libs.min.js"></script>
+    <script src="~/hopeui/js/external.min.js"></script>
+    <script src="~/hopeui/js/hope-ui.js" defer></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

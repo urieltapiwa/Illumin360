@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] · Illumin360</title>
+    <link rel="stylesheet" href="~/hopeui/fonts/inter.css" />
+    <link rel="stylesheet" href="~/hopeui/css/core/libs.min.css" />
+    <link rel="stylesheet" href="~/hopeui/css/hope-ui.min.css" />
+    <link rel="stylesheet" href="~/hopeui/css/custom.min.css" />
+    <link rel="stylesheet" href="~/hopeui/brand.css" />
+    <script src="~/hopeui/js/theme.js"></script>
+</head>
+<body>
+    @{
+        var nav = new (string, string, bool, string)[] {
+            ("Profile", "/", true, "M4 21V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v17M9 8h2M9 12h2M9 16h2"),
+            ("Candidates", "#", false, "M16 11a4 4 0 1 0-4-4 4 4 0 0 0 4 4zM2 21a7 7 0 0 1 14 0M19 21a5 5 0 0 0-6-4.9"),
+            ("Team & Roles", "#", false, "M3 8h18v12H3zM8 8V6a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 13h18"),
+        };
+    }
+    <aside class="sidebar sidebar-default sidebar-white sidebar-base navs-rounded-all">
+        <div class="sidebar-header d-flex align-items-center justify-content-start">
+            <a href="/" class="navbar-brand d-flex align-items-center gap-2 text-decoration-none">
+                <span class="logo-main d-inline-flex">
+                    <svg width="30" height="30" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+                        <circle cx="16" cy="16" r="14" stroke="currentColor" stroke-width="1.8" />
+                        <circle cx="16" cy="16" r="8.5" stroke="currentColor" stroke-width="1.8" opacity=".6" />
+                        <circle cx="16" cy="16" r="3" fill="#E8B14C" />
+                    </svg>
+                </span>
+                <h5 class="logo-title mb-0 fw-bold">Illumin<span class="brand-360">360</span></h5>
+            </a>
+        </div>
+        <div class="sidebar-body pt-0 data-scrollbar">
+            <div class="sidebar-list">
+                <ul class="navbar-nav iq-main-menu" id="sidebar-menu">
+                    <li class="nav-item static-item"><span class="nav-link static-item disabled"><span class="default-icon">Company</span></span></li>
+                    @foreach (var (name, href, active, path) in nav)
+                    {
+                        <li class="nav-item">
+                            <a class="nav-link @(active ? "active" : "")" href="@href">
+                                <i class="icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="@path" /></svg></i>
+                                <span class="item-name">@name</span>
+                            </a>
+                        </li>
+                    }
+                </ul>
+            </div>
+        </div>
+        <div class="sidebar-footer"></div>
+    </aside>
+
+    <main class="main-content">
+        <nav class="nav navbar navbar-expand-lg navbar-light iq-navbar">
+            <div class="container-fluid navbar-inner">
+                <div>
+                    <h4 class="mb-0 fw-bold">@(ViewData["Title"] ?? "Company profile")</h4>
+                    <small class="text-muted">How your company appears to candidates.</small>
+                </div>
+                <div class="ms-auto d-flex align-items-center gap-3">
+                    <span class="status-live"><span class="dot"></span> LIVE</span>
+                    <button id="brandToggle" type="button" class="btn btn-sm btn-primary">Theme: <span id="brandLabel">HopeUI Blue</span></button>
+                    <span class="avatar-initials rounded d-inline-flex align-items-center justify-content-center bg-soft-primary text-primary fw-bold" style="width:38px;height:38px;">NM</span>
+                </div>
+            </div>
+        </nav>
+        <div class="container-fluid content-inner pb-0 mt-4">
+            @RenderBody()
+        </div>
+    </main>
+
+    <script src="~/hopeui/js/libs.min.js"></script>
+    <script src="~/hopeui/js/external.min.js"></script>
+    <script src="~/hopeui/js/hope-ui.js" defer></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>
