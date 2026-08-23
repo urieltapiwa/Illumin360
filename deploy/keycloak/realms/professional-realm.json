@@ -19,6 +19,10 @@
     "realm": [
       {
         "name": "client.user"
+      },
+      {
+        "name": "admin.write",
+        "description": "Service-account provisioning role (registration -> domain profile create). Not for human users."
       }
     ]
   },

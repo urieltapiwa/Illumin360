@@ -41,7 +41,14 @@ nothing outside the six MVC portals changes.
 Realms are declared as version-controlled exports under `deploy/keycloak/realms/` and provisioned by
 `deploy/keycloak/provision-realms.sh` (admin REST API, no Keycloak restart). The four self-registration
 realms each get an `illumin360-registration` service client whose service account holds
-`realm-management` (manage-users/view-users/query-users) plus the realm roles it assigns.
+`realm-management` (manage-users/view-users/query-users **plus view-realm**, so the registrar can read
+the realm role it assigns) and the realm roles it assigns. The student and professional realms
+additionally grant that service account an `admin.write` realm role (service-account only, no human
+users) because their registration flow creates a domain profile through the gateway, and the
+students/professionals services gate profile creation behind `admin.write`. Business and employer are
+identity-only (no domain profile) and so need no `admin.write`. Each portal's own account role is:
+admin `admin.*`, student `client.student`, professional `client.user`, business `client.business`,
+employer `client.employer`, support `support.*`.
 
 ## Consequences
 **Positive:**

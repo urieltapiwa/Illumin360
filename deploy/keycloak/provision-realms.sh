@@ -16,11 +16,14 @@ REG_SECRET="${REGISTRATION_CLIENT_SECRET:-CHANGE_ME_registration_dev_secret}"
 RECREATE="${1:-}"
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# realm -> space-separated realm roles the registration service account must be able to assign.
+# realm -> realm roles the registration service account holds. It must hold every role it assigns to
+# newly-registered users, plus (student/professional) admin.write so its client_credentials service token
+# is accepted by the students/professionals services when creating the domain profile. business/employer
+# are identity-only (no domain profile), so they need no admin.write.
 declare -A REG_ROLES=(
-  [student]="client.user client.student"
-  [professional]="client.user"
-  [business]="client.user"
+  [student]="client.user client.student admin.write"
+  [professional]="client.user admin.write"
+  [business]="client.business"
   [employer]="client.employer client.user"
 )
 REALMS=(admin student professional business employer support)
@@ -84,11 +87,13 @@ for realm in "${REALMS[@]}"; do
     [ -n "$rmid" ] && break; sleep 1
   done
   [ -z "$rmid" ] && { echo "    !! no realm-management client"; exit 1; }
+  # manage-users to create users + assign role mappings; view-realm to read the realm role definitions
+  # the registrar looks up before assigning them.
   rm_json=$(curl -s "${auth[@]}" "$KC/admin/realms/$realm/clients/$rmid/roles")
-  mapping=$(echo "$rm_json" | python -c "import sys,json;w={'manage-users','view-users','query-users'};print(json.dumps([r for r in json.load(sys.stdin) if r['name'] in w]))")
+  mapping=$(echo "$rm_json" | python -c "import sys,json;w={'manage-users','view-users','query-users','view-realm'};print(json.dumps([r for r in json.load(sys.stdin) if r['name'] in w]))")
   curl -s -X POST "${auth[@]}" -H "Content-Type: application/json" -d "$mapping" \
     "$KC/admin/realms/$realm/users/$said/role-mappings/clients/$rmid" >/dev/null
-  echo "      + realm-management: manage-users, view-users, query-users"
+  echo "      + realm-management: manage-users, view-users, query-users, view-realm"
 
   # Realm roles the registrar assigns to newly-created users (the SA must hold them to grant them).
   for role in $roles; do
