@@ -19,6 +19,7 @@ public static class DependencyInjection
         services.AddScoped<IQueryHandler<GetSubscriptionQuery, SubscriptionDto>, GetSubscriptionQueryHandler>();
         services.AddScoped<IQueryHandler<ListInvoicesQuery, IReadOnlyList<InvoiceDto>>, ListInvoicesQueryHandler>();
         services.AddScoped<IQueryHandler<GetEntitlementsQuery, EntitlementsDto>, GetEntitlementsQueryHandler>();
+        services.AddScoped<IQueryHandler<GetMrrTrendQuery, MrrTrendDto>, GetMrrTrendQueryHandler>();
         services.AddScoped<BillingRunner>();
         return services;
     }

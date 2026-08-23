@@ -9,6 +9,13 @@
     var gLabels = hasGrowth ? "[" + string.Join(",", growth.Select(g => "\"" + g.Label + "\"")) + "]" : "[\"2016\",\"2018\",\"2020\",\"2022\",\"2024\",\"2026\"]";
     var gTalent = hasGrowth ? "[" + string.Join(",", growth.Select(g => g.Talent)) + "]" : "[800,2400,5200,9100,13800,17360]";
     var gCompanies = hasGrowth ? "[" + string.Join(",", growth.Select(g => g.Companies)) + "]" : "[120,380,720,1150,1600,1879]";
+    var regions = Model?.Regions ?? System.Array.Empty<Illumin360.AdminWeb.Services.RegionPoint>();
+    var hasRegions = regions.Length > 0;
+    var rLabels = hasRegions ? "[" + string.Join(",", regions.Select(r => "\"" + r.Region + "\"")) + "]" : "[\"Windhoek\",\"Walvis Bay\",\"Swakopmund\",\"Oshakati\",\"Rundu\"]";
+    var rCounts = hasRegions ? "[" + string.Join(",", regions.Select(r => r.Count)) + "]" : "[5884,1717,1404,1371,1037]";
+    var mrrLabels = (ViewData["MrrLabels"] as string) ?? "[\"Jan\",\"Feb\",\"Mar\",\"Apr\",\"May\",\"Jun\",\"Jul\"]";
+    var mrrValues = (ViewData["MrrValues"] as string) ?? "[180000,320000,470000,610000,780000,940000,1100000]";
+    var mrrCcy = (ViewData["MrrCurrency"] as string) ?? "NAD";
     var kpis = new[] {
         ("Total Accounts", (Model?.TotalAccounts ?? 6).ToString(), $"{Model?.ActiveAccounts ?? 6} active", "M16 11a4 4 0 1 0-4-4 4 4 0 0 0 4 4zM2 21a7 7 0 0 1 14 0"),
         ("Companies", (Model?.Companies ?? 4).ToString(), "on the platform", "M4 21V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v17M9 8h2M9 12h2M9 16h2"),
@@ -36,7 +43,7 @@
 
 <div class="d-flex align-items-center gap-2 mb-2">
     <span class="badge @(live ? "bg-soft-primary text-primary" : "bg-soft-warning text-warning")">@(live ? "Live data" : "Demo data")</span>
-    <span class="text-muted small">Accounts, verifications, tickets &amp; account growth are live from the Admin service; revenue and regional splits are illustrative.</span>
+    <span class="text-muted small">All live: accounts, verifications, tickets &amp; growth from the Admin service, MRR from Billing, regional splits from the account directory.</span>
 </div>
 
 <!-- KPI cards -->
@@ -132,7 +139,7 @@
     </div>
     <div class="col-lg-4">
         <div class="card mb-0 h-100">
-            <div class="card-header"><h5 class="mb-0 fw-bold">Talent by region</h5></div>
+            <div class="card-header"><h5 class="mb-0 fw-bold">Accounts by region</h5></div>
             <div class="card-body"><div id="regionChart"></div></div>
         </div>
     </div>
@@ -168,8 +175,8 @@
 
     charts.push(new ApexCharts(document.querySelector("#revenueChart"), {
       chart: { type: "area", height: 300, toolbar: { show: false } }, colors: [p],
-      series: [{ name: "MRR (N$)", data: [180000, 320000, 470000, 610000, 780000, 940000, 1100000] }],
-      xaxis: { categories: ["Jan","Feb","Mar","Apr","May","Jun","Jul"] }, dataLabels: { enabled: false },
+      series: [{ name: "MRR (@mrrCcy)", data: @Html.Raw(mrrValues) }],
+      xaxis: { categories: @Html.Raw(mrrLabels) }, dataLabels: { enabled: false },
       stroke: { curve: "smooth", width: 2.5 }, fill: { type: "gradient", gradient: { opacityFrom: .45, opacityTo: 0 } },
       grid: { borderColor: "#eef0f7" }
     }));
@@ -177,8 +184,8 @@
 
     charts.push(new ApexCharts(document.querySelector("#regionChart"), {
       chart: { type: "bar", height: 300, toolbar: { show: false } }, colors: [p],
-      series: [{ name: "Talent", data: [5884, 1717, 1404, 1371, 1037, 877, 728] }],
-      xaxis: { categories: ["Windhoek","Walvis Bay","Swakopmund","Oshakati","Rundu","Ongwediva","Otjiwarongo"] },
+      series: [{ name: "Accounts", data: @Html.Raw(rCounts) }],
+      xaxis: { categories: @Html.Raw(rLabels) },
       plotOptions: { bar: { horizontal: true, borderRadius: 4, barHeight: "60%" } },
       dataLabels: { enabled: false }, grid: { borderColor: "#eef0f7" }
     }));

@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Authentication;
 namespace Illumin360.SupportWeb.Services;
 
 // Live support-queue metrics from GET /api/admin/support-summary (Admin service).
-public sealed record VolumePoint(string? Label, int Created);
+public sealed record VolumePoint(string? Label, int Created, int Resolved);
 
 public sealed record SupportSummary(int Open, int Assigned, int Resolved, int P1, int P2, int P3, int[]? PriorityMix, VolumePoint[]? Volume);
 

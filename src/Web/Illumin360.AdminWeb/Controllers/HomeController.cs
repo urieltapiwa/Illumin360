@@ -12,6 +12,16 @@ public class HomeController(AdminApiClient admin) : Controller
     public async Task<IActionResult> Index(CancellationToken ct)
     {
         var summary = await _admin.GetSummaryAsync(ct);
+
+        // MRR trend comes from a different service (Billing), so it rides in ViewData rather than the model.
+        var mrr = await _admin.GetMrrTrendAsync(ct);
+        if (mrr?.Points is { Length: > 0 } points)
+        {
+            ViewData["MrrLabels"] = "[" + string.Join(",", points.Select(p => "\"" + p.Label + "\"")) + "]";
+            ViewData["MrrValues"] = "[" + string.Join(",", points.Select(p => p.MrrMinor / 100)) + "]"; // minor units -> currency
+            ViewData["MrrCurrency"] = mrr.Currency ?? "NAD";
+        }
+
         return View(summary);
     }
 

@@ -73,6 +73,7 @@ public sealed class AdminDbContext(DbContextOptions<AdminDbContext> options) : D
             b.Property(t => t.Status).HasColumnName("status").HasConversion(ticketStatusConverter).HasMaxLength(20);
             b.Property(t => t.Assignee).HasColumnName("assignee").HasMaxLength(120);
             b.Property(t => t.CreatedAt).HasColumnName("created_at");
+            b.Property(t => t.ResolvedAt).HasColumnName("resolved_at");
             b.HasIndex(t => t.Status);
             b.Ignore(t => t.DomainEvents);
         });
@@ -90,6 +91,7 @@ public sealed class AdminDbContext(DbContextOptions<AdminDbContext> options) : D
             b.Property(a => a.Kind).HasColumnName("kind").HasMaxLength(20);
             b.Property(a => a.Email).HasColumnName("email").HasMaxLength(160);
             b.Property(a => a.Status).HasColumnName("status").HasConversion(accountStatusConverter).HasMaxLength(20);
+            b.Property(a => a.Region).HasColumnName("region").HasMaxLength(80);
             b.Property(a => a.CreatedAt).HasColumnName("created_at");
             b.HasIndex(a => a.Status);
             b.Ignore(a => a.DomainEvents);

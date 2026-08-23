@@ -47,6 +47,9 @@ public sealed class AdminAccount : Entity<AccountId>
     /// <summary>Current access state.</summary>
     public AccountStatus Status { get; private set; }
 
+    /// <summary>Home city / region (used for the talent-by-region breakdown).</summary>
+    public string Region { get; private set; } = string.Empty;
+
     /// <summary>When the account was created (UTC).</summary>
     public DateTimeOffset CreatedAt { get; private set; }
 
@@ -55,14 +58,16 @@ public sealed class AdminAccount : Entity<AccountId>
     /// <param name="name">Display name.</param>
     /// <param name="kind">"Talent" or "Company".</param>
     /// <param name="email">Contact email.</param>
+    /// <param name="region">Home city / region.</param>
     /// <param name="createdAt">Creation timestamp (UTC).</param>
     /// <returns>The hydrated, active account.</returns>
-    public static AdminAccount Seed(Guid id, string name, string kind, string email, DateTimeOffset createdAt)
+    public static AdminAccount Seed(Guid id, string name, string kind, string email, string region, DateTimeOffset createdAt)
         => new(new AccountId(id))
         {
             Name = name,
             Kind = kind,
             Email = email,
+            Region = region,
             Status = AccountStatus.Active,
             CreatedAt = createdAt,
         };

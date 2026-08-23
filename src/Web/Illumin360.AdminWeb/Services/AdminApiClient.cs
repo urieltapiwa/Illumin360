@@ -6,7 +6,14 @@ namespace Illumin360.AdminWeb.Services;
 // Live platform-operations summary from GET /api/admin/summary (Admin service).
 public sealed record GrowthPoint(string? Label, int Talent, int Companies);
 
-public sealed record AdminSummary(int TotalAccounts, int ActiveAccounts, int SuspendedAccounts, int Companies, int Talent, int PendingVerifications, int OpenTickets, int[]? AccountMix, GrowthPoint[]? Growth);
+public sealed record RegionPoint(string? Region, int Count);
+
+public sealed record AdminSummary(int TotalAccounts, int ActiveAccounts, int SuspendedAccounts, int Companies, int Talent, int PendingVerifications, int OpenTickets, int[]? AccountMix, GrowthPoint[]? Growth, RegionPoint[]? Regions);
+
+// Live platform MRR trend from GET /api/billing/mrr-trend (Billing service).
+public sealed record MrrPoint(string? Label, long MrrMinor);
+
+public sealed record MrrTrend(string? Currency, MrrPoint[]? Points);
 
 // Relays the signed-in admin's access token to the gateway.
 public sealed class TokenRelayHandler(IHttpContextAccessor accessor) : DelegatingHandler
@@ -44,6 +51,18 @@ public sealed class AdminApiClient(HttpClient http)
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException)
         {
             return null; // API unavailable — the view falls back to placeholder values.
+        }
+    }
+
+    public async Task<MrrTrend?> GetMrrTrendAsync(CancellationToken ct = default)
+    {
+        try
+        {
+            return await _http.GetFromJsonAsync<MrrTrend>("/api/billing/mrr-trend", ct).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException)
+        {
+            return null; // Billing unavailable — the view falls back to placeholder values.
         }
     }
 }
