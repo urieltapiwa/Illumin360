@@ -1,0 +1,91 @@
+@model IReadOnlyList<Illumin360.EmployerWeb.Services.TeamMember>
+@{
+    ViewData["Title"] = "Team & Roles";
+    var roles = new[] { "owner", "recruiter", "viewer" };
+}
+
+@if (TempData["Msg"] is string msg)
+{
+    <div class="alert alert-soft-primary py-2 mb-3">@msg</div>
+}
+
+<div class="row g-3">
+    <div class="col-lg-8">
+        <div class="card mb-0 h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0 fw-bold">Team members</h5>
+                <span class="badge bg-soft-primary text-primary">@Model.Count</span>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table mb-0 align-middle">
+                        <thead><tr><th>Name</th><th>Email</th><th>Role</th><th class="text-end">Actions</th></tr></thead>
+                        <tbody>
+                        @if (Model.Count == 0)
+                        {
+                            <tr><td colspan="4" class="text-center text-muted py-4">No team members yet — invite one on the right.</td></tr>
+                        }
+                        @foreach (var m in Model)
+                        {
+                            <tr>
+                                <td class="fw-semibold">@m.DisplayName</td>
+                                <td class="text-muted">@m.Email</td>
+                                <td>
+                                    <form asp-controller="Team" asp-action="ChangeRole" method="post" class="d-flex gap-1 m-0">
+                                        <input type="hidden" name="id" value="@m.Id" />
+                                        <select name="role" class="form-select form-select-sm" style="width:auto;" onchange="this.form.submit()">
+                                            @foreach (var r in roles)
+                                            {
+                                                if (string.Equals(r, m.Role, StringComparison.OrdinalIgnoreCase))
+                                                {
+                                                    <option value="@r" selected>@r</option>
+                                                }
+                                                else
+                                                {
+                                                    <option value="@r">@r</option>
+                                                }
+                                            }
+                                        </select>
+                                    </form>
+                                </td>
+                                <td class="text-end">
+                                    <form asp-controller="Team" asp-action="Remove" method="post" class="m-0 d-inline">
+                                        <input type="hidden" name="id" value="@m.Id" />
+                                        <button type="submit" class="btn btn-sm btn-soft-danger">Remove</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card mb-0 h-100">
+            <div class="card-header"><h5 class="mb-0 fw-bold">Invite member</h5></div>
+            <div class="card-body">
+                <form asp-controller="Team" asp-action="Invite" method="post">
+                    <div class="mb-3">
+                        <label class="form-label" for="displayName">Name</label>
+                        <input id="displayName" name="displayName" class="form-control" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="email">Email</label>
+                        <input id="email" name="email" type="email" class="form-control" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="role">Role</label>
+                        <select id="role" name="role" class="form-select">
+                            <option value="recruiter">recruiter</option>
+                            <option value="viewer">viewer</option>
+                            <option value="owner">owner</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Send invite</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

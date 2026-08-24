@@ -1,0 +1,58 @@
+@model Illumin360.EmployerWeb.Services.EmployerProfile?
+@{
+    ViewData["Title"] = "Company profile";
+}
+
+@if (TempData["Saved"] is string saved)
+{
+    <div class="alert alert-soft-primary py-2 mb-3">@saved</div>
+}
+
+<div class="row g-3">
+    <div class="col-lg-5">
+        <div class="card mb-0 h-100">
+            <div class="card-header"><h5 class="mb-0 fw-bold">@(Model?.CompanyName ?? "Your company")</h5><small class="text-muted">Live profile</small></div>
+            <div class="card-body">
+                <dl class="row mb-0 small">
+                    <dt class="col-4 text-muted">Industry</dt><dd class="col-8">@(string.IsNullOrWhiteSpace(Model?.Industry) ? "—" : Model!.Industry)</dd>
+                    <dt class="col-4 text-muted">City</dt><dd class="col-8">@(string.IsNullOrWhiteSpace(Model?.City) ? "—" : Model!.City)</dd>
+                    <dt class="col-4 text-muted">Website</dt><dd class="col-8">@if (Model?.Website is { Length: > 0 } w) { <a href="@w" target="_blank" rel="noopener">@w</a> } else { <span>—</span> }</dd>
+                    <dt class="col-4 text-muted">About</dt><dd class="col-8">@(string.IsNullOrWhiteSpace(Model?.About) ? "—" : Model!.About)</dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-7">
+        <div class="card mb-0 h-100">
+            <div class="card-header"><h5 class="mb-0 fw-bold">Edit profile</h5></div>
+            <div class="card-body">
+                <form asp-controller="Profile" asp-action="Update" method="post">
+                    <div class="mb-3">
+                        <label class="form-label">Company name</label>
+                        <input class="form-control" value="@Model?.CompanyName" disabled />
+                        <div class="form-text">Company name changes are handled by platform admins.</div>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label" for="industry">Industry</label>
+                            <input id="industry" name="industry" class="form-control" value="@Model?.Industry" required />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label" for="city">City</label>
+                            <input id="city" name="city" class="form-control" value="@Model?.City" required />
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="website">Website</label>
+                        <input id="website" name="website" type="url" class="form-control" value="@Model?.Website" placeholder="https://…" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="about">About</label>
+                        <textarea id="about" name="about" class="form-control" rows="4">@Model?.About</textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Save changes</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

@@ -95,7 +95,7 @@ v1.MapPut("/me", async (
         var result = await handler.HandleAsync(command, ct);
         return result.ToHttpResult();
     })
-    .RequireAuthorization(AuthenticationExtensions.AdminWritePolicy)
+    .RequireAuthorization(AuthenticationExtensions.EmployerPolicy)
     .WithName("UpdateEmployerProfile")
     .WithSummary("Update the current employer's profile. Requires an admin (write) role.")
     .Produces<EmployerDto>(StatusCodes.Status200OK)
@@ -127,7 +127,7 @@ team.MapPost("/", async (
         var result = await handler.HandleAsync(command, ct);
         return result.ToCreatedResult(dto => $"/v1/employers/me/team/{dto.Id}");
     })
-    .RequireAuthorization(AuthenticationExtensions.AdminWritePolicy)
+    .RequireAuthorization(AuthenticationExtensions.EmployerPolicy)
     .WithName("InviteTeamMember")
     .WithSummary("Invite a new team member (owner/recruiter/viewer). Requires an admin (write) role.")
     .Produces<TeamMemberDto>(StatusCodes.Status201Created)
@@ -145,7 +145,7 @@ team.MapPut("/{memberId:guid}/role", async (
         var result = await handler.HandleAsync(new ChangeTeamMemberRoleCommand(memberId, body.Role), ct);
         return result.ToHttpResult();
     })
-    .RequireAuthorization(AuthenticationExtensions.AdminWritePolicy)
+    .RequireAuthorization(AuthenticationExtensions.EmployerPolicy)
     .WithName("ChangeTeamMemberRole")
     .WithSummary("Change a team member's role. Requires an admin (write) role.")
     .Produces<TeamMemberDto>(StatusCodes.Status200OK)
@@ -163,7 +163,7 @@ team.MapDelete("/{memberId:guid}", async (
         var result = await handler.HandleAsync(new RemoveTeamMemberCommand(memberId), ct);
         return result.IsSuccess ? Results.NoContent() : result.ToHttpResult();
     })
-    .RequireAuthorization(AuthenticationExtensions.AdminWritePolicy)
+    .RequireAuthorization(AuthenticationExtensions.EmployerPolicy)
     .WithName("RemoveTeamMember")
     .WithSummary("Remove a team member. Requires an admin (write) role.")
     .Produces(StatusCodes.Status204NoContent)
