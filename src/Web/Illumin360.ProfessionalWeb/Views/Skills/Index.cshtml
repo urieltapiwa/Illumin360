@@ -1,0 +1,71 @@
+@model IReadOnlyList<Illumin360.ProfessionalWeb.Services.EditableSkill>
+@{
+    ViewData["Title"] = "Skills";
+}
+
+@if (TempData["Msg"] is string msg)
+{
+    <div class="alert alert-soft-primary py-2 mb-3">@msg</div>
+}
+
+<div class="row g-3">
+    <div class="col-lg-8">
+        <div class="card mb-0 h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0 fw-bold">Your skills</h5>
+                <span class="badge bg-soft-primary text-primary">@Model.Count</span>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table mb-0 align-middle">
+                        <thead><tr><th>Skill</th><th>Level</th><th>Trend</th><th>Endorsements</th><th class="text-end">Action</th></tr></thead>
+                        <tbody>
+                        @if (Model.Count == 0)
+                        {
+                            <tr><td colspan="5" class="text-center text-muted py-4">No skills yet — add one on the right.</td></tr>
+                        }
+                        @foreach (var s in Model)
+                        {
+                            <tr>
+                                <td class="fw-semibold">@s.Name</td>
+                                <td style="min-width:140px;">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="progress flex-grow-1" style="height:6px;"><div class="progress-bar" style="width:@s.Level%"></div></div>
+                                        <span class="small text-muted">@s.Level</span>
+                                    </div>
+                                </td>
+                                <td><span class="badge @(string.Equals(s.Trend,"hot",StringComparison.OrdinalIgnoreCase) ? "bg-soft-danger text-danger" : string.Equals(s.Trend,"rising",StringComparison.OrdinalIgnoreCase) ? "bg-soft-warning text-warning" : "bg-soft-secondary text-secondary")">@s.Trend</span></td>
+                                <td class="text-muted">@s.Endorsements</td>
+                                <td class="text-end">
+                                    <form asp-controller="Skills" asp-action="Remove" method="post" class="m-0 d-inline">
+                                        <input type="hidden" name="id" value="@s.Id" />
+                                        <button type="submit" class="btn btn-sm btn-soft-danger">Remove</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card mb-0 h-100">
+            <div class="card-header"><h5 class="mb-0 fw-bold">Add a skill</h5></div>
+            <div class="card-body">
+                <form asp-controller="Skills" asp-action="Add" method="post">
+                    <div class="mb-3">
+                        <label class="form-label" for="name">Skill</label>
+                        <input id="name" name="name" class="form-control" placeholder="e.g. Kubernetes" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="level">Proficiency: <span id="lvlOut">70</span></label>
+                        <input id="level" name="level" type="range" min="1" max="100" value="70" class="form-range" oninput="document.getElementById('lvlOut').textContent=this.value" />
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Add skill</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

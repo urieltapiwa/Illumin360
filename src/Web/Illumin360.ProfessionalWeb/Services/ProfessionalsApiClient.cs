@@ -36,7 +36,7 @@ public sealed class TokenRelayHandler(IHttpContextAccessor accessor) : Delegatin
 }
 
 // Typed client for the Professionals service via the gateway.
-public sealed class ProfessionalsApiClient(HttpClient http)
+public sealed partial class ProfessionalsApiClient(HttpClient http)
 {
     private readonly HttpClient _http = http;
 

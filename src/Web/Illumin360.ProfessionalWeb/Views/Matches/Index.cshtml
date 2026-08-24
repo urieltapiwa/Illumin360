@@ -1,0 +1,66 @@
+@model IReadOnlyList<Illumin360.ProfessionalWeb.Services.ProMatch>
+@{
+    ViewData["Title"] = "Role matches";
+}
+
+@if (TempData["Msg"] is string msg)
+{
+    <div class="alert alert-soft-primary py-2 mb-3">@msg</div>
+}
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0 fw-bold">Matched roles</h5>
+        <span class="badge bg-soft-primary text-primary">@Model.Count</span>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table mb-0 align-middle">
+                <thead><tr><th>Role</th><th>Company</th><th>Location</th><th>Salary</th><th>Match</th><th class="text-end">Actions</th></tr></thead>
+                <tbody>
+                @if (Model.Count == 0)
+                {
+                    <tr><td colspan="6" class="text-center text-muted py-4">No role matches yet.</td></tr>
+                }
+                @foreach (var m in Model)
+                {
+                    var applied = string.Equals(m.Status, "applied", StringComparison.OrdinalIgnoreCase);
+                    var dismissed = string.Equals(m.Status, "dismissed", StringComparison.OrdinalIgnoreCase);
+                    <tr>
+                        <td class="fw-semibold">@m.Role</td>
+                        <td class="text-muted">@m.Company<div class="small text-muted">@m.Industry</div></td>
+                        <td class="text-muted">@m.City</td>
+                        <td class="text-muted">N$@m.SalaryLo.ToString("N0")–@m.SalaryHi.ToString("N0")</td>
+                        <td><span class="badge @(m.Match >= 60 ? "bg-soft-success text-success" : m.Match >= 30 ? "bg-soft-warning text-warning" : "bg-soft-secondary text-secondary")">@m.Match%</span></td>
+                        <td class="text-end">
+                            @if (applied)
+                            {
+                                <span class="badge bg-soft-success text-success">Applied</span>
+                            }
+                            else if (dismissed)
+                            {
+                                <span class="badge bg-soft-secondary text-secondary">Dismissed</span>
+                            }
+                            else
+                            {
+                                <form asp-controller="Matches" asp-action="Act" method="post" class="m-0 d-inline">
+                                    <input type="hidden" name="id" value="@m.Id" /><input type="hidden" name="action" value="apply" />
+                                    <button type="submit" class="btn btn-sm btn-soft-success">Apply</button>
+                                </form>
+                                <form asp-controller="Matches" asp-action="Act" method="post" class="m-0 d-inline ms-1">
+                                    <input type="hidden" name="id" value="@m.Id" /><input type="hidden" name="action" value="save" />
+                                    <button type="submit" class="btn btn-sm btn-soft-primary">Save</button>
+                                </form>
+                                <form asp-controller="Matches" asp-action="Act" method="post" class="m-0 d-inline ms-1">
+                                    <input type="hidden" name="id" value="@m.Id" /><input type="hidden" name="action" value="dismiss" />
+                                    <button type="submit" class="btn btn-sm btn-soft-danger">Dismiss</button>
+                                </form>
+                            }
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
