@@ -30,7 +30,7 @@ public sealed class TokenRelayHandler(IHttpContextAccessor accessor) : Delegatin
 }
 
 // Typed client for the Employers service via the gateway.
-public sealed class EmployersApiClient(HttpClient http)
+public sealed partial class EmployersApiClient(HttpClient http)
 {
     private readonly HttpClient _http = http;
 

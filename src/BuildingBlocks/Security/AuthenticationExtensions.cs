@@ -34,6 +34,9 @@ public static class AuthenticationExtensions
     /// <summary>Policy for a signed-in student acting on their own data (role <c>client.user</c>; admins allowed).</summary>
     public const string StudentPolicy = "student";
 
+    /// <summary>Policy for an employer managing their own company profile / team (role <c>client.employer</c>; admins allowed).</summary>
+    public const string EmployerPolicy = "employer";
+
     /// <summary>The composite scheme that selects a per-realm handler by the token issuer.</summary>
     public const string MultiRealmScheme = "kc-multirealm";
 
@@ -49,6 +52,9 @@ public static class AuthenticationExtensions
 
     // Signed-in end users acting on their own data (professional / student portals). Admins are allowed through.
     private static readonly string[] ClientUserRoles = ["client.user", "admin.write", "admin.superuser"];
+
+    // An employer managing their own company profile / team. Admins are allowed through.
+    private static readonly string[] EmployerRoles = ["client.employer", "admin.write", "admin.superuser"];
 
     /// <summary>
     /// Adds multi-realm JWT bearer authentication (against Keycloak) and the admin authorization policies.
@@ -148,6 +154,7 @@ public static class AuthenticationExtensions
             options.AddPolicy(AdminWritePolicy, policy => policy.RequireRole(AdminWriteRoles));
             options.AddPolicy(ProfessionalPolicy, policy => policy.RequireRole(ClientUserRoles));
             options.AddPolicy(StudentPolicy, policy => policy.RequireRole(ClientUserRoles));
+            options.AddPolicy(EmployerPolicy, policy => policy.RequireRole(EmployerRoles));
         });
 
         return services;
