@@ -1,0 +1,279 @@
+<title>Illumin360 Platform Map</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;800&family=Hanken+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+  :root{
+    --ground:#f6f8f7; --card:#ffffff; --card-2:#eef2f0; --ink:#132019; --ink-soft:#4c5b54;
+    --line:#dde5e1; --accent:#0f9d76; --accent-soft:#dbf1ea; --amber:#b7791f; --amber-soft:#f6ebd7;
+    --shadow:0 1px 2px rgba(19,32,25,.04),0 6px 20px rgba(19,32,25,.05);
+  }
+  :root:not([data-theme="light"]){ }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --ground:#0c1512; --card:#121e19; --card-2:#18271f; --ink:#e7efea; --ink-soft:#9db0a6;
+      --line:#233731; --accent:#3ecca0; --accent-soft:#123027; --amber:#e0a94a; --amber-soft:#2a2113;
+      --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 26px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="dark"]{
+    --ground:#0c1512; --card:#121e19; --card-2:#18271f; --ink:#e7efea; --ink-soft:#9db0a6;
+    --line:#233731; --accent:#3ecca0; --accent-soft:#123027; --amber:#e0a94a; --amber-soft:#2a2113;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 26px rgba(0,0,0,.35);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--ground);color:var(--ink);
+    font-family:"Hanken Grotesk",system-ui,sans-serif;line-height:1.5;
+    -webkit-font-smoothing:antialiased;}
+  .wrap{max-width:1180px;margin:0 auto;padding:clamp(28px,5vw,64px) clamp(18px,4vw,40px) 80px;}
+  code,.mono{font-family:"JetBrains Mono",ui-monospace,monospace;}
+
+  /* header */
+  header.top{border-bottom:2px solid var(--ink);padding-bottom:22px;margin-bottom:14px;}
+  .kicker{font-family:"JetBrains Mono",monospace;font-size:.72rem;letter-spacing:.22em;
+    text-transform:uppercase;color:var(--accent);font-weight:700;}
+  h1{font-family:"Archivo",sans-serif;font-weight:800;letter-spacing:-.02em;text-wrap:balance;
+    font-size:clamp(2.1rem,6vw,3.5rem);line-height:.98;margin:.28em 0 .12em;}
+  .lede{max-width:60ch;color:var(--ink-soft);font-size:1.02rem;}
+  .stat-row{display:flex;flex-wrap:wrap;gap:8px 10px;margin-top:18px;}
+  .stat{font-family:"JetBrains Mono",monospace;font-size:.74rem;padding:5px 10px;border:1px solid var(--line);
+    border-radius:999px;color:var(--ink-soft);background:var(--card);}
+  .stat b{color:var(--ink);font-weight:700;}
+
+  /* layer */
+  .layer{margin-top:44px;}
+  .layer-head{display:flex;align-items:baseline;gap:14px;margin-bottom:16px;
+    border-bottom:1px solid var(--line);padding-bottom:8px;}
+  .layer-eyebrow{font-family:"JetBrains Mono",monospace;font-size:.7rem;letter-spacing:.18em;
+    text-transform:uppercase;color:var(--accent);font-weight:700;white-space:nowrap;}
+  .layer-head h2{font-family:"Archivo",sans-serif;font-weight:700;letter-spacing:-.01em;
+    font-size:1.18rem;margin:0;}
+  .layer-head .note{margin-left:auto;color:var(--ink-soft);font-size:.82rem;text-align:right;}
+
+  .grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(255px,1fr));}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 16px 15px;
+    box-shadow:var(--shadow);display:flex;flex-direction:column;gap:9px;}
+  .card.wide{grid-column:1/-1;}
+  .card-top{display:flex;align-items:center;gap:9px;flex-wrap:wrap;}
+  .card h3{font-family:"Archivo",sans-serif;font-weight:700;font-size:1.02rem;margin:0;letter-spacing:-.01em;}
+  .role{font-size:.8rem;color:var(--ink-soft);}
+  .desc{font-size:.86rem;color:var(--ink-soft);}
+  .desc b{color:var(--ink);font-weight:600;}
+
+  .tag{font-family:"JetBrains Mono",monospace;font-size:.68rem;font-weight:500;padding:3px 7px;border-radius:6px;
+    background:var(--card-2);color:var(--ink-soft);white-space:nowrap;}
+  .tag.port{color:var(--accent);background:var(--accent-soft);font-weight:700;}
+  .tag.realm{color:var(--amber);background:var(--amber-soft);}
+  .tag.kind{border:1px solid var(--line);background:transparent;}
+
+  .chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:1px;}
+  .chip{font-family:"JetBrains Mono",monospace;font-size:.68rem;padding:3px 7px;border-radius:5px;
+    background:var(--card-2);color:var(--ink);}
+  .chip.mut{color:var(--ink-soft);}
+  .eplist{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:3px;}
+  .eplist li{font-size:.82rem;color:var(--ink-soft);}
+  .eplist li b{color:var(--ink);font-weight:600;}
+  .live{display:inline-flex;align-items:center;gap:5px;font-size:.75rem;color:var(--accent);font-weight:600;}
+  .live::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--accent);
+    box-shadow:0 0 0 3px var(--accent-soft);}
+  footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);
+    color:var(--ink-soft);font-size:.8rem;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;}
+  footer .mono{font-size:.74rem;}
+  a{color:var(--accent);}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="kicker">Platform Site Map · v0.3 dev</div>
+    <h1>Illumin360</h1>
+    <p class="lede">A Namibian talent &amp; careers marketplace. Six realm-isolated MVC portals over a YARP
+      gateway and eight domain services, drawn here as the request path — from the browser down to data.</p>
+    <div class="stat-row">
+      <span class="stat"><b>6</b> portals</span>
+      <span class="stat"><b>6</b> Keycloak realms</span>
+      <span class="stat"><b>8</b> domain services</span>
+      <span class="stat"><b>29</b> containers</span>
+      <span class="stat">.NET&nbsp;<b>10</b> · HopeUI</span>
+      <span class="stat">gateway <b>:8088</b></span>
+    </div>
+  </header>
+
+  <!-- ACCESS -->
+  <section class="layer">
+    <div class="layer-head">
+      <span class="layer-eyebrow">Access layer</span>
+      <h2>Portals</h2>
+      <span class="note">ASP.NET Core MVC · HopeUI · multi-page consoles · self-contained containers · brand toggle (blue&nbsp;⇄&nbsp;green)</span>
+    </div>
+    <div class="grid">
+      <div class="card">
+        <div class="card-top"><h3>Admin</h3><span class="tag port">:5192</span><span class="tag realm">admin</span><span class="tag kind">sidebar</span></div>
+        <div class="role">“Platform Command” · full console</div>
+        <div class="chips"><span class="chip">Dashboard</span><span class="chip">Accounts</span><span class="chip">Verifications</span><span class="chip">Tickets</span><span class="chip">Audit</span></div>
+        <span class="live">Manage accounts (suspend/activate) · approve verifications · triage tickets · audit trail</span>
+      </div>
+      <div class="card">
+        <div class="card-top"><h3>Business</h3><span class="tag port">:5193</span><span class="tag realm">business</span><span class="tag kind">sidebar</span></div>
+        <div class="role">“Talent Insights” · analytics dashboard</div>
+        <div class="chips"><span class="chip">Talent Insights</span></div>
+        <span class="live">Live: talent · companies · verification · growth</span>
+      </div>
+      <div class="card">
+        <div class="card-top"><h3>Student</h3><span class="tag port">:5194</span><span class="tag realm">student</span><span class="tag kind">top-nav</span></div>
+        <div class="role">“My Path” · self-registration</div>
+        <div class="chips"><span class="chip">Overview</span><span class="chip">Internships</span></div>
+        <span class="live">Apply / save / dismiss internship matches · set availability</span>
+      </div>
+      <div class="card">
+        <div class="card-top"><h3>Professional</h3><span class="tag port">:5195</span><span class="tag realm">professional</span><span class="tag kind">top-nav</span></div>
+        <div class="role">“Career” · self-registration</div>
+        <div class="chips"><span class="chip">Overview</span><span class="chip">Matches</span><span class="chip">Skills</span></div>
+        <span class="live">Apply / save / dismiss role matches · add &amp; remove skills</span>
+      </div>
+      <div class="card">
+        <div class="card-top"><h3>Employer</h3><span class="tag port">:5196</span><span class="tag realm">employer</span><span class="tag kind">sidebar</span></div>
+        <div class="role">“Company workspace” · self-registration</div>
+        <div class="chips"><span class="chip">Overview</span><span class="chip">Company profile</span><span class="chip">Team&nbsp;&amp;&nbsp;Roles</span></div>
+        <span class="live">Edit company profile · invite / role / remove team members</span>
+      </div>
+      <div class="card">
+        <div class="card-top"><h3>Support</h3><span class="tag port">:5197</span><span class="tag realm">support</span><span class="tag kind">sidebar</span></div>
+        <div class="role">“Support Desk” · agent workspace</div>
+        <div class="chips"><span class="chip">Overview</span><span class="chip">Ticket queue</span></div>
+        <span class="live">Work the queue: assign to me · resolve (open/assigned/resolved)</span>
+      </div>
+      <div class="card wide">
+        <div class="card-top"><h3>Business Portal SPA</h3><span class="tag">legacy</span><span class="tag port">:5180</span><span class="tag realm">illumin360</span><span class="tag kind">React · Vite</span></div>
+        <div class="desc">Original single-page Talent-Insights portal + its <b>BFF</b> (server-side OIDC + token relay), retained on the shared <code>illumin360</code> realm. <b>Superseded</b> by the six MVC portals above.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- IDENTITY -->
+  <section class="layer">
+    <div class="layer-head">
+      <span class="layer-eyebrow">Identity</span>
+      <h2>Keycloak <code>:8080</code></h2>
+      <span class="note">OIDC auth-code + PKCE · cookie session · access-token relay to services</span>
+    </div>
+    <div class="grid">
+      <div class="card"><div class="card-top"><h3>admin</h3><span class="tag realm">realm</span></div><div class="chips"><span class="chip">admin.read</span><span class="chip">admin.write</span><span class="chip">admin.superuser</span></div></div>
+      <div class="card"><div class="card-top"><h3>student</h3><span class="tag realm">realm</span></div><div class="chips"><span class="chip">client.user</span><span class="chip">client.student</span></div></div>
+      <div class="card"><div class="card-top"><h3>professional</h3><span class="tag realm">realm</span></div><div class="chips"><span class="chip">client.user</span></div></div>
+      <div class="card"><div class="card-top"><h3>business</h3><span class="tag realm">realm</span></div><div class="chips"><span class="chip">client.business</span></div></div>
+      <div class="card"><div class="card-top"><h3>employer</h3><span class="tag realm">realm</span></div><div class="chips"><span class="chip">client.employer</span><span class="chip">client.user</span></div></div>
+      <div class="card"><div class="card-top"><h3>support</h3><span class="tag realm">realm</span></div><div class="chips"><span class="chip">support.l1</span><span class="chip">support.l2</span><span class="chip">support.lead</span></div></div>
+      <div class="card wide">
+        <div class="card-top"><h3>Isolation &amp; registration</h3></div>
+        <div class="desc">Each portal signs in against <b>its own realm</b> — no cross-portal SSO. Services trust <b>all six issuers</b> (per-realm JWT handlers keyed on <code>iss</code>). Self-registration for <b>student / professional / business / employer</b> runs through the <code>illumin360-registration</code> service client in each realm. Self-service actions are gated by role policies — <code>StudentPolicy</code>, <code>ProfessionalPolicy</code>, <code>EmployerPolicy</code>, <code>SupportPolicy</code> (each its role + admins) — so end users manage their own data. Legacy <code>illumin360</code> realm remains for the SPA/BFF + gateway client.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- EDGE -->
+  <section class="layer">
+    <div class="layer-head">
+      <span class="layer-eyebrow">Edge</span>
+      <h2>API Gateway — YARP <code>:8088</code></h2>
+      <span class="note">path-prefix routing · active health checks · token pass-through</span>
+    </div>
+    <div class="grid">
+      <div class="card wide">
+        <div class="chips">
+          <span class="chip">/api/candidates</span><span class="chip">/api/recruitment</span><span class="chip">/api/students</span>
+          <span class="chip">/api/professionals</span><span class="chip">/api/admin</span><span class="chip">/api/employers</span>
+          <span class="chip">/api/payments</span><span class="chip">/api/billing</span><span class="chip mut">/careers</span>
+        </div>
+        <div class="desc">Each <code>/api/&lt;x&gt;/…</code> rewrites to that service's <code>/v1/&lt;x&gt;/…</code>. Dashboards read their own service; the gateway also fans a single portal's calls across services.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SERVICES -->
+  <section class="layer">
+    <div class="layer-head">
+      <span class="layer-eyebrow">Services</span>
+      <h2>Domain services</h2>
+      <span class="note">.NET 10 · Clean Architecture + CQRS · EF Core · outbox</span>
+    </div>
+    <div class="grid">
+      <div class="card">
+        <div class="card-top"><h3>Candidates</h3><span class="tag">ATS</span></div>
+        <ul class="eplist"><li><b>search · dedup · similar</b> (semantic)</li><li>pools · custom fields · notes</li><li>CV upload/download · intake email</li><li>diversity · stats · export</li></ul>
+      </div>
+      <div class="card">
+        <div class="card-top"><h3>Recruitment</h3><span class="tag">hiring</span></div>
+        <ul class="eplist"><li><b>requisitions · applications</b></li><li>approvals · interviews · feedback</li><li>saved searches + alerts</li><li>reports CSV/PDF · hiring metrics · <code>/careers</code></li></ul>
+      </div>
+      <div class="card">
+        <div class="card-top"><h3>Students</h3><span class="tag">/me</span></div>
+        <ul class="eplist"><li><b>dashboard</b> (readiness, matches)</li><li>match save/dismiss/apply</li><li>availability · CV + skill parse</li></ul>
+      </div>
+      <div class="card">
+        <div class="card-top"><h3>Professionals</h3><span class="tag">/me</span></div>
+        <ul class="eplist"><li><b>dashboard</b> · role-scores · skill-gap</li><li>skills · endorsements</li><li>CV parse · notifications</li></ul>
+      </div>
+      <div class="card">
+        <div class="card-top"><h3>Admin</h3><span class="tag">ops</span></div>
+        <ul class="eplist"><li><b>summary · talent-insights · support-summary</b></li><li>verifications · tickets · accounts</li><li>audit log</li></ul>
+      </div>
+      <div class="card">
+        <div class="card-top"><h3>Employers</h3><span class="tag">B2B</span></div>
+        <ul class="eplist"><li><b>company profile</b> (/me)</li><li>team members &amp; roles</li></ul>
+      </div>
+      <div class="card">
+        <div class="card-top"><h3>Payments</h3><span class="tag">escrow</span></div>
+        <ul class="eplist"><li><b>contracts · milestones</b></li><li>activate / cancel</li><li>payout accounts + verify</li></ul>
+      </div>
+      <div class="card">
+        <div class="card-top"><h3>Billing</h3><span class="tag">SaaS</span></div>
+        <ul class="eplist"><li>plans · subscriptions · invoices</li><li>entitlements</li><li><b>mrr-trend</b> (Admin revenue)</li></ul>
+      </div>
+      <div class="card">
+        <div class="card-top"><h3>Notifications</h3><span class="tag kind">worker</span></div>
+        <ul class="eplist"><li>consumes integration events</li><li>email via Mailpit (dev SMTP)</li></ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- DATA -->
+  <section class="layer">
+    <div class="layer-head">
+      <span class="layer-eyebrow">Data &amp; messaging</span>
+      <h2>State</h2>
+      <span class="note">database-per-service · transactional outbox</span>
+    </div>
+    <div class="grid">
+      <div class="card">
+        <div class="card-top"><h3>PostgreSQL</h3></div>
+        <div class="desc">One schema/DB per service:</div>
+        <div class="chips"><span class="chip mut">candidates</span><span class="chip mut">recruitment</span><span class="chip mut">students</span><span class="chip mut">professionals</span><span class="chip mut">admin</span><span class="chip mut">employers</span><span class="chip mut">payments</span><span class="chip mut">billing</span></div>
+      </div>
+      <div class="card"><div class="card-top"><h3>RabbitMQ</h3></div><div class="desc">MassTransit integration events + <b>outbox</b> for atomic publish.</div></div>
+      <div class="card"><div class="card-top"><h3>Redis</h3></div><div class="desc">Caching / session-adjacent state.</div></div>
+      <div class="card"><div class="card-top"><h3>MinIO</h3></div><div class="desc">S3-compatible object store — CV documents.</div></div>
+      <div class="card"><div class="card-top"><h3>Mailpit</h3><span class="tag port">:8025</span></div><div class="desc">Dev SMTP sink — verification &amp; notification email.</div></div>
+    </div>
+  </section>
+
+  <!-- OBSERVABILITY -->
+  <section class="layer">
+    <div class="layer-head">
+      <span class="layer-eyebrow">Observability</span>
+      <h2>Telemetry</h2>
+      <span class="note">OpenTelemetry + Serilog across every service</span>
+    </div>
+    <div class="grid">
+      <div class="card wide">
+        <div class="chips"><span class="chip">Grafana</span><span class="chip">Prometheus</span><span class="chip">Loki</span><span class="chip">Tempo</span><span class="chip">Mimir</span><span class="chip">Alloy</span></div>
+        <div class="desc">Alloy collects OTLP from services; metrics → Prometheus/Mimir, logs → Loki, traces → Tempo, all surfaced in Grafana.</div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <span>Illumin360 — full platform map, local dev topology.</span>
+    <span class="mono">access → identity → edge → services → data → telemetry</span>
+  </footer>
+</div>
