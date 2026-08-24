@@ -166,7 +166,7 @@ v1.MapGet("/tickets", async (
         var result = await handler.HandleAsync(new GetTicketsQuery(status ?? "open"), ct);
         return result.ToHttpResult();
     })
-    .RequireAuthorization(AuthenticationExtensions.AdminPolicy)
+    .RequireAuthorization(AuthenticationExtensions.SupportPolicy)
     .WithName("ListTickets")
     .WithSummary("List support tickets (default: open). Requires an admin role.")
     .Produces<IReadOnlyList<TicketDto>>(StatusCodes.Status200OK)
@@ -183,7 +183,7 @@ v1.MapPost("/tickets/{id:guid}/assign", async (
             new TriageTicketCommand(id, TicketAction.Assign, user.Identity?.Name ?? "admin"), ct);
         return result.ToHttpResult();
     })
-    .RequireAuthorization(AuthenticationExtensions.AdminWritePolicy)
+    .RequireAuthorization(AuthenticationExtensions.SupportPolicy)
     .WithName("AssignTicket")
     .WithSummary("Assign a ticket to the acting admin. Requires an admin (write) role.")
     .Produces<TicketDto>(StatusCodes.Status200OK)
@@ -202,7 +202,7 @@ v1.MapPost("/tickets/{id:guid}/resolve", async (
             new TriageTicketCommand(id, TicketAction.Resolve, user.Identity?.Name ?? "admin"), ct);
         return result.ToHttpResult();
     })
-    .RequireAuthorization(AuthenticationExtensions.AdminWritePolicy)
+    .RequireAuthorization(AuthenticationExtensions.SupportPolicy)
     .WithName("ResolveTicket")
     .WithSummary("Resolve a ticket. Requires an admin (write) role.")
     .Produces<TicketDto>(StatusCodes.Status200OK)
