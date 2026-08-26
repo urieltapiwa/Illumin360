@@ -144,8 +144,8 @@
         <span class="live">Work the queue: assign to me · resolve (open/assigned/resolved)</span>
       </div>
       <div class="card wide">
-        <div class="card-top"><h3>Business Portal SPA</h3><span class="tag">legacy</span><span class="tag port">:5180</span><span class="tag realm">illumin360</span><span class="tag kind">React · Vite</span></div>
-        <div class="desc">Original single-page Talent-Insights portal + its <b>BFF</b> (server-side OIDC + token relay), retained on the shared <code>illumin360</code> realm. <b>Superseded</b> by the six MVC portals above.</div>
+        <div class="card-top"><h3>Landing hub</h3><span class="tag port">portal.illumin</span><span class="tag kind">static · nginx</span></div>
+        <div class="desc">Front door at <code>portal.illumin</code> — a static page linking to the six portals (targets derived from the request host). <b>Replaced</b> the original React/Vite Talent-Insights SPA + its BFF, which have been retired (repo &amp; runtime). The HopeUI MVC migration is complete — no React/BFF remains.</div>
       </div>
     </div>
   </section>
@@ -166,7 +166,7 @@
       <div class="card"><div class="card-top"><h3>support</h3><span class="tag realm">realm</span></div><div class="chips"><span class="chip">support.l1</span><span class="chip">support.l2</span><span class="chip">support.lead</span></div></div>
       <div class="card wide">
         <div class="card-top"><h3>Isolation &amp; registration</h3></div>
-        <div class="desc">Each portal signs in against <b>its own realm</b> — no cross-portal SSO. Services trust <b>all six issuers</b> (per-realm JWT handlers keyed on <code>iss</code>). Self-registration for <b>student / professional / business / employer</b> runs through the <code>illumin360-registration</code> service client in each realm. Self-service actions are gated by role policies — <code>StudentPolicy</code>, <code>ProfessionalPolicy</code>, <code>EmployerPolicy</code>, <code>SupportPolicy</code> (each its role + admins) — so end users manage their own data. Legacy <code>illumin360</code> realm remains for the SPA/BFF + gateway client.</div>
+        <div class="desc">Each portal signs in against <b>its own realm</b> — no cross-portal SSO. Services trust <b>all six issuers</b> (per-realm JWT handlers keyed on <code>iss</code>). Self-registration for <b>student / professional / business / employer</b> runs through the <code>illumin360-registration</code> service client in each realm. Self-service actions are gated by role policies — <code>StudentPolicy</code>, <code>ProfessionalPolicy</code>, <code>EmployerPolicy</code>, <code>SupportPolicy</code> (each its role + admins) — so end users manage their own data. The legacy <code>illumin360</code> realm now backs only the gateway client (the SPA/BFF that used it have been retired).</div>
       </div>
     </div>
   </section>
