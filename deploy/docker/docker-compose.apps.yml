@@ -205,42 +205,15 @@ services:
     networks: [illumin360]
 
   # Business portal SPA — static build served by nginx, fronted by the BFF (never exposed directly).
-  web:
+  # Landing hub for portal.illumin — static nginx serving links to the six MVC portals.
+  # Replaces the retired business-portal SPA (`web`) + `bff-business`.
+  portal:
     build:
-      context: ../../web/business-portal
+      context: ../../web/portal-hub
       dockerfile: Dockerfile
-      args:
-        VITE_USE_BFF: "1"
-    container_name: illumin360-business-web
+    container_name: illumin360-portal
     restart: unless-stopped
     expose: ["80"]
-    networks: [illumin360]
-
-  # Business BFF — server-side OIDC + cookie session + token relay; serves the SPA same-origin.
-  # Keycloak hostname alignment: the BFF reaches the shared dev Keycloak by its in-network name
-  # (Oidc__Authority = keycloak:8080) for discovery, token exchange, user-info and issuer validation, so the
-  # token `iss` matches Authority. The browser can't resolve `keycloak`, so the authorize/end-session redirects
-  # are rewritten to Oidc__FrontChannelAuthority (localhost:8080, the published KC port) in-app. This keeps the
-  # shared Keycloak on per-request issuer derivation (no fixed KC_HOSTNAME) so the sibling apps still validate.
-  # The realm client's redirect URIs must include this BFF's external URL (http://localhost:5180/bff/...).
-  bff-business:
-    build:
-      context: ../..
-      dockerfile: src/BFF/Illumin360.Bff.Business/Dockerfile
-    container_name: illumin360-bff-business
-    restart: unless-stopped
-    environment:
-      ASPNETCORE_ENVIRONMENT: Production
-      Oidc__Authority: "http://keycloak:8080/realms/illumin360"
-      Oidc__FrontChannelAuthority: "http://localhost:8080/realms/illumin360"
-      Oidc__ClientId: "illumin360-business-bff"
-      Oidc__ClientSecret: "${BFF_CLIENT_SECRET:-bff-dev-secret-local-only}"
-      Oidc__RequireHttps: "false"
-      ReverseProxy__Clusters__gateway__Destinations__d1__Address: "http://gateway:8080/"
-      ReverseProxy__Clusters__spa__Destinations__d1__Address: "http://web:80/"
-      OTEL_EXPORTER_OTLP_ENDPOINT: "http://alloy:4317"
-    ports: ["5180:8080"]
-    depends_on: [web, gateway]
     networks: [illumin360]
 
   # ---------------------------------------------------------------------------------------------------
