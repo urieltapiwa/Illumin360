@@ -37,7 +37,7 @@
   </ItemGroup>
 
   <ItemGroup Label="Object storage">
-    <PackageVersion Include="AWSSDK.S3" Version="4.0.102" />
+    <PackageVersion Include="AWSSDK.S3" Version="4.0.102.4" />
   </ItemGroup>
 
   <ItemGroup Label="Document parsing">
