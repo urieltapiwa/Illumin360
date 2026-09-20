@@ -9,11 +9,11 @@
 #     --env-file deploy/docker/.env up -d --build
 #
 # What this overlay changes (and ONLY this):
-#   • Every app service also joins the shared `monitoring` net so OTEL ->
-#     alloy:4317 hits the SHARED Alloy (Illumin's own observability compose is
-#     NOT included any more).
-#   • The 6 MVC portals + the business BFF + the gateway also join `edge` and
-#     get Traefik routers at <x>.illumin.${BASE_DOMAIN}.
+#   • Observability is REMOVED for the single 8 GB host — Illumin's own LGTM
+#     compose is not included, and the apps' baked OTEL endpoint (alloy:4317)
+#     simply has no collector to reach (harmless; the exporter drops silently).
+#   • The 6 MVC portals + the gateway join `edge` and get Traefik routers at
+#     <x>.illumin.${BASE_DOMAIN}.
 #   • The split-issuer hack (keycloak:8080 in-network + localhost:8080 front)
 #     is replaced by ONE public issuer https://id.${BASE_DOMAIN}/realms/<realm>.
 #     With a real HTTPS Keycloak, browser and server use the same issuer, so
@@ -27,23 +27,22 @@
 networks:
   illumin360: { external: true }
   edge:       { external: true }
-  monitoring: { external: true }
 
 services:
-  # ── Backend APIs + worker: just add the shared monitoring net ─────────────
-  candidates-api:    { networks: [illumin360, monitoring] }
-  recruitment-api:   { networks: [illumin360, monitoring] }
-  students-api:      { networks: [illumin360, monitoring] }
-  professionals-api: { networks: [illumin360, monitoring] }
-  admin-api:         { networks: [illumin360, monitoring] }
-  employers-api:     { networks: [illumin360, monitoring] }
-  payments-api:      { networks: [illumin360, monitoring] }
-  billing-api:       { networks: [illumin360, monitoring] }
-  notifications-worker: { networks: [illumin360, monitoring] }
+  # ── Backend APIs + worker: no shared monitoring net (removed, see header) ──
+  candidates-api:    { networks: [illumin360], environment: { Oidc__BackChannelBase: "https://id.${BASE_DOMAIN}", Oidc__FrontChannelBase: "https://id.${BASE_DOMAIN}" } }
+  recruitment-api:   { networks: [illumin360], environment: { Oidc__BackChannelBase: "https://id.${BASE_DOMAIN}", Oidc__FrontChannelBase: "https://id.${BASE_DOMAIN}" } }
+  students-api:      { networks: [illumin360], environment: { Oidc__BackChannelBase: "https://id.${BASE_DOMAIN}", Oidc__FrontChannelBase: "https://id.${BASE_DOMAIN}" } }
+  professionals-api: { networks: [illumin360], environment: { Oidc__BackChannelBase: "https://id.${BASE_DOMAIN}", Oidc__FrontChannelBase: "https://id.${BASE_DOMAIN}" } }
+  admin-api:         { networks: [illumin360], environment: { Oidc__BackChannelBase: "https://id.${BASE_DOMAIN}", Oidc__FrontChannelBase: "https://id.${BASE_DOMAIN}" } }
+  employers-api:     { networks: [illumin360], environment: { Oidc__BackChannelBase: "https://id.${BASE_DOMAIN}", Oidc__FrontChannelBase: "https://id.${BASE_DOMAIN}" } }
+  payments-api:      { networks: [illumin360], environment: { Oidc__BackChannelBase: "https://id.${BASE_DOMAIN}", Oidc__FrontChannelBase: "https://id.${BASE_DOMAIN}" } }
+  billing-api:       { networks: [illumin360], environment: { Oidc__BackChannelBase: "https://id.${BASE_DOMAIN}", Oidc__FrontChannelBase: "https://id.${BASE_DOMAIN}" } }
+  notifications-worker: { networks: [illumin360] }
 
   # ── Gateway: exposed for direct API testing with bearer tokens ────────────
   gateway:
-    networks: [illumin360, monitoring, edge]
+    networks: [illumin360, edge]
     labels:
       - traefik.enable=true
       - traefik.docker.network=edge
@@ -52,7 +51,8 @@ services:
       - traefik.http.routers.illumin-gw.tls.certresolver=le
       - traefik.http.services.illumin-gw.loadbalancer.server.port=8080
 
-  # ── Landing hub (static nginx, no auth) ────────────────────────────────────
+  # ── Landing hub (static nginx, no auth) — replaces the retired
+  # business-portal SPA + bff-business. ──────────────────────────────────────
   portal:
     networks: [illumin360, edge]
     labels:
@@ -69,7 +69,10 @@ services:
       Oidc__Authority: "https://id.${BASE_DOMAIN}/realms/admin"
       Oidc__FrontChannelAuthority: "https://id.${BASE_DOMAIN}/realms/admin"
       Oidc__RequireHttps: "true"
-    networks: [illumin360, monitoring, edge]
+      # Honour Traefik's X-Forwarded-Proto so the app builds https redirect_uris
+      # (otherwise it sends http:// and Keycloak rejects "Invalid redirect_uri").
+      ASPNETCORE_FORWARDEDHEADERS_ENABLED: "true"
+    networks: [illumin360, edge]
     labels:
       - traefik.enable=true
       - traefik.docker.network=edge
@@ -83,8 +86,11 @@ services:
       Oidc__Authority: "https://id.${BASE_DOMAIN}/realms/business"
       Oidc__FrontChannelAuthority: "https://id.${BASE_DOMAIN}/realms/business"
       Oidc__RequireHttps: "true"
+      # Honour Traefik's X-Forwarded-Proto so the app builds https redirect_uris
+      # (otherwise it sends http:// and Keycloak rejects "Invalid redirect_uri").
+      ASPNETCORE_FORWARDEDHEADERS_ENABLED: "true"
       Registration__KeycloakBaseUrl: "https://id.${BASE_DOMAIN}"
-    networks: [illumin360, monitoring, edge]
+    networks: [illumin360, edge]
     labels:
       - traefik.enable=true
       - traefik.docker.network=edge
@@ -98,8 +104,11 @@ services:
       Oidc__Authority: "https://id.${BASE_DOMAIN}/realms/student"
       Oidc__FrontChannelAuthority: "https://id.${BASE_DOMAIN}/realms/student"
       Oidc__RequireHttps: "true"
+      # Honour Traefik's X-Forwarded-Proto so the app builds https redirect_uris
+      # (otherwise it sends http:// and Keycloak rejects "Invalid redirect_uri").
+      ASPNETCORE_FORWARDEDHEADERS_ENABLED: "true"
       Registration__KeycloakBaseUrl: "https://id.${BASE_DOMAIN}"
-    networks: [illumin360, monitoring, edge]
+    networks: [illumin360, edge]
     labels:
       - traefik.enable=true
       - traefik.docker.network=edge
@@ -113,8 +122,11 @@ services:
       Oidc__Authority: "https://id.${BASE_DOMAIN}/realms/professional"
       Oidc__FrontChannelAuthority: "https://id.${BASE_DOMAIN}/realms/professional"
       Oidc__RequireHttps: "true"
+      # Honour Traefik's X-Forwarded-Proto so the app builds https redirect_uris
+      # (otherwise it sends http:// and Keycloak rejects "Invalid redirect_uri").
+      ASPNETCORE_FORWARDEDHEADERS_ENABLED: "true"
       Registration__KeycloakBaseUrl: "https://id.${BASE_DOMAIN}"
-    networks: [illumin360, monitoring, edge]
+    networks: [illumin360, edge]
     labels:
       - traefik.enable=true
       - traefik.docker.network=edge
@@ -128,8 +140,11 @@ services:
       Oidc__Authority: "https://id.${BASE_DOMAIN}/realms/employer"
       Oidc__FrontChannelAuthority: "https://id.${BASE_DOMAIN}/realms/employer"
       Oidc__RequireHttps: "true"
+      # Honour Traefik's X-Forwarded-Proto so the app builds https redirect_uris
+      # (otherwise it sends http:// and Keycloak rejects "Invalid redirect_uri").
+      ASPNETCORE_FORWARDEDHEADERS_ENABLED: "true"
       Registration__KeycloakBaseUrl: "https://id.${BASE_DOMAIN}"
-    networks: [illumin360, monitoring, edge]
+    networks: [illumin360, edge]
     labels:
       - traefik.enable=true
       - traefik.docker.network=edge
@@ -143,7 +158,10 @@ services:
       Oidc__Authority: "https://id.${BASE_DOMAIN}/realms/support"
       Oidc__FrontChannelAuthority: "https://id.${BASE_DOMAIN}/realms/support"
       Oidc__RequireHttps: "true"
-    networks: [illumin360, monitoring, edge]
+      # Honour Traefik's X-Forwarded-Proto so the app builds https redirect_uris
+      # (otherwise it sends http:// and Keycloak rejects "Invalid redirect_uri").
+      ASPNETCORE_FORWARDEDHEADERS_ENABLED: "true"
+    networks: [illumin360, edge]
     labels:
       - traefik.enable=true
       - traefik.docker.network=edge
