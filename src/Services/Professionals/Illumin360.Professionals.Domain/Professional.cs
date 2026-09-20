@@ -1,3 +1,4 @@
+using System.Linq;
 using Illumin360.SharedKernel;
 
 namespace Illumin360.Professionals.Domain;
@@ -57,6 +58,9 @@ public sealed class Professional : Entity<ProfessionalId>
 
     /// <summary>Public headline / tagline.</summary>
     public string Headline { get; private set; } = string.Empty;
+
+    /// <summary>The Keycloak subject (user id) this profile belongs to; null for seeded/demo profiles.</summary>
+    public string? Subject { get; private set; }
 
     /// <summary>Profile-strength score (0–100).</summary>
     public int ProfileStrength { get; private set; }
@@ -161,6 +165,24 @@ public sealed class Professional : Entity<ProfessionalId>
     /// <summary>Records that the professional submitted an application (bumps the active count).</summary>
     public void RecordApplication() => ActiveApplications += 1;
 
+    /// <summary>Records that someone viewed this profile: bumps the view total, recent delta, and the latest trend bucket.</summary>
+    public void RecordProfileView()
+    {
+        ProfileViews++;
+        ViewsDelta++;
+        var trend = ViewsTrend.ToList();
+        if (trend.Count == 0)
+        {
+            trend.Add(1);
+        }
+        else
+        {
+            trend[^1] += 1;
+        }
+
+        ViewsTrend = trend;
+    }
+
     /// <summary>Registers a new professional. Metrics start at zero and accrue with platform use.</summary>
     /// <param name="firstName">Given name.</param>
     /// <param name="lastName">Family name.</param>
@@ -169,6 +191,7 @@ public sealed class Professional : Entity<ProfessionalId>
     /// <param name="nationality">Nationality.</param>
     /// <param name="availability">Availability label.</param>
     /// <param name="headline">Public headline.</param>
+    /// <param name="subject">The Keycloak subject (user id) that owns this profile; null for demo profiles.</param>
     /// <returns>A successful <see cref="Result{T}"/> with the professional, or a validation error.</returns>
     public static Result<Professional> Register(
         string firstName,
@@ -177,7 +200,8 @@ public sealed class Professional : Entity<ProfessionalId>
         string city,
         string nationality,
         string availability,
-        string headline)
+        string headline,
+        string? subject = null)
     {
         if (string.IsNullOrWhiteSpace(firstName))
         {
@@ -209,6 +233,7 @@ public sealed class Professional : Entity<ProfessionalId>
             availability?.Trim() ?? string.Empty,
             headline?.Trim() ?? string.Empty);
 
+        professional.Subject = string.IsNullOrWhiteSpace(subject) ? null : subject.Trim();
         professional.Raise(new ProfessionalRegistered(professional.Id, professional.FullName, professional.CreatedAt));
         return professional;
     }

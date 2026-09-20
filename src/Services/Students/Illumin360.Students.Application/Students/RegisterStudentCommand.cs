@@ -21,6 +21,7 @@ public sealed record StudentSummaryDto(Guid Id, string Name, string Field, strin
 /// <param name="Graduating">Expected graduation year label.</param>
 /// <param name="Program">Sponsoring programme.</param>
 /// <param name="City">Home city.</param>
+/// <param name="Subject">The Keycloak subject (user id) that owns this profile; null when created without identity.</param>
 public sealed record RegisterStudentCommand(
     string FirstName,
     string LastName,
@@ -29,7 +30,8 @@ public sealed record RegisterStudentCommand(
     string Year,
     string Graduating,
     string Program,
-    string City) : ICommand<StudentSummaryDto>;
+    string City,
+    string? Subject = null) : ICommand<StudentSummaryDto>;
 
 /// <summary>Handles <see cref="RegisterStudentCommand"/>.</summary>
 /// <param name="repository">The student repository.</param>
@@ -56,7 +58,8 @@ public sealed class RegisterStudentCommandHandler(
             command.Year,
             command.Graduating,
             command.Program,
-            command.City);
+            command.City,
+            command.Subject);
 
         if (creation.IsFailure)
         {

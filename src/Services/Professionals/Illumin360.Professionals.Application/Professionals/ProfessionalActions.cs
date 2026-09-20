@@ -113,3 +113,31 @@ public sealed class SetAvailabilityCommandHandler(IProfessionalRepository reposi
         return me.Availability;
     }
 }
+
+/// <summary>Records a profile view against a specific professional (someone opened their profile by id).</summary>
+/// <param name="Id">The viewed professional's id.</param>
+public sealed record RecordProfessionalViewCommand(Guid Id) : ICommand<bool>;
+
+/// <summary>Handles <see cref="RecordProfessionalViewCommand"/> by bumping the professional's view counters.</summary>
+/// <param name="repository">The professional repository.</param>
+public sealed class RecordProfessionalViewCommandHandler(IProfessionalRepository repository)
+    : ICommandHandler<RecordProfessionalViewCommand, bool>
+{
+    private readonly IProfessionalRepository _repository = repository;
+
+    /// <inheritdoc />
+    public async Task<Result<bool>> HandleAsync(RecordProfessionalViewCommand command, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+
+        var professional = await _repository.GetTrackedAsync(new ProfessionalId(command.Id), cancellationToken).ConfigureAwait(false);
+        if (professional is null)
+        {
+            return Result<bool>.Success(false);
+        }
+
+        professional.RecordProfileView();
+        await _repository.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        return Result<bool>.Success(true);
+    }
+}

@@ -64,6 +64,7 @@ await using (var scope = app.Services.CreateAsyncScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<PaymentsDbContext>();
     await db.Database.MigrateAsync();
+    await PaymentsSeeder.SeedAsync(db, CancellationToken.None);
 }
 
 app.UseExceptionHandler();

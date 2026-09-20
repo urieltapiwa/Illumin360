@@ -1,5 +1,7 @@
 using Illumin360.Employers.Application.Abstractions;
+using Illumin360.Employers.Infrastructure.Messaging;
 using Illumin360.Employers.Infrastructure.Persistence;
+using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -21,6 +23,28 @@ public static class DependencyInjection
         services.AddDbContext<EmployersDbContext>(o => o.UseNpgsql(connectionString));
         services.AddScoped<IEmployerRepository, EmployerRepository>();
         services.AddScoped<ITeamMemberRepository, TeamMemberRepository>();
+
+        var rabbitConnectionString = configuration.GetConnectionString("rabbitmq")
+            ?? "amqp://illumin:illumin@localhost:5672";
+
+        services.AddMassTransit(x =>
+        {
+            x.AddEntityFrameworkOutbox<EmployersDbContext>(o =>
+            {
+                o.UsePostgres();
+                o.UseBusOutbox();
+            });
+
+            x.SetKebabCaseEndpointNameFormatter();
+
+            x.UsingRabbitMq((context, cfg) =>
+            {
+                cfg.Host(new Uri(rabbitConnectionString));
+                cfg.ConfigureEndpoints(context);
+            });
+        });
+
+        services.AddScoped<IIntegrationEventPublisher, MassTransitIntegrationEventPublisher>();
 
         services.AddHealthChecks()
             .AddNpgSql(connectionString, name: "employers-db", tags: ["ready", "startup"]);

@@ -23,6 +23,10 @@ public sealed class EmployerRepository(EmployersDbContext db) : IEmployerReposit
         => await _db.Employers.FirstOrDefaultAsync(e => e.Id == id, cancellationToken).ConfigureAwait(false);
 
     /// <inheritdoc />
+    public async Task<Employer?> GetBySubjectAsync(string subject, CancellationToken cancellationToken)
+        => await _db.Employers.AsNoTracking().OrderBy(e => e.CreatedAt).FirstOrDefaultAsync(e => e.Subject == subject, cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
     public void Add(Employer employer) => _db.Employers.Add(employer);
 
     /// <inheritdoc />

@@ -15,6 +15,9 @@ public sealed record MrrPoint(string? Label, long MrrMinor);
 
 public sealed record MrrTrend(string? Currency, MrrPoint[]? Points);
 
+// Live per-service health from GET /api/admin/system-health (Admin service fan-in).
+public sealed record ServiceHealth(string Name, bool Healthy, int LatencyMs);
+
 // Relays the signed-in admin's access token to the gateway.
 public sealed class TokenRelayHandler(IHttpContextAccessor accessor) : DelegatingHandler
 {
@@ -63,6 +66,18 @@ public sealed partial class AdminApiClient(HttpClient http)
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException)
         {
             return null; // Billing unavailable — the view falls back to placeholder values.
+        }
+    }
+
+    public async Task<IReadOnlyList<ServiceHealth>?> GetSystemHealthAsync(CancellationToken ct = default)
+    {
+        try
+        {
+            return await _http.GetFromJsonAsync<List<ServiceHealth>>("/api/admin/system-health", ct).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException)
+        {
+            return null; // Admin fan-in unavailable — the view falls back to the illustrative list.
         }
     }
 }

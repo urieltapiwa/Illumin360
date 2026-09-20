@@ -31,6 +31,12 @@ public interface IStudentRepository
     /// <returns>The dashboard, or <see langword="null"/> if no students exist.</returns>
     Task<StudentDashboard?> GetDefaultDashboardAsync(CancellationToken cancellationToken);
 
+    /// <summary>Loads the dashboard for the profile owned by the given Keycloak subject, or null.</summary>
+    /// <param name="subject">The Keycloak subject (user id).</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The student's dashboard, or null if no profile is linked to that subject.</returns>
+    Task<StudentDashboard?> GetDashboardBySubjectAsync(string subject, CancellationToken cancellationToken);
+
     /// <summary>Stages a new student for insertion.</summary>
     /// <param name="student">The student to add.</param>
     void Add(Student student);

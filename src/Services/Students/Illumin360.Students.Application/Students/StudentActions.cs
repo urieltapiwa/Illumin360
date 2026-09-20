@@ -113,3 +113,31 @@ public sealed class SetAvailabilityCommandHandler(IStudentRepository repository)
         return me.Availability;
     }
 }
+
+/// <summary>Records a profile view against a specific student (someone opened their profile by id).</summary>
+/// <param name="Id">The viewed student's id.</param>
+public sealed record RecordStudentViewCommand(Guid Id) : ICommand<bool>;
+
+/// <summary>Handles <see cref="RecordStudentViewCommand"/> by bumping the student's view counters.</summary>
+/// <param name="repository">The student repository.</param>
+public sealed class RecordStudentViewCommandHandler(IStudentRepository repository)
+    : ICommandHandler<RecordStudentViewCommand, bool>
+{
+    private readonly IStudentRepository _repository = repository;
+
+    /// <inheritdoc />
+    public async Task<Result<bool>> HandleAsync(RecordStudentViewCommand command, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+
+        var student = await _repository.GetTrackedAsync(new StudentId(command.Id), cancellationToken).ConfigureAwait(false);
+        if (student is null)
+        {
+            return Result<bool>.Success(false);
+        }
+
+        student.RecordProfileView();
+        await _repository.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        return Result<bool>.Success(true);
+    }
+}

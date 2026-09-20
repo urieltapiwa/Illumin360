@@ -164,7 +164,7 @@ public sealed class KeycloakRegistrar(IHttpClientFactory httpFactory, IConfigura
         }
 
         // --- 5. create the domain profile; compensate (delete the identity) if it fails → atomic outcome ---
-        var profileOk = await CreateDomainProfileAsync(http, token, type, req, ct).ConfigureAwait(false);
+        var profileOk = await CreateDomainProfileAsync(http, token, type, req, userId, ct).ConfigureAwait(false);
         if (!profileOk)
         {
             (await http.DeleteAsync($"{kcBase}/admin/realms/{realm}/users/{userId}", ct).ConfigureAwait(false)).Dispose();
@@ -198,7 +198,7 @@ public sealed class KeycloakRegistrar(IHttpClientFactory httpFactory, IConfigura
         return payload.TryGetProperty("access_token", out var t) ? t.GetString() : null;
     }
 
-    private async Task<bool> CreateDomainProfileAsync(HttpClient http, string token, string type, RegisterRequest req, CancellationToken ct)
+    private async Task<bool> CreateDomainProfileAsync(HttpClient http, string token, string type, RegisterRequest req, string subject, CancellationToken ct)
     {
         // Employer: identity + client.employer role only — no employers service to profile into yet.
         if (type == "employer" || type == "business")
@@ -222,6 +222,7 @@ public sealed class KeycloakRegistrar(IHttpClientFactory httpFactory, IConfigura
                     graduating = string.Empty,
                     program = "Self-registered",
                     city = req.City!.Trim(),
+                    subject,
                 })
                 : ($"{gateway}/api/professionals", new
                 {
@@ -232,6 +233,7 @@ public sealed class KeycloakRegistrar(IHttpClientFactory httpFactory, IConfigura
                     nationality = string.Empty,
                     availability = "Open to opportunities",
                     headline = string.Empty,
+                    subject,
                 });
 
             using var resp = await http.PostAsJsonAsync(path, body, ct).ConfigureAwait(false);

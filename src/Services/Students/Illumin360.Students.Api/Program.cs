@@ -51,22 +51,32 @@ app.MapProjectHealthChecks();
 var v1 = app.MapGroup("/v1/students").WithTags("Students");
 
 v1.MapGet("/me", async (
+        System.Security.Claims.ClaimsPrincipal user,
         IQueryHandler<GetStudentDashboardQuery, StudentDashboardDto> handler,
         CancellationToken ct) =>
     {
-        var result = await handler.HandleAsync(new GetStudentDashboardQuery(), ct);
+        // Per-user identity: resolve by the caller's Keycloak subject (inbound claim mapping is off,
+        // so the claim is "sub"). The handler falls back to the demo profile when there's no match.
+        var subject = user.FindFirst("sub")?.Value;
+        var result = await handler.HandleAsync(new GetStudentDashboardQuery(Subject: subject), ct);
         return result.ToHttpResult();
     })
+    .RequireAuthorization(AuthenticationExtensions.StudentPolicy)
     .WithName("GetMyStudentDashboard")
-    .WithSummary("Dashboard for the current (demo) student.")
+    .WithSummary("Dashboard for the signed-in student (resolved by token subject).")
     .Produces<StudentDashboardDto>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
     .ProducesProblem(StatusCodes.Status404NotFound);
 
 v1.MapGet("/{id:guid}", async (
         Guid id,
+        ICommandHandler<RecordStudentViewCommand, bool> viewRecorder,
         IQueryHandler<GetStudentDashboardQuery, StudentDashboardDto> handler,
         CancellationToken ct) =>
     {
+        // Viewing a profile by id (recruiter/admin) is a real engagement signal — record it. The owner's
+        // own /me view does not count. Best-effort: a failed record must not break the read.
+        await viewRecorder.HandleAsync(new RecordStudentViewCommand(id), ct);
         var result = await handler.HandleAsync(new GetStudentDashboardQuery(id), ct);
         return result.ToHttpResult();
     })

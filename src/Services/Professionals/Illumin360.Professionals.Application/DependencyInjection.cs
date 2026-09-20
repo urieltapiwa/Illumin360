@@ -25,6 +25,9 @@ public static class DependencyInjection
             ICommandHandler<SetAvailabilityCommand, string>,
             SetAvailabilityCommandHandler>();
         services.AddScoped<
+            ICommandHandler<RecordProfessionalViewCommand, bool>,
+            RecordProfessionalViewCommandHandler>();
+        services.AddScoped<
             ICommandHandler<UploadCvCommand, CvDto>,
             UploadCvCommandHandler>();
         services.AddScoped<

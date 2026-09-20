@@ -1,0 +1,177 @@
+@model Illumin360.EmployerWeb.Controllers.CandidateSearchVm
+@{
+    ViewData["Title"] = "Find talent";
+    var r = Model.Result;
+    var live = r is not null;
+    var total = r?.Total ?? 0;
+    var pageSize = r?.PageSize ?? 12;
+    var page = Model.Page;
+    var showingFrom = total == 0 ? 0 : ((page - 1) * pageSize) + 1;
+    var showingTo = Math.Min(page * pageSize, total);
+    var hasNext = page * pageSize < total;
+    var hasCvParam = Model.HasCv == true ? "true" : null;
+    var blindParam = Model.Blind ? "true" : null;
+    var availabilities = new (string Value, string Label)[]
+    {
+        ("", "Any availability"),
+        ("ActivelyLooking", "Actively looking"),
+        ("OpenToOpportunities", "Open to opportunities"),
+        ("NotAvailable", "Not available"),
+    };
+    string AvailLabel(string v) => v switch
+    {
+        "ActivelyLooking" => "Actively looking",
+        "OpenToOpportunities" => "Open to opportunities",
+        "NotAvailable" => "Not available",
+        _ => v,
+    };
+    string AvailCls(string v) => v switch
+    {
+        "ActivelyLooking" => "bg-soft-success text-success",
+        "OpenToOpportunities" => "bg-soft-primary text-primary",
+        "NotAvailable" => "bg-soft-secondary text-secondary",
+        _ => "bg-soft-secondary text-secondary",
+    };
+}
+
+<div class="d-flex align-items-center gap-2 mb-3">
+    <span class="badge @(live ? "bg-soft-primary text-primary" : "bg-soft-warning text-warning")">@(live ? "Live data" : "Demo data")</span>
+    <span class="text-muted small">Faceted search over the candidate pool (Candidates service). Blind screening hides names for fairer shortlisting.</span>
+</div>
+
+<div class="card mb-3"><div class="card-body">
+    <form asp-action="Index" method="get" class="row g-2 align-items-end">
+        <div class="col-md-4">
+            <label class="form-label small text-muted">Keyword</label>
+            <input name="q" value="@Model.Q" class="form-control" placeholder="name or headline" />
+        </div>
+        <div class="col-md-3">
+            <label class="form-label small text-muted">City</label>
+            <input name="city" value="@Model.City" class="form-control" placeholder="any city" />
+        </div>
+        <div class="col-md-3">
+            <label class="form-label small text-muted">Availability</label>
+            <select name="availability" class="form-select">
+                @foreach (var (val, label) in availabilities)
+                {
+                    if (string.Equals(val, Model.Availability, StringComparison.Ordinal))
+                    {
+                        <option value="@val" selected>@label</option>
+                    }
+                    else
+                    {
+                        <option value="@val">@label</option>
+                    }
+                }
+            </select>
+        </div>
+        <div class="col-md-2 d-flex flex-column gap-1">
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="hasCv" value="true" id="hasCv" @(Model.HasCv == true ? "checked" : "") />
+                <label class="form-check-label small" for="hasCv">Has CV</label>
+            </div>
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="blind" value="true" id="blind" @(Model.Blind ? "checked" : "") />
+                <label class="form-check-label small" for="blind">Blind screen</label>
+            </div>
+        </div>
+        <div class="col-12">
+            <button type="submit" class="btn btn-primary">Search</button>
+            <a asp-action="Index" class="btn btn-soft-secondary">Reset</a>
+        </div>
+    </form>
+</div></div>
+
+<div class="row g-3">
+    <div class="col-lg-9">
+        <div class="card mb-0 h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0 fw-bold">Candidates</h5>
+                <span class="text-muted small">@(total == 0 ? "No matches" : $"Showing {showingFrom}–{showingTo} of {total}")</span>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table mb-0 align-middle">
+                        <thead><tr><th>Candidate</th><th>City</th><th>Availability</th><th>Headline</th></tr></thead>
+                        <tbody>
+                        @if (!live)
+                        {
+                            <tr><td colspan="4" class="text-center text-muted py-4">Candidate search is unavailable right now.</td></tr>
+                        }
+                        else if (r!.Items.Count == 0)
+                        {
+                            <tr><td colspan="4" class="text-center text-muted py-4">No candidates match these filters.</td></tr>
+                        }
+                        @foreach (var c in r?.Items ?? Array.Empty<Illumin360.EmployerWeb.Services.CandidateDto>())
+                        {
+                            var name = $"{c.FirstName} {c.LastName}".Trim();
+                            var initials = string.Concat(name.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(w => char.ToUpperInvariant(w[0])));
+                            <tr>
+                                <td>
+                                    <span class="d-flex align-items-center gap-2">
+                                        <span class="avatar-initials rounded d-inline-flex align-items-center justify-content-center bg-soft-primary text-primary fw-bold" style="width:34px;height:34px;">@(string.IsNullOrWhiteSpace(initials) ? "?" : initials)</span>
+                                        @if (Model.Blind)
+                                        {
+                                            <span class="fw-semibold">@(string.IsNullOrWhiteSpace(name) ? "(hidden)" : name)</span>
+                                        }
+                                        else
+                                        {
+                                            <a class="fw-semibold text-decoration-none" asp-action="Details" asp-route-id="@c.Id">@(string.IsNullOrWhiteSpace(name) ? "(hidden)" : name)</a>
+                                        }
+                                    </span>
+                                </td>
+                                <td class="text-muted">@c.City</td>
+                                <td><span class="badge @AvailCls(c.Availability)">@AvailLabel(c.Availability)</span></td>
+                                <td class="text-muted">@(c.PublicHeadline ?? "—")</td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            @if (live && total > pageSize)
+            {
+                <div class="card-footer d-flex justify-content-between align-items-center">
+                    @if (page > 1)
+                    {
+                        <a class="btn btn-sm btn-soft-primary" asp-action="Index" asp-route-q="@Model.Q" asp-route-city="@Model.City" asp-route-availability="@Model.Availability" asp-route-hasCv="@hasCvParam" asp-route-blind="@blindParam" asp-route-page="@(page - 1)">&larr; Previous</a>
+                    }
+                    else { <span></span> }
+                    <span class="text-muted small">Page @(page)</span>
+                    @if (hasNext)
+                    {
+                        <a class="btn btn-sm btn-soft-primary" asp-action="Index" asp-route-q="@Model.Q" asp-route-city="@Model.City" asp-route-availability="@Model.Availability" asp-route-hasCv="@hasCvParam" asp-route-blind="@blindParam" asp-route-page="@(page + 1)">Next &rarr;</a>
+                    }
+                    else { <span></span> }
+                </div>
+            }
+        </div>
+    </div>
+
+    <div class="col-lg-3">
+        <div class="card mb-0 h-100">
+            <div class="card-header"><h6 class="mb-0 fw-bold">Refine</h6></div>
+            <div class="card-body">
+                <p class="text-muted mb-2" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;">By city</p>
+                @if (r?.Facets.Cities is { Count: > 0 } cities)
+                {
+                    foreach (var f in cities)
+                    {
+                        <a class="badge bg-soft-primary text-primary text-decoration-none me-1 mb-1 d-inline-block" asp-action="Index" asp-route-q="@Model.Q" asp-route-city="@f.Label" asp-route-availability="@Model.Availability" asp-route-blind="@blindParam">@f.Label · @f.Count</a>
+                    }
+                }
+                else { <span class="text-muted small">—</span> }
+
+                <p class="text-muted mb-2 mt-3" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;">By availability</p>
+                @if (r?.Facets.Availability is { Count: > 0 } avail)
+                {
+                    foreach (var f in avail)
+                    {
+                        <a class="badge bg-soft-secondary text-secondary text-decoration-none me-1 mb-1 d-inline-block" asp-action="Index" asp-route-q="@Model.Q" asp-route-city="@Model.City" asp-route-availability="@f.Label" asp-route-blind="@blindParam">@AvailLabel(f.Label) · @f.Count</a>
+                    }
+                }
+                else { <span class="text-muted small">—</span> }
+            </div>
+        </div>
+    </div>
+</div>

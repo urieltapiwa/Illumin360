@@ -24,21 +24,9 @@
         ("Pending Verifications", (Model?.PendingVerifications ?? 5).ToString(), "awaiting review", "M22 12h-4l-3 9L9 3l-3 9H2"),
         ("Open Tickets", (Model?.OpenTickets ?? 4).ToString(), "in the support queue", "M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"),
     };
-    var services = new[] {
-        ("Gateway", "38ms", "99.99%", true),
-        ("Candidates", "52ms", "99.98%", true),
-        ("Recruitment / AI Match", "119ms", "99.95%", true),
-        ("Billing", "61ms", "99.99%", true),
-        ("Notifications", "248ms", "99.82%", false),
-        ("Identity (Keycloak)", "44ms", "99.99%", true),
-    };
-    var queue = new[] {
-        ("Etosha Consulting", "Company verification", "34s ago", "Low"),
-        ("Apex Namibia", "Recruiter ID", "12s ago", "Low"),
-        ("Meridian Group", "Company verification", "5h ago", "Medium"),
-        ("Orange River Trading", "Document review", "3h ago", "Low"),
-        ("Erongo Consulting", "Company verification", "3h ago", "Medium"),
-    };
+    var health = ViewData["SystemHealth"] as IReadOnlyList<Illumin360.AdminWeb.Services.ServiceHealth>;
+    var healthLive = health is { Count: > 0 };
+    var queue = (ViewData["Verifications"] as List<Illumin360.AdminWeb.Services.VerificationRow>) ?? new List<Illumin360.AdminWeb.Services.VerificationRow>();
 }
 
 <div class="d-flex align-items-center gap-2 mb-2">
@@ -97,13 +85,17 @@
     </div>
     <div class="col-lg-4">
         <div class="card mb-0 h-100">
-            <div class="card-header d-flex justify-content-between align-items-center"><h5 class="mb-0 fw-bold">System health</h5><span class="badge bg-soft-primary text-primary">live</span></div>
+            <div class="card-header d-flex justify-content-between align-items-center"><h5 class="mb-0 fw-bold">System health</h5><span class="badge @(healthLive ? "bg-soft-primary text-primary" : "bg-light text-muted border")" title="@(healthLive ? "Live /health/ready probes via the Admin service." : "Probe unavailable — showing no data.")">@(healthLive ? "live" : "unavailable")</span></div>
             <div class="card-body">
-                @foreach (var (name, latency, uptime, ok) in services)
+                @if (!healthLive)
+                {
+                    <div class="text-muted small py-2">Health probe unavailable right now.</div>
+                }
+                @foreach (var s in health ?? System.Array.Empty<Illumin360.AdminWeb.Services.ServiceHealth>())
                 {
                     <div class="d-flex align-items-center justify-content-between py-2 border-bottom">
-                        <span class="d-flex align-items-center gap-2"><span class="rounded-circle d-inline-block" style="width:8px;height:8px;background:@(ok ? "#1aa053" : "#e8b14c")"></span>@name</span>
-                        <span class="text-muted small">@latency · <span class="@(ok ? "" : "text-warning")">@uptime</span></span>
+                        <span class="d-flex align-items-center gap-2"><span class="rounded-circle d-inline-block" style="width:8px;height:8px;background:@(s.Healthy ? "#1aa053" : "#d9534f")"></span>@s.Name</span>
+                        <span class="text-muted small">@s.LatencyMs ms · <span class="@(s.Healthy ? "text-success" : "text-danger")">@(s.Healthy ? "healthy" : "down")</span></span>
                     </div>
                 }
             </div>
@@ -121,14 +113,22 @@
                     <table class="table mb-0">
                         <thead><tr><th>Entity</th><th>Type</th><th>Submitted</th><th>Risk</th><th class="text-end">Action</th></tr></thead>
                         <tbody>
-                            @foreach (var (entity, type, submitted, risk) in queue)
+                            @if (queue.Count == 0)
                             {
+                                <tr><td colspan="5" class="text-center text-muted py-4">No pending verifications.</td></tr>
+                            }
+                            @foreach (var v in queue)
+                            {
+                                var risk = v.Risk ?? "Low";
+                                var riskCls = risk.Equals("High", StringComparison.OrdinalIgnoreCase) ? "bg-soft-danger text-danger"
+                                    : risk.Equals("Medium", StringComparison.OrdinalIgnoreCase) ? "bg-soft-warning text-warning"
+                                    : "bg-soft-primary text-primary";
                                 <tr>
-                                    <td class="fw-semibold">@entity</td>
-                                    <td class="text-muted">@type</td>
-                                    <td class="text-muted">@submitted</td>
-                                    <td><span class="badge @(risk == "Medium" ? "bg-soft-warning text-warning" : "bg-soft-primary text-primary")">@risk</span></td>
-                                    <td class="text-end"><a href="#" class="btn btn-sm btn-soft-primary">Review</a></td>
+                                    <td class="fw-semibold">@(v.Entity ?? "—")</td>
+                                    <td class="text-muted">@(v.Kind ?? "—")</td>
+                                    <td class="text-muted">@(v.Submitted ?? "—")</td>
+                                    <td><span class="badge @riskCls">@risk</span></td>
+                                    <td class="text-end"><a asp-controller="Verifications" asp-action="Index" class="btn btn-sm btn-soft-primary">Review</a></td>
                                 </tr>
                             }
                         </tbody>

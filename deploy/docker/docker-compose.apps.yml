@@ -118,11 +118,13 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       ConnectionStrings__employers: "Host=postgres;Port=5432;Database=illumin360_employers;Username=${POSTGRES_USER:-illumin};Password=${POSTGRES_PASSWORD:-illumin_dev_pw}"
+      ConnectionStrings__rabbitmq: "amqp://${RABBITMQ_USER:-illumin}:${RABBITMQ_PASSWORD:-illumin}@rabbitmq:5672"
       OTEL_EXPORTER_OTLP_ENDPOINT: "http://alloy:4317"
     expose: ["8080"]
     ports: ["5206:8080"]
     depends_on:
       postgres: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
     # No container HEALTHCHECK: the chiseled runtime has no shell for a CMD-SHELL probe (it reported a false
     # "unhealthy"). Liveness/readiness are exposed over HTTP at /health/live and /health/ready and consumed by
     # the gateway's active health checks and Kubernetes probes.

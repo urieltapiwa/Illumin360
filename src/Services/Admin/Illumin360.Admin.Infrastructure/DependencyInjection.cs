@@ -41,6 +41,11 @@ public static class DependencyInjection
                 o.UseBusOutbox();
             });
 
+            // Ingest cross-service registration events into the account directory.
+            x.AddConsumer<Messaging.StudentRegisteredConsumer>();
+            x.AddConsumer<Messaging.ProfessionalRegisteredConsumer>();
+            x.AddConsumer<Messaging.EmployerRegisteredConsumer>();
+
             x.SetKebabCaseEndpointNameFormatter();
 
             x.UsingRabbitMq((context, cfg) =>

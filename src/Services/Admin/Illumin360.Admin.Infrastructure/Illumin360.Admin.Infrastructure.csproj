@@ -12,5 +12,8 @@
     <PackageReference Include="MassTransit.RabbitMQ" />
     <PackageReference Include="MassTransit.EntityFrameworkCore" />
     <ProjectReference Include="..\Illumin360.Admin.Application\Illumin360.Admin.Application.csproj" />
+    <ProjectReference Include="..\..\Students\Illumin360.Students.Contracts\Illumin360.Students.Contracts.csproj" />
+    <ProjectReference Include="..\..\Professionals\Illumin360.Professionals.Contracts\Illumin360.Professionals.Contracts.csproj" />
+    <ProjectReference Include="..\..\Employers\Illumin360.Employers.Contracts\Illumin360.Employers.Contracts.csproj" />
   </ItemGroup>
 </Project>

@@ -67,6 +67,8 @@ public sealed class ProfessionalsDbContext(DbContextOptions<ProfessionalsDbConte
             b.Property(p => p.Nationality).HasColumnName("nationality").HasMaxLength(100);
             b.Property(p => p.Availability).HasColumnName("availability").HasMaxLength(60);
             b.Property(p => p.Headline).HasColumnName("headline").HasMaxLength(200);
+            b.Property(p => p.Subject).HasColumnName("subject").HasMaxLength(64);
+            b.HasIndex(p => p.Subject).IsUnique().HasFilter("subject IS NOT NULL");
             b.Property(p => p.ProfileStrength).HasColumnName("profile_strength");
             b.Property(p => p.Percentile).HasColumnName("percentile");
             b.Property(p => p.MemberSince).HasColumnName("member_since").HasMaxLength(8);

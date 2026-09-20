@@ -30,6 +30,15 @@ public sealed class StudentRepository(StudentsDbContext db) : IStudentRepository
     }
 
     /// <inheritdoc />
+    public async Task<StudentDashboard?> GetDashboardBySubjectAsync(string subject, CancellationToken cancellationToken)
+    {
+        var student = await _db.Students.AsNoTracking()
+            .FirstOrDefaultAsync(s => s.Subject == subject, cancellationToken).ConfigureAwait(false);
+
+        return student is null ? null : await LoadAsync(student, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
     public void Add(Student student) => _db.Students.Add(student);
 
     /// <inheritdoc />

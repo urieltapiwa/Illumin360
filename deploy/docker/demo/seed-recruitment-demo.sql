@@ -153,3 +153,66 @@ BEGIN
     RAISE NOTICE 'Illumin360 demo seeded: 1 requisition, 6 applicants, 24 labelled outcomes.';
 END
 $demo$;
+
+-- ==================================================================================================
+-- Dashboard-stats seed (idempotent, independent of the learned-ranking block above).
+-- Feeds GET /api/recruitment/stats — the Employer portal dashboard reads OpenRequests, FilledRequests,
+-- TotalApplications, TotalHires, the funnel (by status), and the 6-month applications trend from here.
+-- 7 requisitions (4 open / 3 filled) across five cities + 30 applications spread over 6 months with a
+-- full pipeline funnel (applied → reviewed → shortlisted → rejected → hired) and three hires.
+-- ==================================================================================================
+DO $stats$
+DECLARE
+    sentinel uuid := '33333333-3333-3333-3333-333333333333';
+    reqs uuid[] := ARRAY[
+        '3a000001-0000-0000-0000-000000000001',  -- open   Windhoek
+        '3a000002-0000-0000-0000-000000000002',  -- open   Walvis Bay
+        '3a000003-0000-0000-0000-000000000003',  -- open   Windhoek
+        '3a000004-0000-0000-0000-000000000004',  -- open   Swakopmund
+        '3a000005-0000-0000-0000-000000000005',  -- filled Oshakati
+        '3a000006-0000-0000-0000-000000000006',  -- filled Windhoek
+        '3a000007-0000-0000-0000-000000000007'   -- filled Rundu
+    ]::uuid[];
+    company_id uuid := '22222222-2222-2222-2222-222222222222';
+BEGIN
+    IF EXISTS (SELECT 1 FROM recruitment.recruitment_requests WHERE id = sentinel) THEN
+        RAISE NOTICE 'Illumin360 dashboard-stats demo already seeded — skipping.';
+        RETURN;
+    END IF;
+
+    -- Marker row so re-runs are a no-op (kept as a valid open requisition too).
+    INSERT INTO recruitment.recruitment_requests (id, city, company_id, created_at, positions, status, title)
+    VALUES (sentinel, 'Windhoek', company_id, now() - interval '90 days', 1, 'open', 'Talent Acquisition Lead');
+
+    -- 7 requisitions: 4 open, 3 filled.
+    INSERT INTO recruitment.recruitment_requests (id, city, company_id, created_at, filled_at, positions, status, title) VALUES
+        (reqs[1], 'Windhoek',   company_id, now() - interval '80 days', NULL,                      2, 'open',   'Senior Accountant'),
+        (reqs[2], 'Walvis Bay', company_id, now() - interval '72 days', NULL,                      1, 'open',   'Logistics Coordinator'),
+        (reqs[3], 'Windhoek',   company_id, now() - interval '60 days', NULL,                      3, 'open',   'Registered Nurse'),
+        (reqs[4], 'Swakopmund', company_id, now() - interval '50 days', NULL,                      1, 'open',   'Frontend Developer'),
+        (reqs[5], 'Oshakati',   company_id, now() - interval '150 days', now() - interval '40 days', 1, 'filled', 'Sales Manager'),
+        (reqs[6], 'Windhoek',   company_id, now() - interval '130 days', now() - interval '25 days', 1, 'filled', 'HR Officer'),
+        (reqs[7], 'Rundu',      company_id, now() - interval '120 days', now() - interval '15 days', 2, 'filled', 'Civil Engineer');
+
+    -- 30 applications spread over 6 months; status drives the funnel, is_hire drives hires/trend.
+    INSERT INTO recruitment.applications (id, applied_at, decided_at, is_hire, match_score, request_id, status, talent_id, talent_type)
+    SELECT
+        gen_random_uuid(),
+        now() - (((g % 6) + 1) || ' months')::interval - ((g % 20) || ' days')::interval,
+        CASE WHEN g % 10 = 0 THEN now() - interval '5 days' ELSE NULL END,
+        (g % 10 = 0),                                             -- 3 hires (g = 10,20,30)
+        45 + (g % 45),                                            -- match score 45..89
+        reqs[1 + (g % 7)],
+        (ARRAY['applied','reviewed','shortlisted','rejected','hired'])[
+            CASE WHEN g % 10 = 0 THEN 5
+                 WHEN g % 4 = 0  THEN 4
+                 WHEN g % 3 = 0  THEN 3
+                 WHEN g % 2 = 0  THEN 2
+                 ELSE 1 END],
+        gen_random_uuid(),
+        (ARRAY['professional','student'])[1 + (g % 2)]
+    FROM generate_series(1, 30) AS g;
+
+    RAISE NOTICE 'Illumin360 dashboard-stats demo seeded: 8 requisitions (5 open / 3 filled), 30 applications, 3 hires.';
+END
+$stats$;

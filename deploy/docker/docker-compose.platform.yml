@@ -1,0 +1,158 @@
+# ─────────────────────────────────────────────────────────────────────────
+# Illumin360 — platform OVERLAY (Hetzner, plan A′, runs on the CAX41).
+#
+# Merge ON TOP of the existing base + apps composes:
+#   docker compose \
+#     -f deploy/docker/docker-compose.yml \
+#     -f deploy/docker/docker-compose.apps.yml \
+#     -f deploy/docker/docker-compose.platform.yml \
+#     --env-file deploy/docker/.env up -d --build
+#
+# What this overlay changes (and ONLY this):
+#   • Every app service also joins the shared `monitoring` net so OTEL ->
+#     alloy:4317 hits the SHARED Alloy (Illumin's own observability compose is
+#     NOT included any more).
+#   • The 6 MVC portals + the business BFF + the gateway also join `edge` and
+#     get Traefik routers at <x>.illumin.${BASE_DOMAIN}.
+#   • The split-issuer hack (keycloak:8080 in-network + localhost:8080 front)
+#     is replaced by ONE public issuer https://id.${BASE_DOMAIN}/realms/<realm>.
+#     With a real HTTPS Keycloak, browser and server use the same issuer, so
+#     token `iss` matches Authority — no front-channel rewrite needed.
+#
+# NOTE: Illumin's own postgres/redis/rabbitmq/minio (base compose) stay as the
+# app's private infra. Its bundled mailpit (apps compose) can be left running
+# or dropped; realm SMTP can instead point at the shared mailpit:1025.
+# ─────────────────────────────────────────────────────────────────────────
+
+networks:
+  illumin360: { external: true }
+  edge:       { external: true }
+  monitoring: { external: true }
+
+services:
+  # ── Backend APIs + worker: just add the shared monitoring net ─────────────
+  candidates-api:    { networks: [illumin360, monitoring] }
+  recruitment-api:   { networks: [illumin360, monitoring] }
+  students-api:      { networks: [illumin360, monitoring] }
+  professionals-api: { networks: [illumin360, monitoring] }
+  admin-api:         { networks: [illumin360, monitoring] }
+  employers-api:     { networks: [illumin360, monitoring] }
+  payments-api:      { networks: [illumin360, monitoring] }
+  billing-api:       { networks: [illumin360, monitoring] }
+  notifications-worker: { networks: [illumin360, monitoring] }
+  web:               { networks: [illumin360] }
+
+  # ── Gateway: exposed for direct API testing with bearer tokens ────────────
+  gateway:
+    networks: [illumin360, monitoring, edge]
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=edge
+      - traefik.http.routers.illumin-gw.rule=Host(`api.illumin.${BASE_DOMAIN}`)
+      - traefik.http.routers.illumin-gw.entrypoints=websecure
+      - traefik.http.routers.illumin-gw.tls.certresolver=le
+      - traefik.http.services.illumin-gw.loadbalancer.server.port=8080
+
+  # ── Business portal (React SPA behind the BFF) ────────────────────────────
+  bff-business:
+    environment:
+      Oidc__Authority: "https://id.${BASE_DOMAIN}/realms/illumin360"
+      Oidc__FrontChannelAuthority: "https://id.${BASE_DOMAIN}/realms/illumin360"
+      Oidc__RequireHttps: "true"
+    networks: [illumin360, monitoring, edge]
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=edge
+      - traefik.http.routers.illumin-portal.rule=Host(`portal.illumin.${BASE_DOMAIN}`)
+      - traefik.http.routers.illumin-portal.entrypoints=websecure
+      - traefik.http.routers.illumin-portal.tls.certresolver=le
+      - traefik.http.services.illumin-portal.loadbalancer.server.port=8080
+
+  # ── MVC portals: one public issuer + Registration base -> shared KC ───────
+  admin-web:
+    environment:
+      Oidc__Authority: "https://id.${BASE_DOMAIN}/realms/admin"
+      Oidc__FrontChannelAuthority: "https://id.${BASE_DOMAIN}/realms/admin"
+      Oidc__RequireHttps: "true"
+    networks: [illumin360, monitoring, edge]
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=edge
+      - traefik.http.routers.illumin-admin.rule=Host(`admin.illumin.${BASE_DOMAIN}`)
+      - traefik.http.routers.illumin-admin.entrypoints=websecure
+      - traefik.http.routers.illumin-admin.tls.certresolver=le
+      - traefik.http.services.illumin-admin.loadbalancer.server.port=8080
+
+  business-web:
+    environment:
+      Oidc__Authority: "https://id.${BASE_DOMAIN}/realms/business"
+      Oidc__FrontChannelAuthority: "https://id.${BASE_DOMAIN}/realms/business"
+      Oidc__RequireHttps: "true"
+      Registration__KeycloakBaseUrl: "https://id.${BASE_DOMAIN}"
+    networks: [illumin360, monitoring, edge]
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=edge
+      - traefik.http.routers.illumin-business.rule=Host(`business.illumin.${BASE_DOMAIN}`)
+      - traefik.http.routers.illumin-business.entrypoints=websecure
+      - traefik.http.routers.illumin-business.tls.certresolver=le
+      - traefik.http.services.illumin-business.loadbalancer.server.port=8080
+
+  student-web:
+    environment:
+      Oidc__Authority: "https://id.${BASE_DOMAIN}/realms/student"
+      Oidc__FrontChannelAuthority: "https://id.${BASE_DOMAIN}/realms/student"
+      Oidc__RequireHttps: "true"
+      Registration__KeycloakBaseUrl: "https://id.${BASE_DOMAIN}"
+    networks: [illumin360, monitoring, edge]
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=edge
+      - traefik.http.routers.illumin-student.rule=Host(`student.illumin.${BASE_DOMAIN}`)
+      - traefik.http.routers.illumin-student.entrypoints=websecure
+      - traefik.http.routers.illumin-student.tls.certresolver=le
+      - traefik.http.services.illumin-student.loadbalancer.server.port=8080
+
+  professional-web:
+    environment:
+      Oidc__Authority: "https://id.${BASE_DOMAIN}/realms/professional"
+      Oidc__FrontChannelAuthority: "https://id.${BASE_DOMAIN}/realms/professional"
+      Oidc__RequireHttps: "true"
+      Registration__KeycloakBaseUrl: "https://id.${BASE_DOMAIN}"
+    networks: [illumin360, monitoring, edge]
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=edge
+      - traefik.http.routers.illumin-professional.rule=Host(`professional.illumin.${BASE_DOMAIN}`)
+      - traefik.http.routers.illumin-professional.entrypoints=websecure
+      - traefik.http.routers.illumin-professional.tls.certresolver=le
+      - traefik.http.services.illumin-professional.loadbalancer.server.port=8080
+
+  employer-web:
+    environment:
+      Oidc__Authority: "https://id.${BASE_DOMAIN}/realms/employer"
+      Oidc__FrontChannelAuthority: "https://id.${BASE_DOMAIN}/realms/employer"
+      Oidc__RequireHttps: "true"
+      Registration__KeycloakBaseUrl: "https://id.${BASE_DOMAIN}"
+    networks: [illumin360, monitoring, edge]
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=edge
+      - traefik.http.routers.illumin-employer.rule=Host(`employer.illumin.${BASE_DOMAIN}`)
+      - traefik.http.routers.illumin-employer.entrypoints=websecure
+      - traefik.http.routers.illumin-employer.tls.certresolver=le
+      - traefik.http.services.illumin-employer.loadbalancer.server.port=8080
+
+  support-web:
+    environment:
+      Oidc__Authority: "https://id.${BASE_DOMAIN}/realms/support"
+      Oidc__FrontChannelAuthority: "https://id.${BASE_DOMAIN}/realms/support"
+      Oidc__RequireHttps: "true"
+    networks: [illumin360, monitoring, edge]
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=edge
+      - traefik.http.routers.illumin-support.rule=Host(`support.illumin.${BASE_DOMAIN}`)
+      - traefik.http.routers.illumin-support.entrypoints=websecure
+      - traefik.http.routers.illumin-support.tls.certresolver=le
+      - traefik.http.services.illumin-support.loadbalancer.server.port=8080

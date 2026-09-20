@@ -1,0 +1,160 @@
+@model Illumin360.EmployerWeb.Services.ContractDetailDto
+@{
+    var c = Model.Contract;
+    ViewData["Title"] = c.Title;
+    string Money(long minor) => (minor / 100m).ToString("N2");
+    string CStatusCls(string s) => s switch
+    {
+        "Active" => "bg-soft-success text-success",
+        "Draft" => "bg-soft-warning text-warning",
+        "Completed" => "bg-soft-primary text-primary",
+        "Cancelled" => "bg-soft-danger text-danger",
+        _ => "bg-soft-secondary text-secondary",
+    };
+    string MStatusCls(string s) => s switch
+    {
+        "Approved" => "bg-soft-success text-success",
+        "Funded" => "bg-soft-primary text-primary",
+        "Submitted" => "bg-soft-info text-info",
+        "Refunded" => "bg-soft-danger text-danger",
+        _ => "bg-soft-secondary text-secondary",
+    };
+    // Which escrow verbs are valid for a milestone in a given state.
+    string[] Verbs(string s) => s switch
+    {
+        "Pending" => new[] { "fund" },
+        "Funded" => new[] { "submit", "refund" },
+        "Submitted" => new[] { "approve", "refund" },
+        _ => System.Array.Empty<string>(),
+    };
+    var total = Model.Milestones.Sum(m => m.AmountMinor);
+    var isDraft = c.Status == "Draft";
+    var canCancel = c.Status is "Draft" or "Active";
+}
+
+@if (TempData["Msg"] is string msg)
+{
+    <div class="alert alert-soft-primary py-2 mb-3">@msg</div>
+}
+
+<div class="mb-3"><a asp-action="Index" class="text-decoration-none small text-muted">&larr; All contracts</a></div>
+
+<div class="card mb-3"><div class="card-body d-flex align-items-center justify-content-between flex-wrap gap-2">
+    <div>
+        <div class="d-flex align-items-center gap-2 mb-1">
+            <h5 class="mb-0 fw-bold">@c.Title</h5>
+            <span class="badge @CStatusCls(c.Status)">@c.Status</span>
+        </div>
+        <div class="text-muted small">@c.Currency @Money(total) total · @Model.Milestones.Count milestone(s) · created @c.CreatedAt.ToString("yyyy-MM-dd")</div>
+    </div>
+    <div class="d-flex gap-2">
+        @if (isDraft)
+        {
+            <form asp-action="Activate" method="post" class="m-0">
+                <input type="hidden" name="id" value="@c.Id" />
+                <button type="submit" class="btn btn-sm btn-success">Activate</button>
+            </form>
+        }
+        @if (canCancel)
+        {
+            <form asp-action="Cancel" method="post" class="m-0" onsubmit="return confirm('Cancel this contract?');">
+                <input type="hidden" name="id" value="@c.Id" />
+                <button type="submit" class="btn btn-sm btn-soft-danger">Cancel</button>
+            </form>
+        }
+    </div>
+</div></div>
+
+<div class="row g-3">
+    <div class="col-lg-8">
+        <div class="card mb-0 h-100">
+            <div class="card-header"><h5 class="mb-0 fw-bold">Milestones</h5></div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table mb-0 align-middle">
+                        <thead><tr><th>#</th><th>Title</th><th class="text-end">Amount</th><th>Status</th><th class="text-end">Escrow</th></tr></thead>
+                        <tbody>
+                        @if (Model.Milestones.Count == 0)
+                        {
+                            <tr><td colspan="5" class="text-center text-muted py-4">No milestones yet@(isDraft ? " — add one below." : ".")</td></tr>
+                        }
+                        @foreach (var m in Model.Milestones.OrderBy(x => x.Order))
+                        {
+                            <tr>
+                                <td class="text-muted">@m.Order</td>
+                                <td class="fw-semibold">@m.Title</td>
+                                <td class="text-end">@c.Currency @Money(m.AmountMinor)</td>
+                                <td><span class="badge @MStatusCls(m.Status)">@m.Status</span></td>
+                                <td class="text-end">
+                                    @foreach (var v in Verbs(m.Status))
+                                    {
+                                        <form asp-action="Milestone" method="post" class="m-0 d-inline">
+                                            <input type="hidden" name="id" value="@c.Id" />
+                                            <input type="hidden" name="milestoneId" value="@m.Id" />
+                                            <input type="hidden" name="verb" value="@v" />
+                                            <button type="submit" class="btn btn-sm @(v == "refund" ? "btn-soft-danger" : "btn-soft-primary") text-capitalize">@v</button>
+                                        </form>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        @if (Model.Movements.Count > 0)
+        {
+            <div class="card mb-0 mt-3">
+                <div class="card-header"><h5 class="mb-0 fw-bold">Ledger</h5></div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table mb-0 align-middle">
+                            <thead><tr><th>Movement</th><th class="text-end">Amount</th><th>When</th></tr></thead>
+                            <tbody>
+                            @foreach (var mv in Model.Movements.OrderByDescending(x => x.CreatedAt))
+                            {
+                                <tr>
+                                    <td class="text-capitalize">@mv.Kind</td>
+                                    <td class="text-end">@mv.Currency @Money(mv.AmountMinor)</td>
+                                    <td class="text-muted">@mv.CreatedAt.ToString("yyyy-MM-dd HH:mm")</td>
+                                </tr>
+                            }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+
+    <div class="col-lg-4">
+        @if (isDraft)
+        {
+            <div class="card mb-0 h-100">
+                <div class="card-header"><h5 class="mb-0 fw-bold">Add milestone</h5></div>
+                <div class="card-body">
+                    <form asp-action="AddMilestone" method="post">
+                        <input type="hidden" name="id" value="@c.Id" />
+                        <div class="mb-3">
+                            <label class="form-label small text-muted">Title</label>
+                            <input name="title" class="form-control" placeholder="e.g. Discovery phase" required maxlength="160" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small text-muted">Amount (@c.Currency)</label>
+                            <input name="amount" type="number" step="0.01" min="0" class="form-control" placeholder="0.00" required />
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">Add milestone</button>
+                    </form>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="card mb-0 h-100"><div class="card-body text-muted small">
+                Milestones are locked once a contract leaves <span class="fw-semibold">Draft</span>. Fund a milestone to move money into escrow, then approve to release it to the talent.
+            </div></div>
+        }
+    </div>
+</div>

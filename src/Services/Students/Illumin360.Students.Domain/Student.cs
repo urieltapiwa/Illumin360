@@ -1,3 +1,4 @@
+using System.Linq;
 using Illumin360.SharedKernel;
 
 namespace Illumin360.Students.Domain;
@@ -66,6 +67,9 @@ public sealed class Student : Entity<StudentId>
     /// <summary>Availability label shown to employers (e.g. "Open to internships").</summary>
     public string Availability { get; private set; } = "Open to internships";
 
+    /// <summary>The Keycloak subject (user id) this profile belongs to; null for seeded/demo profiles.</summary>
+    public string? Subject { get; private set; }
+
     /// <summary>Career-readiness score (0–100).</summary>
     public int Readiness { get; private set; }
 
@@ -131,6 +135,24 @@ public sealed class Student : Entity<StudentId>
     /// <summary>Records that the student submitted an application (bumps the counter).</summary>
     public void RecordApplication() => ApplicationsCount++;
 
+    /// <summary>Records that someone viewed this profile: bumps the view total, recent delta, and the latest trend bucket.</summary>
+    public void RecordProfileView()
+    {
+        ProfileViews++;
+        ViewsDelta++;
+        var trend = ViewsTrend.ToList();
+        if (trend.Count == 0)
+        {
+            trend.Add(1);
+        }
+        else
+        {
+            trend[^1] += 1;
+        }
+
+        ViewsTrend = trend;
+    }
+
     /// <summary>
     /// Registers a new student. Engagement counters and readiness start at zero — they accrue
     /// as the student uses the platform.
@@ -143,6 +165,7 @@ public sealed class Student : Entity<StudentId>
     /// <param name="graduating">Expected graduation year label.</param>
     /// <param name="program">Sponsoring programme.</param>
     /// <param name="city">Home city.</param>
+    /// <param name="subject">The Keycloak subject (user id) that owns this profile; null for demo profiles.</param>
     /// <returns>A successful <see cref="Result{T}"/> with the student, or a validation error.</returns>
     public static Result<Student> Register(
         string firstName,
@@ -152,7 +175,8 @@ public sealed class Student : Entity<StudentId>
         string year,
         string graduating,
         string program,
-        string city)
+        string city,
+        string? subject = null)
     {
         if (string.IsNullOrWhiteSpace(firstName))
         {
@@ -185,6 +209,7 @@ public sealed class Student : Entity<StudentId>
             program?.Trim() ?? string.Empty,
             city.Trim());
 
+        student.Subject = string.IsNullOrWhiteSpace(subject) ? null : subject.Trim();
         student.Raise(new StudentRegistered(student.Id, student.FullName, student.CreatedAt));
         return student;
     }

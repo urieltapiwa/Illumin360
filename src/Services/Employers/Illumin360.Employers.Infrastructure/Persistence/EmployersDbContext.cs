@@ -1,4 +1,5 @@
 using Illumin360.Employers.Domain;
+using MassTransit;
 using Microsoft.EntityFrameworkCore;
 
 namespace Illumin360.Employers.Infrastructure.Persistence;
@@ -21,6 +22,11 @@ public sealed class EmployersDbContext(DbContextOptions<EmployersDbContext> opti
         ArgumentNullException.ThrowIfNull(modelBuilder);
         modelBuilder.HasDefaultSchema("employers");
 
+        // Transactional outbox/inbox tables (MassTransit EF Core) — publish integration events atomically.
+        modelBuilder.AddInboxStateEntity();
+        modelBuilder.AddOutboxMessageEntity();
+        modelBuilder.AddOutboxStateEntity();
+
         modelBuilder.Entity<Employer>(b =>
         {
             b.ToTable("employers");
@@ -33,7 +39,9 @@ public sealed class EmployersDbContext(DbContextOptions<EmployersDbContext> opti
             b.Property(e => e.City).HasColumnName("city").HasMaxLength(100);
             b.Property(e => e.Website).HasColumnName("website").HasMaxLength(200);
             b.Property(e => e.About).HasColumnName("about").HasMaxLength(1000);
+            b.Property(e => e.Subject).HasColumnName("subject").HasMaxLength(64);
             b.Property(e => e.CreatedAt).HasColumnName("created_at");
+            b.HasIndex(e => e.Subject).IsUnique().HasFilter("subject IS NOT NULL");
             b.Ignore(e => e.DomainEvents);
         });
 

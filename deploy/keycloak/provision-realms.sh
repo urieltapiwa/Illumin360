@@ -17,14 +17,15 @@ RECREATE="${1:-}"
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # realm -> realm roles the registration service account holds. It must hold every role it assigns to
-# newly-registered users, plus (student/professional) admin.write so its client_credentials service token
-# is accepted by the students/professionals services when creating the domain profile. business/employer
-# are identity-only (no domain profile), so they need no admin.write.
+# newly-registered users, plus admin.write for the realms whose self-registration creates a domain profile
+# (student/professional/employer) so its client_credentials service token is accepted by the students/
+# professionals/employers services when creating that profile. business is identity-only (no domain
+# profile), so it needs no admin.write.
 declare -A REG_ROLES=(
   [student]="client.user client.student admin.write"
   [professional]="client.user admin.write"
   [business]="client.business"
-  [employer]="client.employer client.user"
+  [employer]="client.employer client.user admin.write"
 )
 REALMS=(admin student professional business employer support)
 

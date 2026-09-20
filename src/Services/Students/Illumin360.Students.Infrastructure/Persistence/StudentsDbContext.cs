@@ -64,6 +64,8 @@ public sealed class StudentsDbContext(DbContextOptions<StudentsDbContext> option
             b.Property(s => s.Program).HasColumnName("program").HasMaxLength(120);
             b.Property(s => s.City).HasColumnName("city").HasMaxLength(100);
             b.Property(s => s.Availability).HasColumnName("availability").HasMaxLength(60).HasDefaultValue("Open to internships");
+            b.Property(s => s.Subject).HasColumnName("subject").HasMaxLength(64);
+            b.HasIndex(s => s.Subject).IsUnique().HasFilter("subject IS NOT NULL");
             b.Property(s => s.Readiness).HasColumnName("readiness");
             b.Property(s => s.ProfileViews).HasColumnName("profile_views");
             b.Property(s => s.ViewsDelta).HasColumnName("views_delta");

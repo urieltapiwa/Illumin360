@@ -51,22 +51,30 @@ app.MapProjectHealthChecks();
 var v1 = app.MapGroup("/v1/professionals").WithTags("Professionals");
 
 v1.MapGet("/me", async (
+        System.Security.Claims.ClaimsPrincipal user,
         IQueryHandler<GetProfessionalDashboardQuery, ProfessionalDashboardDto> handler,
         CancellationToken ct) =>
     {
-        var result = await handler.HandleAsync(new GetProfessionalDashboardQuery(), ct);
+        var subject = user.FindFirst("sub")?.Value;
+        var result = await handler.HandleAsync(new GetProfessionalDashboardQuery(Subject: subject), ct);
         return result.ToHttpResult();
     })
+    .RequireAuthorization(AuthenticationExtensions.ProfessionalPolicy)
     .WithName("GetMyProfessionalDashboard")
     .WithSummary("Dashboard for the current (demo) professional.")
     .Produces<ProfessionalDashboardDto>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
     .ProducesProblem(StatusCodes.Status404NotFound);
 
 v1.MapGet("/{id:guid}", async (
         Guid id,
+        ICommandHandler<RecordProfessionalViewCommand, bool> viewRecorder,
         IQueryHandler<GetProfessionalDashboardQuery, ProfessionalDashboardDto> handler,
         CancellationToken ct) =>
     {
+        // Viewing a profile by id (recruiter/admin) is a real engagement signal — record it. The owner's
+        // own /me view does not count. Best-effort: a failed record must not break the read.
+        await viewRecorder.HandleAsync(new RecordProfessionalViewCommand(id), ct);
         var result = await handler.HandleAsync(new GetProfessionalDashboardQuery(id), ct);
         return result.ToHttpResult();
     })

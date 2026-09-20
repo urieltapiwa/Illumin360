@@ -162,6 +162,11 @@ namespace Illumin360.Professionals.Infrastructure.Persistence.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("salary_you");
 
+                    b.Property<string>("Subject")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("subject");
+
                     b.Property<int>("ViewsDelta")
                         .HasColumnType("integer")
                         .HasColumnName("views_delta");
@@ -172,6 +177,10 @@ namespace Illumin360.Professionals.Infrastructure.Persistence.Migrations
                         .HasColumnName("views_trend");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Subject")
+                        .IsUnique()
+                        .HasFilter("subject IS NOT NULL");
 
                     b.ToTable("professionals", "professionals");
                 });

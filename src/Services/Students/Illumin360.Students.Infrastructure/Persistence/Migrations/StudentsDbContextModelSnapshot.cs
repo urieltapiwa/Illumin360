@@ -122,6 +122,11 @@ namespace Illumin360.Students.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(160)")
                         .HasColumnName("school");
 
+                    b.Property<string>("Subject")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("subject");
+
                     b.Property<int>("ViewsDelta")
                         .HasColumnType("integer")
                         .HasColumnName("views_delta");
@@ -138,6 +143,10 @@ namespace Illumin360.Students.Infrastructure.Persistence.Migrations
                         .HasColumnName("year");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Subject")
+                        .IsUnique()
+                        .HasFilter("subject IS NOT NULL");
 
                     b.ToTable("students", "students");
                 });

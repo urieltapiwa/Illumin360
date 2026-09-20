@@ -9,7 +9,8 @@ namespace Illumin360.Professionals.Application.Professionals;
 /// (demo) professional is returned — the portal's "me" view before real per-user identity is wired.
 /// </summary>
 /// <param name="Id">The professional id, or <see langword="null"/> for the default professional.</param>
-public sealed record GetProfessionalDashboardQuery(Guid? Id = null) : IQuery<ProfessionalDashboardDto>;
+/// <param name="Subject">The Keycloak subject (user id) to resolve the professional by, when <see cref="Id"/> is null.</param>
+public sealed record GetProfessionalDashboardQuery(Guid? Id = null, string? Subject = null) : IQuery<ProfessionalDashboardDto>;
 
 /// <summary>Handles <see cref="GetProfessionalDashboardQuery"/>.</summary>
 /// <param name="repository">The professional repository.</param>
@@ -24,9 +25,20 @@ public sealed class GetProfessionalDashboardQueryHandler(IProfessionalRepository
     {
         ArgumentNullException.ThrowIfNull(query);
 
-        var dashboard = query.Id is { } id
-            ? await _repository.GetDashboardAsync(new ProfessionalId(id), cancellationToken).ConfigureAwait(false)
-            : await _repository.GetDefaultDashboardAsync(cancellationToken).ConfigureAwait(false);
+        ProfessionalDashboard? dashboard;
+        if (query.Id is { } id)
+        {
+            dashboard = await _repository.GetDashboardAsync(new ProfessionalId(id), cancellationToken).ConfigureAwait(false);
+        }
+        else if (!string.IsNullOrWhiteSpace(query.Subject))
+        {
+            dashboard = await _repository.GetDashboardBySubjectAsync(query.Subject, cancellationToken).ConfigureAwait(false)
+                ?? await _repository.GetDefaultDashboardAsync(cancellationToken).ConfigureAwait(false);
+        }
+        else
+        {
+            dashboard = await _repository.GetDefaultDashboardAsync(cancellationToken).ConfigureAwait(false);
+        }
 
         if (dashboard is null)
         {

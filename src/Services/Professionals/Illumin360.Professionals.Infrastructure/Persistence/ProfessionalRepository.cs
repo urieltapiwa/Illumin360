@@ -30,6 +30,15 @@ public sealed class ProfessionalRepository(ProfessionalsDbContext db) : IProfess
     }
 
     /// <inheritdoc />
+    public async Task<ProfessionalDashboard?> GetDashboardBySubjectAsync(string subject, CancellationToken cancellationToken)
+    {
+        var professional = await _db.Professionals.AsNoTracking()
+            .FirstOrDefaultAsync(p => p.Subject == subject, cancellationToken).ConfigureAwait(false);
+
+        return professional is null ? null : await LoadAsync(professional, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
     public void Add(Professional professional) => _db.Professionals.Add(professional);
 
     /// <inheritdoc />

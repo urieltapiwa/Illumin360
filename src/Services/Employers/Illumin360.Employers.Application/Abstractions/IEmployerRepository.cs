@@ -18,6 +18,11 @@ public interface IEmployerRepository
     /// <param name="cancellationToken">Cancellation token.</param>
     Task<Employer?> GetByIdAsync(EmployerId id, CancellationToken cancellationToken);
 
+    /// <summary>Loads the employer owned by the given identity-provider subject ("sub"), or null.</summary>
+    /// <param name="subject">The identity-provider subject.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<Employer?> GetBySubjectAsync(string subject, CancellationToken cancellationToken);
+
     /// <summary>Stages a new employer for insertion.</summary>
     /// <param name="employer">The employer to add.</param>
     void Add(Employer employer);

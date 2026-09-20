@@ -47,15 +47,20 @@ app.MapProjectHealthChecks();
 var v1 = app.MapGroup("/v1/employers").WithTags("Employers");
 
 v1.MapGet("/me", async (
+        System.Security.Claims.ClaimsPrincipal user,
         IQueryHandler<GetEmployerQuery, EmployerDto> handler,
         CancellationToken ct) =>
     {
-        var result = await handler.HandleAsync(new GetEmployerQuery(), ct);
+        ArgumentNullException.ThrowIfNull(user);
+        var subject = user.FindFirst("sub")?.Value;
+        var result = await handler.HandleAsync(new GetEmployerQuery(Subject: subject), ct);
         return result.ToHttpResult();
     })
+    .RequireAuthorization(AuthenticationExtensions.EmployerPolicy)
     .WithName("GetMyEmployer")
     .WithSummary("Company profile for the current (demo) employer.")
     .Produces<EmployerDto>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
     .ProducesProblem(StatusCodes.Status404NotFound);
 
 v1.MapGet("/{id:guid}", async (

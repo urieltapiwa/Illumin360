@@ -39,6 +39,9 @@ public sealed class Employer : Entity<EmployerId>
     /// <summary>Short "about" blurb, if any.</summary>
     public string? About { get; private set; }
 
+    /// <summary>The identity-provider subject ("sub") that owns this employer profile, if any.</summary>
+    public string? Subject { get; private set; }
+
     /// <summary>When the profile was created (UTC).</summary>
     public DateTimeOffset CreatedAt { get; private set; }
 
@@ -48,8 +51,9 @@ public sealed class Employer : Entity<EmployerId>
     /// <param name="city">City (required).</param>
     /// <param name="website">Optional website.</param>
     /// <param name="about">Optional about blurb (≤ 1000 chars).</param>
+    /// <param name="subject">Optional identity-provider subject ("sub") that owns this profile.</param>
     /// <returns>The employer, or a validation error.</returns>
-    public static Result<Employer> Register(string companyName, string industry, string city, string? website, string? about)
+    public static Result<Employer> Register(string companyName, string industry, string city, string? website, string? about, string? subject = null)
     {
         if (string.IsNullOrWhiteSpace(companyName))
         {
@@ -71,7 +75,9 @@ public sealed class Employer : Entity<EmployerId>
             return Error.Validation("employer.about_too_long", "About must be 1000 characters or fewer.");
         }
 
-        return new Employer(EmployerId.New(), companyName.Trim(), industry.Trim(), city.Trim(), Clean(website), Clean(about));
+        var employer = new Employer(EmployerId.New(), companyName.Trim(), industry.Trim(), city.Trim(), Clean(website), Clean(about));
+        employer.Subject = Clean(subject);
+        return employer;
     }
 
     /// <summary>Rehydrates a fully-specified employer for demo seeding / import (raises no event).</summary>

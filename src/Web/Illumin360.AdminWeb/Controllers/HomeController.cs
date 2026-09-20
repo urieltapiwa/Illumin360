@@ -13,6 +13,13 @@ public class HomeController(AdminApiClient admin) : Controller
     {
         var summary = await _admin.GetSummaryAsync(ct);
 
+        // Live verification queue — same source the Verifications console page reads (top 6 pending).
+        var pending = await _admin.GetVerificationsAsync("pending", ct);
+        ViewData["Verifications"] = pending?.Take(6).ToList();
+
+        // Live system health — Admin API probes each service's /health/ready.
+        ViewData["SystemHealth"] = await _admin.GetSystemHealthAsync(ct);
+
         // MRR trend comes from a different service (Billing), so it rides in ViewData rather than the model.
         var mrr = await _admin.GetMrrTrendAsync(ct);
         if (mrr?.Points is { Length: > 0 } points)

@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Security.Claims;
 using Illumin360.Admin.Application;
 using Illumin360.Admin.Application.Abstractions;
@@ -33,6 +34,9 @@ builder.Services.AddIllumin360Auth(builder.Configuration);
 builder.Services.AddOpenApi();
 builder.Services.AddProblemDetails();
 
+// HttpClient for the system-health fan-in probe below.
+builder.Services.AddHttpClient();
+
 var app = builder.Build();
 
 // Apply EF Core migrations on startup, then seed the demo verification queue if empty.
@@ -66,6 +70,47 @@ v1.MapGet("/summary", async (
     .WithName("GetAdminSummary")
     .WithSummary("Platform-operations summary for the Admin dashboard (accounts, verifications, tickets).")
     .Produces<AdminSummaryDto>(StatusCodes.Status200OK);
+
+// --- Live system health: probe each service's /health/ready over the internal network (anonymous,
+// like the other dashboard reads). Returns per-service up/down + round-trip latency. ---
+v1.MapGet("/system-health", async (IHttpClientFactory httpFactory, CancellationToken ct) =>
+    {
+        var targets = new (string Name, string Url)[]
+        {
+            ("Candidates", "http://candidates-api:8080/health/ready"),
+            ("Recruitment / AI Match", "http://recruitment-api:8080/health/ready"),
+            ("Employers", "http://employers-api:8080/health/ready"),
+            ("Payments", "http://payments-api:8080/health/ready"),
+            ("Billing", "http://billing-api:8080/health/ready"),
+            ("Students", "http://students-api:8080/health/ready"),
+            ("Professionals", "http://professionals-api:8080/health/ready"),
+            ("Admin", "http://admin-api:8080/health/ready"),
+        };
+
+        var client = httpFactory.CreateClient();
+        client.Timeout = TimeSpan.FromSeconds(3);
+
+        var results = await Task.WhenAll(targets.Select(async t =>
+        {
+            var sw = Stopwatch.StartNew();
+            try
+            {
+                using var resp = await client.GetAsync(t.Url, ct).ConfigureAwait(false);
+                sw.Stop();
+                return new ServiceHealthDto(t.Name, resp.IsSuccessStatusCode, (int)sw.ElapsedMilliseconds);
+            }
+            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+            {
+                sw.Stop();
+                return new ServiceHealthDto(t.Name, false, (int)sw.ElapsedMilliseconds);
+            }
+        })).ConfigureAwait(false);
+
+        return Results.Ok(results);
+    })
+    .WithName("GetSystemHealth")
+    .WithSummary("Live health of the platform services (per-service up/down + latency).")
+    .Produces<IReadOnlyList<ServiceHealthDto>>(StatusCodes.Status200OK);
 
 v1.MapGet("/talent-insights", async (
         IQueryHandler<GetTalentInsightsQuery, TalentInsightsDto> handler,
@@ -269,3 +314,9 @@ app.Run();
 
 /// <summary>Exposed so integration tests can use <c>WebApplicationFactory</c> (charter Part 14).</summary>
 public partial class Program;
+
+/// <summary>Per-service health status for the Admin system-health panel.</summary>
+/// <param name="Name">Display name of the service.</param>
+/// <param name="Healthy">Whether its <c>/health/ready</c> probe returned success.</param>
+/// <param name="LatencyMs">Round-trip latency of the probe, in milliseconds.</param>
+internal sealed record ServiceHealthDto(string Name, bool Healthy, int LatencyMs);

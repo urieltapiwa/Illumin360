@@ -20,6 +20,7 @@ public sealed record ProfessionalSummaryDto(Guid Id, string Name, string Role, s
 /// <param name="Nationality">Nationality.</param>
 /// <param name="Availability">Availability label.</param>
 /// <param name="Headline">Public headline.</param>
+/// <param name="Subject">The Keycloak subject (user id) that owns this profile; null for demo profiles.</param>
 public sealed record RegisterProfessionalCommand(
     string FirstName,
     string LastName,
@@ -27,7 +28,8 @@ public sealed record RegisterProfessionalCommand(
     string City,
     string Nationality,
     string Availability,
-    string Headline) : ICommand<ProfessionalSummaryDto>;
+    string Headline,
+    string? Subject = null) : ICommand<ProfessionalSummaryDto>;
 
 /// <summary>Handles <see cref="RegisterProfessionalCommand"/>.</summary>
 /// <param name="repository">The professional repository.</param>
@@ -53,7 +55,8 @@ public sealed class RegisterProfessionalCommandHandler(
             command.City,
             command.Nationality,
             command.Availability,
-            command.Headline);
+            command.Headline,
+            command.Subject);
 
         if (creation.IsFailure)
         {

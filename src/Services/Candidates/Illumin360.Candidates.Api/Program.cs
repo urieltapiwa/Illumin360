@@ -51,6 +51,7 @@ await using (var scope = app.Services.CreateAsyncScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<CandidatesDbContext>();
     await db.Database.MigrateAsync();
+    await CandidatesSeeder.SeedAsync(db, CancellationToken.None);
 }
 
 app.UseExceptionHandler();
@@ -150,9 +151,9 @@ v1.MapGet("/{id:guid}/similar", async (
         var result = await handler.HandleAsync(new GetSimilarCandidatesQuery(id, take ?? 5), ct);
         return result.ToHttpResult();
     })
-    .RequireAuthorization(AuthenticationExtensions.AdminPolicy)
+    .RequireAuthorization()
     .WithName("GetSimilarCandidates")
-    .WithSummary("Find candidates most similar to a seed candidate (\"more like this\"). Requires an admin role.")
+    .WithSummary("Find candidates most similar to a seed candidate (\"more like this\"). Requires a signed-in user.")
     .Produces<IReadOnlyList<SimilarCandidateDto>>(StatusCodes.Status200OK)
     .ProducesProblem(StatusCodes.Status401Unauthorized)
     .ProducesProblem(StatusCodes.Status403Forbidden)

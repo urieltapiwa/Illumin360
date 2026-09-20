@@ -11,8 +11,19 @@ public class HomeController(EmployersApiClient employers) : Controller
 
     public async Task<IActionResult> Index(CancellationToken ct)
     {
-        var profile = await _employers.GetProfileAsync(ct);
-        return View(profile);
+        // Live company profile + team (Employers service) and cross-service pool/pipeline stats
+        // (Candidates + Recruitment services) — fetched in parallel through the gateway.
+        var profileTask = _employers.GetProfileAsync(ct);
+        var teamTask = _employers.GetTeamAsync(ct);
+        var candidatesTask = _employers.GetCandidateStatsAsync(ct);
+        var recruitmentTask = _employers.GetRecruitmentStatsAsync(ct);
+        await Task.WhenAll(profileTask, teamTask, candidatesTask, recruitmentTask);
+
+        return View(new EmployerDashboard(
+            profileTask.Result,
+            teamTask.Result.Count,
+            candidatesTask.Result,
+            recruitmentTask.Result));
     }
 
     [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]

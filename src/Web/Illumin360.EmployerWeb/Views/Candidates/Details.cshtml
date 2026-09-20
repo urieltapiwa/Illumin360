@@ -1,0 +1,116 @@
+@model Illumin360.EmployerWeb.Controllers.CandidateDetailVm
+@{
+    var c = Model.Candidate;
+    var name = $"{c.FirstName} {c.LastName}".Trim();
+    ViewData["Title"] = string.IsNullOrWhiteSpace(name) ? "Candidate" : name;
+    var initials = string.Concat(name.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(w => char.ToUpperInvariant(w[0])));
+    string AvailLabel(string v) => v switch
+    {
+        "ActivelyLooking" => "Actively looking",
+        "OpenToOpportunities" => "Open to opportunities",
+        "NotAvailable" => "Not available",
+        _ => v,
+    };
+    string AvailCls(string v) => v switch
+    {
+        "ActivelyLooking" => "bg-soft-success text-success",
+        "OpenToOpportunities" => "bg-soft-primary text-primary",
+        "NotAvailable" => "bg-soft-secondary text-secondary",
+        _ => "bg-soft-secondary text-secondary",
+    };
+    string Size(long bytes) => bytes >= 1_048_576 ? $"{bytes / 1_048_576d:N1} MB" : $"{bytes / 1024d:N0} KB";
+}
+
+@if (TempData["Msg"] is string msg)
+{
+    <div class="alert alert-soft-primary py-2 mb-3">@msg</div>
+}
+
+<div class="mb-3"><a asp-action="Index" class="text-decoration-none small text-muted">&larr; Back to search</a></div>
+
+<div class="row g-3">
+    <div class="col-lg-8">
+        <div class="card mb-0 h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center gap-3 mb-3">
+                    <span class="avatar-initials rounded d-inline-flex align-items-center justify-content-center bg-soft-primary text-primary fw-bold" style="width:56px;height:56px;font-size:1.2rem;">@(string.IsNullOrWhiteSpace(initials) ? "?" : initials)</span>
+                    <div>
+                        <h4 class="mb-1 fw-bold">@(string.IsNullOrWhiteSpace(name) ? "(hidden)" : name)</h4>
+                        <span class="badge @AvailCls(c.Availability)">@AvailLabel(c.Availability)</span>
+                    </div>
+                </div>
+                @if (!string.IsNullOrWhiteSpace(c.PublicHeadline))
+                {
+                    <p class="text-muted mb-3">@c.PublicHeadline</p>
+                }
+                <dl class="row mb-0">
+                    <dt class="col-sm-3 text-muted fw-normal small">City</dt><dd class="col-sm-9">@c.City</dd>
+                    <dt class="col-sm-3 text-muted fw-normal small">Nationality</dt><dd class="col-sm-9">@c.Nationality</dd>
+                    <dt class="col-sm-3 text-muted fw-normal small">Availability</dt><dd class="col-sm-9">@AvailLabel(c.Availability)</dd>
+                    <dt class="col-sm-3 text-muted fw-normal small">CV</dt>
+                    <dd class="col-sm-9">
+                        @if (Model.Cv is { } cv)
+                        {
+                            <span>@cv.FileName <span class="text-muted small">· @Size(cv.Size) · uploaded @cv.UploadedAt.ToString("yyyy-MM-dd")</span></span>
+                        }
+                        else
+                        {
+                            <span class="text-muted">No CV on file.</span>
+                        }
+                    </dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card mb-0 h-100">
+            <div class="card-header"><h5 class="mb-0 fw-bold">Start a contract</h5></div>
+            <div class="card-body">
+                <p class="text-muted small">Create a draft fixed-price contract with this candidate as the talent. You can add milestones and activate it next.</p>
+                <form asp-controller="Contracts" asp-action="Create" method="post">
+                    <input type="hidden" name="talentId" value="@c.Id" />
+                    <div class="mb-3">
+                        <label class="form-label small text-muted">Contract title</label>
+                        <input name="title" class="form-control" placeholder="e.g. Website Redesign" required maxlength="160" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small text-muted">Currency</label>
+                        <input name="currency" class="form-control" value="NAD" maxlength="3" />
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Create draft contract</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mt-3 mb-0">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <div><h5 class="mb-0 fw-bold">Similar candidates</h5><small class="text-muted">"More like this" — ranked by city, availability &amp; headline</small></div>
+        <span class="badge bg-soft-primary text-primary">@Model.Similar.Count</span>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table mb-0 align-middle">
+                <thead><tr><th>Candidate</th><th>City</th><th>Availability</th><th>Headline</th><th class="text-end">Match</th></tr></thead>
+                <tbody>
+                @if (Model.Similar.Count == 0)
+                {
+                    <tr><td colspan="5" class="text-center text-muted py-4">No similar candidates found.</td></tr>
+                }
+                @foreach (var s in Model.Similar)
+                {
+                    <tr>
+                        <td class="fw-semibold"><a class="text-decoration-none" asp-action="Details" asp-route-id="@s.Id">@s.Name</a></td>
+                        <td class="text-muted">@s.City</td>
+                        <td><span class="badge @AvailCls(s.Availability)">@AvailLabel(s.Availability)</span></td>
+                        <td class="text-muted">@(s.Headline ?? "—")</td>
+                        <td class="text-end"><span class="badge bg-soft-success text-success">@s.Score%</span></td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

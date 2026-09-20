@@ -31,6 +31,12 @@ public interface IProfessionalRepository
     /// <returns>The dashboard, or <see langword="null"/> if no professionals exist.</returns>
     Task<ProfessionalDashboard?> GetDefaultDashboardAsync(CancellationToken cancellationToken);
 
+    /// <summary>Loads the dashboard for the professional owned by the given Keycloak subject.</summary>
+    /// <param name="subject">The Keycloak subject (user id).</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The dashboard, or <see langword="null"/> if no professional owns that subject.</returns>
+    Task<ProfessionalDashboard?> GetDashboardBySubjectAsync(string subject, CancellationToken cancellationToken);
+
     /// <summary>Stages a new professional for insertion.</summary>
     /// <param name="professional">The professional to add.</param>
     void Add(Professional professional);

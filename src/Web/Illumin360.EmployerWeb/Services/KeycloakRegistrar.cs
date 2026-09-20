@@ -164,7 +164,7 @@ public sealed class KeycloakRegistrar(IHttpClientFactory httpFactory, IConfigura
         }
 
         // --- 5. create the domain profile; compensate (delete the identity) if it fails → atomic outcome ---
-        var profileOk = await CreateDomainProfileAsync(http, token, type, req, ct).ConfigureAwait(false);
+        var profileOk = await CreateDomainProfileAsync(http, token, type, req, userId, ct).ConfigureAwait(false);
         if (!profileOk)
         {
             (await http.DeleteAsync($"{kcBase}/admin/realms/{realm}/users/{userId}", ct).ConfigureAwait(false)).Dispose();
@@ -198,10 +198,10 @@ public sealed class KeycloakRegistrar(IHttpClientFactory httpFactory, IConfigura
         return payload.TryGetProperty("access_token", out var t) ? t.GetString() : null;
     }
 
-    private async Task<bool> CreateDomainProfileAsync(HttpClient http, string token, string type, RegisterRequest req, CancellationToken ct)
+    private async Task<bool> CreateDomainProfileAsync(HttpClient http, string token, string type, RegisterRequest req, string subject, CancellationToken ct)
     {
-        // Employer: identity + client.employer role only — no employers service to profile into yet.
-        if (type == "employer" || type == "business")
+        // Business portal has no profile service — identity + role only.
+        if (type == "business")
         {
             return true;
         }
@@ -211,8 +211,9 @@ public sealed class KeycloakRegistrar(IHttpClientFactory httpFactory, IConfigura
 
         try
         {
-            var (path, body) = type == "student"
-                ? ($"{gateway}/api/students", (object)new
+            var (path, body) = type switch
+            {
+                "student" => ($"{gateway}/api/students", (object)new
                 {
                     firstName = req.FirstName!.Trim(),
                     lastName = req.LastName!.Trim(),
@@ -222,8 +223,18 @@ public sealed class KeycloakRegistrar(IHttpClientFactory httpFactory, IConfigura
                     graduating = string.Empty,
                     program = "Self-registered",
                     city = req.City!.Trim(),
-                })
-                : ($"{gateway}/api/professionals", new
+                    subject,
+                }),
+                "employer" => ($"{gateway}/api/employers", new
+                {
+                    companyName = req.Company!.Trim(),
+                    industry = string.IsNullOrWhiteSpace(req.Field) ? "Unspecified" : req.Field.Trim(),
+                    city = req.City!.Trim(),
+                    website = (string?)null,
+                    about = (string?)null,
+                    subject,
+                }),
+                _ => ($"{gateway}/api/professionals", new
                 {
                     firstName = req.FirstName!.Trim(),
                     lastName = req.LastName!.Trim(),
@@ -232,7 +243,9 @@ public sealed class KeycloakRegistrar(IHttpClientFactory httpFactory, IConfigura
                     nationality = string.Empty,
                     availability = "Open to opportunities",
                     headline = string.Empty,
-                });
+                    subject,
+                }),
+            };
 
             using var resp = await http.PostAsJsonAsync(path, body, ct).ConfigureAwait(false);
             return resp.IsSuccessStatusCode;
