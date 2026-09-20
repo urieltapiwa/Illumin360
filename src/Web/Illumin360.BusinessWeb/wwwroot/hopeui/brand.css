@@ -29,3 +29,53 @@
 /* Live pill (independent of the primary hue). */
 .status-live { display: inline-flex; align-items: center; gap: 6px; font-size: .72rem; font-weight: 700; color: #1aa053; border: 1px solid rgba(26,160,83,.35); border-radius: 999px; padding: 3px 10px; }
 .status-live .dot { width: 7px; height: 7px; border-radius: 50%; background: #1aa053; }
+
+/* ============================================================
+   Dark emerald canvas — only under the green theme (never blue).
+   Cards stay white and float on a deep-green page/chrome; only the
+   canvas + chrome recolour, not the icon chips/buttons inside cards.
+   ============================================================ */
+[data-brand="green"] body { background-color: #064e3b; }
+
+[data-brand="green"] .sidebar,
+[data-brand="green"] .iq-navbar {
+  background-color: #04352a;
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-brand="green"] .card {
+  background-color: #ffffff;
+  border: 1px solid rgba(6, 78, 59, 0.12);
+  box-shadow: rgba(6, 78, 59, 0.28) 0 10px 30px 0;
+}
+
+[data-brand="green"] .sidebar h5.logo-title,
+[data-brand="green"] .iq-navbar h4 {
+  color: #eaf6f0;
+}
+
+[data-brand="green"] .sidebar .nav-link:not(.active) {
+  color: #9fcab9;
+}
+
+/* "How your company appears..." + the account name next to the avatar. */
+[data-brand="green"] .iq-navbar .text-muted {
+  color: #9fcab9 !important;
+}
+
+/* Opt-in for description text that sits directly on the dark canvas
+   (not inside a .card or the navbar/sidebar, which are handled above). */
+[data-brand="green"] .text-on-dark-canvas {
+  color: #a7d5c4 !important;
+}
+
+/* Scoped to the navbar so bg-soft-primary/text-primary icon chips and
+   btn-soft-primary buttons inside white cards elsewhere are untouched. */
+[data-brand="green"] .iq-navbar .avatar-initials {
+  background-color: rgba(255, 255, 255, 0.2) !important;
+  color: #6ee7b7 !important;
+}
+[data-brand="green"] .iq-navbar .btn-soft-primary {
+  background-color: rgba(255, 255, 255, 0.18);
+  color: #ffffff;
+}
