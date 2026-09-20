@@ -18,6 +18,11 @@
   apply(localStorage.getItem(KEY) || "blue");
 
   document.addEventListener("DOMContentLoaded", function () {
+    // The initial apply() above runs before <body> exists, so #brandLabel
+    // wasn't found yet — sync it now that the DOM is ready.
+    var l = document.getElementById("brandLabel");
+    if (l) { l.textContent = label(root.getAttribute("data-brand")); }
+
     var btn = document.getElementById("brandToggle");
     if (!btn) { return; }
     btn.addEventListener("click", function () {
