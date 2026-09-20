@@ -117,6 +117,29 @@ public sealed class Student : Entity<StudentId>
     public void SetAvailability(string availability) =>
         Availability = string.IsNullOrWhiteSpace(availability) ? Availability : availability.Trim();
 
+    /// <summary>Updates the student's editable academic details (field of study, institution, city).</summary>
+    /// <param name="field">Field of study.</param>
+    /// <param name="school">Institution.</param>
+    /// <param name="city">Home city.</param>
+    /// <returns>A successful <see cref="Result{T}"/>, or a validation error.</returns>
+    public Result<bool> UpdateAcademicProfile(string field, string school, string city)
+    {
+        if (string.IsNullOrWhiteSpace(field))
+        {
+            return Error.Validation("student.field_required", "Field of study is required.");
+        }
+
+        if (string.IsNullOrWhiteSpace(city))
+        {
+            return Error.Validation("student.city_required", "City is required.");
+        }
+
+        Field = field.Trim();
+        School = school?.Trim() ?? string.Empty;
+        City = city.Trim();
+        return true;
+    }
+
     /// <summary>Records an uploaded CV's storage location and metadata.</summary>
     /// <param name="objectKey">Storage object key.</param>
     /// <param name="fileName">Original file name.</param>

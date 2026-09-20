@@ -1,0 +1,57 @@
+@model Illumin360.StudentWeb.Services.Persona?
+@{
+    ViewData["Title"] = "Profile";
+}
+
+@if (TempData["Saved"] is string saved)
+{
+    <div class="alert alert-soft-primary py-2 mb-3">@saved</div>
+}
+
+<div class="row g-3">
+    <div class="col-lg-5">
+        <div class="card mb-0 h-100">
+            <div class="card-header"><h5 class="mb-0 fw-bold">@(Model?.Name ?? "Your profile")</h5><small class="text-muted">Live profile</small></div>
+            <div class="card-body">
+                <dl class="row mb-0 small">
+                    <dt class="col-4 text-muted">Field of study</dt><dd class="col-8">@(string.IsNullOrWhiteSpace(Model?.Field) ? "—" : Model!.Field)</dd>
+                    <dt class="col-4 text-muted">Institution</dt><dd class="col-8">@(string.IsNullOrWhiteSpace(Model?.School) ? "—" : Model!.School)</dd>
+                    <dt class="col-4 text-muted">City</dt><dd class="col-8">@(string.IsNullOrWhiteSpace(Model?.City) ? "—" : Model!.City)</dd>
+                    <dt class="col-4 text-muted">Year</dt><dd class="col-8">@(string.IsNullOrWhiteSpace(Model?.Year) ? "—" : Model!.Year)</dd>
+                    <dt class="col-4 text-muted">Graduating</dt><dd class="col-8">@(string.IsNullOrWhiteSpace(Model?.Graduating) ? "—" : Model!.Graduating)</dd>
+                    <dt class="col-4 text-muted">Programme</dt><dd class="col-8">@(string.IsNullOrWhiteSpace(Model?.Program) ? "—" : Model!.Program)</dd>
+                    <dt class="col-4 text-muted">Availability</dt><dd class="col-8">@(string.IsNullOrWhiteSpace(Model?.Availability) ? "—" : Model!.Availability)</dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-7">
+        <div class="card mb-0 h-100">
+            <div class="card-header"><h5 class="mb-0 fw-bold">Edit profile</h5></div>
+            <div class="card-body">
+                <form asp-controller="Profile" asp-action="Update" method="post">
+                    <div class="mb-3">
+                        <label class="form-label">Name</label>
+                        <input class="form-control" value="@Model?.Name" disabled />
+                        <div class="form-text">Name changes are handled by platform admins.</div>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label" for="field">Field of study</label>
+                            <input id="field" name="field" class="form-control" value="@Model?.Field" required />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label" for="city">City</label>
+                            <input id="city" name="city" class="form-control" value="@Model?.City" required />
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="school">Institution</label>
+                        <input id="school" name="school" class="form-control" value="@Model?.School" />
+                    </div>
+                    <button type="submit" class="btn btn-sm btn-primary">Save changes</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

@@ -42,6 +42,19 @@ public sealed partial class StudentsApiClient
         }
     }
 
+    public async Task<bool> UpdateProfileAsync(string field, string school, string city, CancellationToken ct = default)
+    {
+        try
+        {
+            using var resp = await _http.PutAsJsonAsync("/api/students/me", new { field, school, city }, ct).ConfigureAwait(false);
+            return resp.IsSuccessStatusCode;
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+        {
+            return false;
+        }
+    }
+
     private async Task<bool> PostAsync(string url, CancellationToken ct)
     {
         try

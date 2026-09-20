@@ -133,6 +133,23 @@ v1.MapPost("/me/matches/{id:guid}/{action}", async (
     .ProducesProblem(StatusCodes.Status404NotFound)
     .ProducesProblem(StatusCodes.Status409Conflict);
 
+v1.MapPut("/me", async (
+        UpdateStudentProfileCommand command,
+        ICommandHandler<UpdateStudentProfileCommand, PersonaDto> handler,
+        CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(command, ct);
+        return result.ToHttpResult();
+    })
+    .RequireAuthorization(AuthenticationExtensions.StudentPolicy)
+    .WithName("UpdateMyStudentProfile")
+    .WithSummary("Update the current profile's academic details (field of study, school, city). Requires a student role.")
+    .Produces<PersonaDto>(StatusCodes.Status200OK)
+    .ProducesProblem(StatusCodes.Status400BadRequest)
+    .ProducesProblem(StatusCodes.Status401Unauthorized)
+    .ProducesProblem(StatusCodes.Status403Forbidden)
+    .ProducesProblem(StatusCodes.Status404NotFound);
+
 v1.MapPost("/me/availability", async (
         SetAvailabilityCommand command,
         ICommandHandler<SetAvailabilityCommand, string> handler,

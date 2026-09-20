@@ -114,6 +114,47 @@ public sealed class SetAvailabilityCommandHandler(IStudentRepository repository)
     }
 }
 
+/// <summary>Updates the current ("me") student's editable academic profile.</summary>
+/// <param name="Field">Field of study.</param>
+/// <param name="School">Institution.</param>
+/// <param name="City">Home city.</param>
+public sealed record UpdateStudentProfileCommand(string Field, string School, string City) : ICommand<PersonaDto>;
+
+/// <summary>Handles <see cref="UpdateStudentProfileCommand"/>.</summary>
+/// <param name="repository">The student repository.</param>
+public sealed class UpdateStudentProfileCommandHandler(IStudentRepository repository)
+    : ICommandHandler<UpdateStudentProfileCommand, PersonaDto>
+{
+    private readonly IStudentRepository _repository = repository;
+
+    /// <inheritdoc />
+    public async Task<Result<PersonaDto>> HandleAsync(UpdateStudentProfileCommand command, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+
+        var meId = await _repository.GetDefaultStudentIdAsync(cancellationToken).ConfigureAwait(false);
+        if (meId is not { } id)
+        {
+            return Error.NotFound("student.not_found", "No student profile found.");
+        }
+
+        var me = await _repository.GetTrackedAsync(id, cancellationToken).ConfigureAwait(false);
+        if (me is null)
+        {
+            return Error.NotFound("student.not_found", "No student profile found.");
+        }
+
+        var updated = me.UpdateAcademicProfile(command.Field, command.School, command.City);
+        if (updated.IsFailure)
+        {
+            return updated.Error!;
+        }
+
+        await _repository.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        return new PersonaDto(me.FullName, me.Field, me.School, me.Year, me.Graduating, me.Readiness, me.Program, me.City, me.Availability);
+    }
+}
+
 /// <summary>Records a profile view against a specific student (someone opened their profile by id).</summary>
 /// <param name="Id">The viewed student's id.</param>
 public sealed record RecordStudentViewCommand(Guid Id) : ICommand<bool>;

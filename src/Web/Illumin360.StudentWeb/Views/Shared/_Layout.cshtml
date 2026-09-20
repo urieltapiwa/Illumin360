@@ -26,6 +26,7 @@
         bool _active(string href) => href == "/" ? _path == "/" : _path.StartsWith(href.ToLowerInvariant(), StringComparison.Ordinal);
         var nav = new (string, string, bool)[] {
             ("Overview", "/", _active("/")),
+            ("Profile", "/Profile", _active("/Profile")),
             ("Internships", "/Internships", _active("/Internships")),
         };
     }
