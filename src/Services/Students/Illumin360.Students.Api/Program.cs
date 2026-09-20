@@ -135,10 +135,14 @@ v1.MapPost("/me/matches/{id:guid}/{action}", async (
 
 v1.MapPut("/me", async (
         UpdateStudentProfileCommand command,
+        System.Security.Claims.ClaimsPrincipal user,
         ICommandHandler<UpdateStudentProfileCommand, PersonaDto> handler,
         CancellationToken ct) =>
     {
-        var result = await handler.HandleAsync(command, ct);
+        // Per-user identity: resolve by the caller's Keycloak subject (inbound claim mapping is off,
+        // so the claim is "sub"), same as GET /me.
+        var subject = user.FindFirst("sub")?.Value;
+        var result = await handler.HandleAsync(command with { Subject = subject }, ct);
         return result.ToHttpResult();
     })
     .RequireAuthorization(AuthenticationExtensions.StudentPolicy)

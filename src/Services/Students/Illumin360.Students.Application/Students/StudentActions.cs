@@ -118,7 +118,8 @@ public sealed class SetAvailabilityCommandHandler(IStudentRepository repository)
 /// <param name="Field">Field of study.</param>
 /// <param name="School">Institution.</param>
 /// <param name="City">Home city.</param>
-public sealed record UpdateStudentProfileCommand(string Field, string School, string City) : ICommand<PersonaDto>;
+/// <param name="Subject">The caller's Keycloak subject (user id), or <see langword="null"/> to fall back to the default demo profile.</param>
+public sealed record UpdateStudentProfileCommand(string Field, string School, string City, string? Subject = null) : ICommand<PersonaDto>;
 
 /// <summary>Handles <see cref="UpdateStudentProfileCommand"/>.</summary>
 /// <param name="repository">The student repository.</param>
@@ -132,13 +133,26 @@ public sealed class UpdateStudentProfileCommandHandler(IStudentRepository reposi
     {
         ArgumentNullException.ThrowIfNull(command);
 
-        var meId = await _repository.GetDefaultStudentIdAsync(cancellationToken).ConfigureAwait(false);
-        if (meId is not { } id)
+        // Per-user identity: resolve the caller's own profile by their Keycloak subject first
+        // (mirrors GetStudentDashboardQuery), falling back to the default demo profile so seeded
+        // logins with no linked profile still have something to edit.
+        Student? me = null;
+        if (!string.IsNullOrWhiteSpace(command.Subject))
         {
-            return Error.NotFound("student.not_found", "No student profile found.");
+            me = await _repository.GetTrackedBySubjectAsync(command.Subject, cancellationToken).ConfigureAwait(false);
         }
 
-        var me = await _repository.GetTrackedAsync(id, cancellationToken).ConfigureAwait(false);
+        if (me is null)
+        {
+            var meId = await _repository.GetDefaultStudentIdAsync(cancellationToken).ConfigureAwait(false);
+            if (meId is not { } id)
+            {
+                return Error.NotFound("student.not_found", "No student profile found.");
+            }
+
+            me = await _repository.GetTrackedAsync(id, cancellationToken).ConfigureAwait(false);
+        }
+
         if (me is null)
         {
             return Error.NotFound("student.not_found", "No student profile found.");

@@ -52,6 +52,12 @@ public interface IStudentRepository
     /// <returns>The tracked student, or null.</returns>
     Task<Student?> GetTrackedAsync(StudentId id, CancellationToken cancellationToken);
 
+    /// <summary>Loads the profile owned by the given Keycloak subject for update (change-tracked).</summary>
+    /// <param name="subject">The Keycloak subject (user id).</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The tracked student, or null if no profile is linked to that subject.</returns>
+    Task<Student?> GetTrackedBySubjectAsync(string subject, CancellationToken cancellationToken);
+
     /// <summary>Loads a match belonging to a student for update (change-tracked).</summary>
     /// <param name="studentId">Owning student.</param>
     /// <param name="matchId">Match id.</param>

@@ -54,6 +54,10 @@ public sealed class StudentRepository(StudentsDbContext db) : IStudentRepository
         _db.Students.FirstOrDefaultAsync(s => s.Id == id, cancellationToken);
 
     /// <inheritdoc />
+    public Task<Student?> GetTrackedBySubjectAsync(string subject, CancellationToken cancellationToken) =>
+        _db.Students.FirstOrDefaultAsync(s => s.Subject == subject, cancellationToken);
+
+    /// <inheritdoc />
     public Task<StudentMatch?> GetMatchAsync(StudentId studentId, Guid matchId, CancellationToken cancellationToken) =>
         _db.Matches.FirstOrDefaultAsync(m => m.Id == matchId && m.StudentId == studentId, cancellationToken);
 
