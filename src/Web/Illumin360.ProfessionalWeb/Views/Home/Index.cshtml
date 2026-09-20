@@ -25,7 +25,7 @@
     <span class="badge @(live ? "bg-soft-primary text-primary" : "bg-soft-warning text-warning")">@(live ? "Live data" : "Demo data")</span>
     @if (live && Model?.Persona?.Name is { Length: > 0 } nm)
     {
-        <span class="text-muted small">@nm · @Model?.Persona?.Headline</span>
+        <span class="text-muted small text-on-dark-canvas">@nm · @Model?.Persona?.Headline</span>
     }
 </div>
 

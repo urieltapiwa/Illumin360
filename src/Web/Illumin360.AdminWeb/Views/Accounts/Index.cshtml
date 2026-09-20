@@ -9,11 +9,11 @@
 }
 
 <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
-    <span class="text-muted small me-2">Registered companies &amp; talent on the platform.</span>
+    <span class="text-muted small me-2 text-on-dark-canvas">Registered companies &amp; talent on the platform.</span>
     <a class="btn btn-sm @Pill("All", null, null)" href="/Accounts">All</a>
     <a class="btn btn-sm @(string.Equals(kind,"Company",StringComparison.OrdinalIgnoreCase) ? "btn-primary" : "btn-soft-primary")" href="/Accounts?kind=Company">Companies</a>
     <a class="btn btn-sm @(string.Equals(kind,"Talent",StringComparison.OrdinalIgnoreCase) ? "btn-primary" : "btn-soft-primary")" href="/Accounts?kind=Talent">Talent</a>
-    <span class="mx-1 text-muted">·</span>
+    <span class="mx-1 text-muted text-on-dark-canvas">·</span>
     <a class="btn btn-sm @(string.Equals(status,"suspended",StringComparison.OrdinalIgnoreCase) ? "btn-primary" : "btn-soft-primary")" href="/Accounts?status=suspended">Suspended</a>
 </div>
 

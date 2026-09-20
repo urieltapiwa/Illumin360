@@ -18,7 +18,7 @@
 }
 <div class="d-flex align-items-center gap-2 mb-2">
     <span class="badge @(live ? "bg-soft-primary text-primary" : "bg-soft-warning text-warning")">@(live ? "Live data" : "Demo data")</span>
-    <span class="text-muted small">Talent, company &amp; verification counts and the growth trend are live from the platform.</span>
+    <span class="text-muted small text-on-dark-canvas">Talent, company &amp; verification counts and the growth trend are live from the platform.</span>
 </div>
 <div id="overview" class="row row-cols-2 row-cols-md-3 row-cols-xl-4 g-3 mb-3" style="scroll-margin-top:84px;">
     @foreach (var (label, value, sub, icon) in kpis)
