@@ -31,7 +31,7 @@
             </div>
             <div class="card-body p-0">
                 <div class="table-responsive">
-                    <table class="table mb-0 align-middle">
+                    <table class="table table-sm mb-0 align-middle">
                         <thead><tr><th>Title</th><th>Currency</th><th>Status</th><th>Created</th><th class="text-end">Action</th></tr></thead>
                         <tbody>
                         @if (Model.Contracts.Count == 0)
@@ -67,7 +67,7 @@
                         <label class="form-label small text-muted">Currency</label>
                         <input name="currency" class="form-control" value="NAD" maxlength="3" />
                     </div>
-                    <button type="submit" class="btn btn-primary w-100">Create draft</button>
+                    <button type="submit" class="btn btn-sm btn-primary w-100">Create draft</button>
                     <p class="text-muted mt-2 mb-0" style="font-size:.75rem;">Add milestones and activate on the next screen.</p>
                 </form>
             </div>
