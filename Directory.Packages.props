@@ -20,7 +20,7 @@
   </ItemGroup>
 
   <ItemGroup Label="ASP.NET Core / Web">
-    <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.10" />
+    <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.11" />
     <!-- Microsoft.AspNetCore.OpenApi transitively depends on Microsoft.OpenApi 2.0.0, which carries the
          high-severity advisory GHSA-v5pm-xwqc-g5wc. Pin to the latest patched 2.x (same major → API
          compatible) so transitive resolution lands on a non-vulnerable version. -->
