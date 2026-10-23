@@ -36,7 +36,7 @@ jobs:
         run: dotnet format src/Illumin360.sln --verify-no-changes --severity warn
       - name: Test (+ coverage)
         run: dotnet test src/Illumin360.sln -c Release --no-build --collect:"XPlat Code Coverage" --results-directory ./TestResults
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: test-results
@@ -96,7 +96,7 @@ jobs:
           dotnet tool install --global CycloneDX
           dotnet restore src/Illumin360.sln
           dotnet CycloneDX src/Illumin360.sln -o sbom
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: sbom
           path: sbom
